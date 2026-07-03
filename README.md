@@ -11,6 +11,12 @@ The current focus is local-node data management for Ascend NPU systems:
 
 The long-term direction is a unified data layer for future supernode-style systems, where HBM, DDR, SSD/SSU, and remote memory can be represented by the same object / placement / transfer language.
 
+## Related Repositories
+
+- [LL-mixed/ub_sim](https://github.com/LL-mixed/ub_sim): UB data-flow simulation and validation environment.
+- [hw-native-sys/pypto-serving](https://github.com/hw-native-sys/pypto-serving): model-serving framework that UFlow is designed to integrate with.
+- [hw-native-sys/pypto](https://github.com/hw-native-sys/pypto): high-performance AI accelerator programming framework used by the PyPTO runtime stack.
+
 ## Current Status
 
 Implemented pieces include:
