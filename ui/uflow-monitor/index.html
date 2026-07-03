@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UFlow Monitor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">PhaseE-04</p>
+          <h1>UFlow Monitor</h1>
+        </div>
+        <div class="status-pill" id="status-pill">connecting</div>
+      </header>
+
+      <section class="config-row" aria-label="connection config">
+        <label>
+          API base
+          <input id="api-base" type="text" spellcheck="false" />
+        </label>
+        <label>
+          Model namespace
+          <input id="model-id" type="text" spellcheck="false" value="phasee04-monitor" />
+        </label>
+        <button id="apply-config" type="button">Apply</button>
+      </section>
+
+      <section class="layout-grid">
+        <section class="panel architecture" aria-label="architecture">
+          <div class="panel-title">
+            <span>Architecture</span>
+            <small id="tunnel-path">local -> host1 -> host2 container</small>
+          </div>
+          <svg viewBox="0 0 980 420" role="img" aria-label="UFlow monitor architecture">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6 Z" fill="#2f5b87"></path>
+              </marker>
+            </defs>
+
+            <rect class="box client" x="80" y="24" width="820" height="86" rx="8"></rect>
+            <text class="label large" x="116" y="74">PyPTO serving / other app</text>
+            <text class="label muted" x="610" y="74">client allocator / CLI / monitor fetch</text>
+
+            <line class="flow" x1="490" y1="112" x2="490" y2="164"></line>
+            <text class="label edge" x="515" y="146">API</text>
+
+            <rect class="box uflow" x="80" y="166" width="820" height="88" rx="8"></rect>
+            <text class="label large" x="116" y="218">UFlow</text>
+            <text class="label muted" x="260" y="203">catalog</text>
+            <text class="label muted" x="360" y="203">lease</text>
+            <text class="label muted" x="452" y="203">stats</text>
+            <text class="label muted" x="548" y="203">transfer</text>
+            <text class="label muted" x="666" y="203">monitor API</text>
+            <text class="label subtle" x="260" y="230">hot path: object create/open/release</text>
+            <text class="label subtle" x="548" y="230">cold path: link/config/health</text>
+
+            <rect class="box medium hbm" x="72" y="318" width="180" height="72" rx="8"></rect>
+            <text class="label medium-title" x="112" y="360">HBM</text>
+            <text class="label subtle" x="101" y="380">lazy on demand</text>
+
+            <rect class="box medium ddr" x="292" y="294" width="240" height="100" rx="8"></rect>
+            <text class="label medium-title" x="378" y="334">DDR</text>
+            <rect class="chip" x="326" y="350" width="70" height="26" rx="6"></rect>
+            <text class="label chip-text" x="343" y="368">fd</text>
+            <rect class="chip" x="416" y="350" width="86" height="26" rx="6"></rect>
+            <text class="label chip-text" x="434" y="368">pinned</text>
+
+            <rect class="box medium h2hot" x="590" y="318" width="150" height="72" rx="8"></rect>
+            <text class="label medium-title" x="630" y="360">H2H hot</text>
+            <text class="label subtle" x="622" y="380">reuse copy pool</text>
+
+            <rect class="box medium h2cold" x="780" y="318" width="150" height="72" rx="8"></rect>
+            <text class="label medium-title" x="815" y="360">H2H cold</text>
+            <text class="label subtle" x="813" y="380">mmap object</text>
+
+            <line class="flow" x1="180" y1="256" x2="165" y2="316"></line>
+            <line class="flow" x1="420" y1="256" x2="410" y2="292"></line>
+            <line class="flow" x1="655" y1="256" x2="665" y2="316"></line>
+            <line class="flow dashed" x1="840" y1="256" x2="855" y2="316"></line>
+            <line class="flow dashed" x1="532" y1="350" x2="588" y2="350"></line>
+            <text class="label edge" x="548" y="340">fast DDR-HBM</text>
+          </svg>
+        </section>
+
+        <section class="panel health" aria-label="health">
+          <div class="panel-title">
+            <span>Health</span>
+            <small id="last-updated">never</small>
+          </div>
+          <div class="kv-grid">
+            <div><span>Monitor</span><strong id="monitor-state">unknown</strong></div>
+            <div><span>Daemon</span><strong id="daemon-state">unknown</strong></div>
+            <div><span>HBM</span><strong id="hbm-state">unknown</strong></div>
+            <div><span>Socket</span><strong id="daemon-socket">-</strong></div>
+          </div>
+          <pre id="health-detail"></pre>
+        </section>
+      </section>
+
+      <section class="metric-grid" aria-label="stats">
+        <article class="metric">
+          <span>DDR objects</span>
+          <strong id="ddr-objects">0</strong>
+        </article>
+        <article class="metric">
+          <span>DDR requested</span>
+          <strong id="ddr-requested">0 B</strong>
+        </article>
+        <article class="metric">
+          <span>DDR committed</span>
+          <strong id="ddr-committed">0 B</strong>
+        </article>
+        <article class="metric">
+          <span>Safe allocatable</span>
+          <strong id="ddr-safe">0 B</strong>
+        </article>
+        <article class="metric">
+          <span>Cgroup current</span>
+          <strong id="cgroup-current">0 B</strong>
+        </article>
+        <article class="metric">
+          <span>HBM free</span>
+          <strong id="hbm-free">unknown</strong>
+        </article>
+        <article class="metric">
+          <span>Trace</span>
+          <strong id="trace-state">disabled</strong>
+        </article>
+        <article class="metric">
+          <span>Trace events</span>
+          <strong id="trace-events">0</strong>
+        </article>
+      </section>
+
+      <section class="panel command-panel" aria-label="command console">
+        <div class="panel-title">
+          <span>Command Console</span>
+          <small>JSON command -> monitor API -> daemon</small>
+        </div>
+
+        <details class="help-menu" id="command-help">
+          <summary>Command Help</summary>
+          <div class="help-content">
+            <div>
+              <h2>Object commands</h2>
+              <pre>{
+  "op": "CreateDataObject",
+  "model_id": "phasee04-monitor",
+  "name": "ui.demo.ddr.1m",
+  "role": "user",
+  "hint": "mandatory:ddr",
+  "target": "host:0",
+  "nbytes": 1048576,
+  "shape": "1048576",
+  "dtype": "uint8"
+}</pre>
+              <pre>{
+  "op": "ReleaseDataObject",
+  "object_id": 100
+}</pre>
+            </div>
+            <div>
+              <h2>Query / lifecycle</h2>
+              <pre>{ "op": "GetStats" }</pre>
+              <pre>{
+  "op": "StartTrace",
+  "run_id": "ui-hot-demo",
+  "mode": "hot"
+}</pre>
+              <pre>{ "op": "StopTrace", "flush": 1 }</pre>
+              <pre>{ "op": "FlushTrace" }</pre>
+              <pre>{
+  "op": "GetModelObjects",
+  "model_id": "phasee04-monitor"
+}</pre>
+              <pre>{ "op": "ShutdownDaemon" }</pre>
+            </div>
+          </div>
+        </details>
+
+        <div class="command-grid">
+          <label class="command-input-wrap">
+            Command JSON
+            <textarea id="command-input" spellcheck="false"></textarea>
+          </label>
+          <div class="command-actions">
+            <button id="send-command" type="button">Send Command</button>
+            <div class="template-row">
+              <button class="secondary-button" data-template="create-ddr" type="button">Create DDR</button>
+              <button class="secondary-button" data-template="release-object" type="button">Release</button>
+              <button class="secondary-button" data-template="get-stats" type="button">Stats</button>
+              <button class="secondary-button" data-template="start-trace" type="button">Start Trace</button>
+              <button class="secondary-button" data-template="stop-trace" type="button">Stop Trace</button>
+              <button class="danger-button" data-template="shutdown" type="button">Shutdown</button>
+            </div>
+            <pre id="command-result"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel table-panel" aria-label="objects">
+        <div class="panel-title">
+          <span>Data objects</span>
+          <small id="object-count">0 objects</small>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Placement</th>
+                <th>Target</th>
+                <th>Requested</th>
+                <th>State</th>
+                <th>Path</th>
+              </tr>
+            </thead>
+            <tbody id="objects-body">
+              <tr><td colspan="8" class="empty">No data yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

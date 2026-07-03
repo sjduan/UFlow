@@ -1,0 +1,8 @@
+[workspace]
+members = [
+  "crates/uf-acl-sys",
+  "crates/uf-core",
+  "crates/uf-daemon",
+]
+resolver = "2"
+

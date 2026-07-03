@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UFlow 服务侧架构与重构报告</title>
+  <style>
+    :root {
+      --ink: #17202a;
+      --muted: #5d6d7e;
+      --line: #d7dee8;
+      --panel: #f7f9fc;
+      --blue: #2f6fed;
+      --cyan: #138d9c;
+      --green: #1e8a5a;
+      --orange: #c46a1a;
+      --red: #b03a2e;
+      --violet: #6954c8;
+      --bg: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+    header {
+      padding: 28px 38px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcff;
+    }
+    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0; }
+    h2 { margin: 34px 0 14px; font-size: 22px; }
+    h3 { margin: 24px 0 10px; font-size: 17px; }
+    p { margin: 8px 0; }
+    main { max-width: 1280px; margin: 0 auto; padding: 26px 34px 60px; }
+    .subtitle { color: var(--muted); font-size: 14px; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px 16px;
+    }
+    .card h3 { margin-top: 0; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eef3fb;
+      color: #244d8f;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 22px; font-size: 14px; }
+    th, td { border: 1px solid var(--line); padding: 9px 10px; vertical-align: top; }
+    th { background: #eef3f8; text-align: left; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; color: #2b3b53; }
+    .note { border-left: 4px solid var(--blue); background: #f3f7ff; padding: 10px 12px; color: #26364d; }
+    .warn { border-left-color: var(--orange); background: #fff8ef; }
+    .ok { color: var(--green); font-weight: 700; }
+    .todo { color: var(--orange); font-weight: 700; }
+    .bad { color: var(--red); font-weight: 700; }
+    svg { width: 100%; height: auto; display: block; }
+    .box { fill: #fff; stroke: #99a9bc; stroke-width: 1.4; rx: 8; }
+    .box-blue { fill: #eef5ff; stroke: var(--blue); }
+    .box-green { fill: #effaf4; stroke: var(--green); }
+    .box-cyan { fill: #ecfbfd; stroke: var(--cyan); }
+    .box-orange { fill: #fff6ec; stroke: var(--orange); }
+    .box-violet { fill: #f4f1ff; stroke: var(--violet); }
+    .label { font-size: 15px; font-weight: 700; fill: var(--ink); }
+    .small { font-size: 12px; fill: var(--muted); }
+    .arrow { stroke: #506176; stroke-width: 1.7; marker-end: url(#arrow); fill: none; }
+    .dash { stroke-dasharray: 5 5; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UFlow 服务侧架构与重构报告</h1>
+    <div class="subtitle">更新日期：2026-06-22 · 范围：daemon / SDK / monitor / trace / ACL backend · 不包含 pypto-serving 适配</div>
+  </header>
+  <main>
+    <section>
+      <h2>1. 结论</h2>
+      <div class="grid three">
+        <div class="card">
+          <h3>接口收敛</h3>
+          <p>UFlow public API 统一到 <code>DataObject + Placement + TransferPlan + TransferEvent</code>。旧 buffer alias 和 client-local transfer helper 不再作为正式接口。</p>
+        </div>
+        <div class="card">
+          <h3>模块边界</h3>
+          <p>daemon 已按 router、object、planner、executor、backend、stats、trace、capabilities 分层，ACL backend 进一步拆成 runtime / HBM / host / copy。</p>
+        </div>
+        <div class="card">
+          <h3>验收方式</h3>
+          <p>本轮不以 pypto-serving 为验收目标，先用裸 UFlow 覆盖 HBM、DDR、HBM-DDR、HBM-HBM、DDR-DDR、monitor 和 trace。</p>
+        </div>
+      </div>
+      <p class="note">架构审视结果：当前方向合理，但原型阶段留下的旧 public op、SDK 中 client-local copy helper、backend 文件职责混杂会阻碍后续扩展。本轮重构将这些路径移出正式边界。</p>
+    </section>
+
+    <section>
+      <h2>2. 总架构</h2>
+      <svg viewBox="0 0 1180 560" role="img" aria-label="UFlow 总架构图">
+        <defs>
+          <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L8,3 z" fill="#506176"></path>
+          </marker>
+        </defs>
+        <rect x="30" y="28" width="1120" height="95" class="box box-blue"></rect>
+        <text x="55" y="60" class="label">Client Apps</text>
+        <text x="55" y="86" class="small">pypto-serving / PyPTO / benchmark / future apps</text>
+        <rect x="360" y="50" width="250" height="48" class="box"></rect>
+        <text x="385" y="80" class="small">Python SDK facade</text>
+        <rect x="640" y="50" width="220" height="48" class="box"></rect>
+        <text x="665" y="80" class="small">Monitor / CLI JSON command</text>
+
+        <rect x="30" y="178" width="1120" height="270" class="box box-green"></rect>
+        <text x="55" y="212" class="label">UFlow daemon</text>
+        <rect x="70" y="240" width="135" height="70" class="box"></rect>
+        <text x="94" y="270" class="small">router</text>
+        <text x="94" y="291" class="small">op dispatch</text>
+        <rect x="230" y="240" width="150" height="70" class="box"></rect>
+        <text x="255" y="267" class="small">object_service</text>
+        <text x="255" y="289" class="small">lease/state</text>
+        <rect x="405" y="240" width="155" height="70" class="box"></rect>
+        <text x="430" y="267" class="small">transfer_planner</text>
+        <text x="430" y="289" class="small">cost/plan</text>
+        <rect x="585" y="240" width="165" height="70" class="box"></rect>
+        <text x="610" y="267" class="small">transfer_executor</text>
+        <text x="610" y="289" class="small">event/copy</text>
+        <rect x="775" y="240" width="150" height="70" class="box"></rect>
+        <text x="802" y="267" class="small">stats_service</text>
+        <text x="802" y="289" class="small">snapshot/stats</text>
+        <rect x="950" y="240" width="150" height="70" class="box"></rect>
+        <text x="980" y="267" class="small">trace_api</text>
+        <text x="980" y="289" class="small">Chrome trace</text>
+
+        <rect x="230" y="345" width="150" height="58" class="box box-cyan"></rect>
+        <text x="262" y="379" class="small">catalog</text>
+        <rect x="405" y="345" width="155" height="58" class="box box-cyan"></rect>
+        <text x="430" y="379" class="small">ddr_backend</text>
+        <rect x="585" y="345" width="165" height="58" class="box box-cyan"></rect>
+        <text x="613" y="379" class="small">transfer_channel</text>
+        <rect x="775" y="345" width="325" height="58" class="box box-cyan"></rect>
+        <text x="815" y="379" class="small">acl_backend: runtime / hbm_memory / host_memory / device_copy</text>
+
+        <rect x="30" y="488" width="1120" height="50" class="box box-orange"></rect>
+        <text x="55" y="518" class="label">Devices / Memory</text>
+        <text x="240" y="518" class="small">HBM(NPU) · DDR(memfd/mmap/pinned workspace) · future SSD/UB/remote placement</text>
+
+        <path d="M485 100 L485 176" class="arrow"></path>
+        <path d="M750 100 L750 176" class="arrow"></path>
+        <path d="M205 275 L228 275" class="arrow"></path>
+        <path d="M380 275 L403 275" class="arrow"></path>
+        <path d="M560 275 L583 275" class="arrow"></path>
+        <path d="M668 310 L668 343" class="arrow"></path>
+        <path d="M670 403 L670 486" class="arrow"></path>
+        <path d="M850 310 L850 343" class="arrow"></path>
+        <path d="M1025 310 L1025 343" class="arrow dash"></path>
+      </svg>
+    </section>
+
+    <section>
+      <h2>3. Public API 状态</h2>
+      <table>
+        <tr><th>类别</th><th>保留 op</th><th>说明</th></tr>
+        <tr><td>lifecycle</td><td><code>RegisterClient</code>, <code>RegisterModel</code></td><td>client/model identity，只做轻量注册。</td></tr>
+        <tr><td>object</td><td><code>CreateDataObject</code>, <code>OpenDataObject</code>, <code>ReleaseDataObject</code>, <code>CloseLease</code>, <code>DescribeObject</code></td><td>HBM 返回 shareable handle；DDR 返回 mmap path；lease 是准入边界。</td></tr>
+        <tr><td>state</td><td><code>MarkReady</code>, <code>MarkDirty</code>, <code>MarkModified</code></td><td>client 自己改写数据后，必须把同步状态交回 daemon。</td></tr>
+        <tr><td>transfer</td><td><code>EstimateCost</code>, <code>PlanTransfer</code>, <code>SubmitTransfer</code>, <code>PollEvent</code>, <code>WaitEvent</code>, <code>CancelEvent</code></td><td>统一表达 HBM/DDR/HBM-HBM/DDR-DDR 数据移动。</td></tr>
+        <tr><td>observability</td><td><code>GetStats</code>, <code>GetModelObjects</code>, trace ops</td><td>monitor 常开，trace 可开关。</td></tr>
+        <tr><td>service</td><td><code>GetCapabilities</code>, <code>ShutdownDaemon</code></td><td>能力发现和优雅退出。</td></tr>
+      </table>
+      <table>
+        <tr><th>已移除旧 op</th><th>处理方式</th></tr>
+        <tr><td><code>CreateBuffer</code>, <code>OpenBuffer</code>, <code>ReleaseBuffer</code></td><td>返回 unsupported removed op；不再维护 alias。</td></tr>
+        <tr><td><code>UploadData</code>, <code>GetDeviceHandle</code></td><td>由 object response 和 transfer API 取代。</td></tr>
+        <tr><td><code>CompleteTransferEvent</code>, <code>WaitObjectEvent</code></td><td>由 <code>PollEvent/WaitEvent/CancelEvent</code> 取代。</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. DataObject 生命周期</h2>
+      <svg viewBox="0 0 1120 260" role="img" aria-label="DataObject 生命周期">
+        <defs>
+          <marker id="arrow2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L8,3 z" fill="#506176"></path>
+          </marker>
+        </defs>
+        <rect x="35" y="70" width="145" height="68" class="box box-blue"></rect>
+        <text x="63" y="102" class="small">RegisterClient</text>
+        <text x="63" y="122" class="small">RegisterModel</text>
+        <rect x="230" y="70" width="170" height="68" class="box box-green"></rect>
+        <text x="258" y="102" class="small">CreateDataObject</text>
+        <text x="258" y="122" class="small">placement=hbm/ddr</text>
+        <rect x="455" y="70" width="170" height="68" class="box box-cyan"></rect>
+        <text x="486" y="102" class="small">OpenDataObject</text>
+        <text x="486" y="122" class="small">lease准入</text>
+        <rect x="680" y="70" width="170" height="68" class="box box-orange"></rect>
+        <text x="716" y="102" class="small">MarkReady</text>
+        <text x="716" y="122" class="small">MarkDirty</text>
+        <rect x="905" y="70" width="170" height="68" class="box box-violet"></rect>
+        <text x="932" y="102" class="small">CloseLease</text>
+        <text x="932" y="122" class="small">ReleaseObject</text>
+        <path d="M180 104 L228 104" class="arrow" marker-end="url(#arrow2)"></path>
+        <path d="M400 104 L453 104" class="arrow" marker-end="url(#arrow2)"></path>
+        <path d="M625 104 L678 104" class="arrow" marker-end="url(#arrow2)"></path>
+        <path d="M850 104 L903 104" class="arrow" marker-end="url(#arrow2)"></path>
+        <text x="255" y="177" class="small">HBM: shareable_handle + service VA</text>
+        <text x="255" y="199" class="small">DDR: mmap_path + file-backed shared object</text>
+        <text x="680" y="177" class="small">client 自己 map/use 后，状态边界必须回写给 UFlow</text>
+      </svg>
+    </section>
+
+    <section>
+      <h2>5. Transfer 数据流</h2>
+      <svg viewBox="0 0 1120 350" role="img" aria-label="TransferPlan SubmitTransfer TransferEvent 流程">
+        <rect x="45" y="42" width="160" height="58" class="box box-blue"></rect>
+        <text x="78" y="77" class="small">EstimateCost</text>
+        <rect x="260" y="42" width="160" height="58" class="box box-blue"></rect>
+        <text x="300" y="77" class="small">PlanTransfer</text>
+        <rect x="475" y="42" width="160" height="58" class="box box-green"></rect>
+        <text x="510" y="77" class="small">SubmitTransfer</text>
+        <rect x="690" y="42" width="160" height="58" class="box box-green"></rect>
+        <text x="726" y="77" class="small">TransferEvent</text>
+        <rect x="905" y="42" width="160" height="58" class="box box-violet"></rect>
+        <text x="940" y="77" class="small">Wait/Poll</text>
+        <path d="M205 71 L258 71" class="arrow"></path>
+        <path d="M420 71 L473 71" class="arrow"></path>
+        <path d="M635 71 L688 71" class="arrow"></path>
+        <path d="M850 71 L903 71" class="arrow"></path>
+
+        <rect x="75" y="160" width="210" height="92" class="box box-cyan"></rect>
+        <text x="112" y="192" class="small">HBM -> DDR</text>
+        <text x="112" y="216" class="small">D2H direct / pinned channel</text>
+        <rect x="330" y="160" width="210" height="92" class="box box-cyan"></rect>
+        <text x="367" y="192" class="small">DDR -> HBM</text>
+        <text x="367" y="216" class="small">H2D pinned async channel</text>
+        <rect x="585" y="160" width="210" height="92" class="box box-cyan"></rect>
+        <text x="622" y="192" class="small">HBM -> HBM</text>
+        <text x="622" y="216" class="small">same card / peer D2D</text>
+        <rect x="840" y="160" width="210" height="92" class="box box-cyan"></rect>
+        <text x="878" y="192" class="small">DDR -> DDR</text>
+        <text x="878" y="216" class="small">mmap CPU copy</text>
+        <text x="95" y="300" class="small">executor 只依赖 service-owned HBM VA 和 DDR mmap view；client-local copy 不进入正式路径。</text>
+      </svg>
+    </section>
+
+    <section>
+      <h2>6. 代码结构</h2>
+      <table>
+        <tr><th>路径</th><th>职责</th><th>架构评价</th></tr>
+        <tr><td><code>crates/uf-daemon/src/router.rs</code></td><td>op 分发、旧 op 统一 unsupported、command trace</td><td class="ok">边界清晰</td></tr>
+        <tr><td><code>object_service.rs</code></td><td>client/model/object/lease/state 生命周期</td><td class="ok">从 protocol 中拆出后更适合扩展</td></tr>
+        <tr><td><code>transfer_planner.rs</code></td><td>classify、cost、plan record</td><td class="ok">与 executor 分离，便于未来 topology cost</td></tr>
+        <tr><td><code>transfer_executor.rs</code></td><td>执行 transfer，维护 event 状态和 actual stats</td><td class="todo">后续可继续拆 path executor，但当前可接受</td></tr>
+        <tr><td><code>acl_backend/*</code></td><td>runtime、HBM、host、copy 的 ACL FFI 封装</td><td class="ok">替代原混合 hbm_backend</td></tr>
+        <tr><td><code>ddr_backend.rs</code></td><td>DDR mmap、pre-touch、NUMA/cgroup/statvfs</td><td class="ok">服务侧 DDR 能力集中</td></tr>
+        <tr><td><code>stats_service.rs</code></td><td>catalog snapshot 后锁外查 backend/channel stats</td><td class="ok">降低 monitor 常开干扰</td></tr>
+        <tr><td><code>trace_api.rs</code> / <code>trace.rs</code></td><td>trace 控制面和事件采集</td><td class="ok">和 monitor 解耦但共用 observability 出口</td></tr>
+        <tr><td><code>sdk/python/uflow/*</code></td><td>IDL、protocol、ACL bridge、object wrapper、transfer wrapper、client facade</td><td class="ok">SDK 主路径不再混入 client-local transfer worker</td></tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>7. Monitor 与 Trace</h2>
+      <div class="grid two">
+        <div class="card">
+          <h3>Monitor</h3>
+          <p><span class="tag">常开</span><span class="tag">低频</span><span class="tag">聚合</span></p>
+          <p><code>/healthz</code>、<code>/v1/stats</code>、<code>/v1/objects</code>、<code>/v1/capabilities</code>、<code>/v1/observability</code> 用于 UI/CLI 的服务状态监控。</p>
+        </div>
+        <div class="card">
+          <h3>Trace</h3>
+          <p><span class="tag">默认关闭</span><span class="tag">事件级</span><span class="tag">Chrome trace</span></p>
+          <p><code>/v1/trace/start|stop|flush</code> 控制细粒度采集；正式产物为 <code>trace_events.json</code>、<code>trace_summary.json</code>、<code>trace_summary.csv</code>、<code>summary.md</code>。</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>8. 测试矩阵</h2>
+      <table>
+        <tr><th>类别</th><th>用例</th><th>验收</th></tr>
+        <tr><td>Build</td><td><code>cargo fmt --all -- --check</code>、<code>cargo check --workspace</code>、<code>cargo build --workspace</code></td><td>Rust 模块拆分后可编译</td></tr>
+        <tr><td>Python</td><td><code>python -m compileall sdk/python/uflow tools/uflow_monitor_api.py</code></td><td>SDK / monitor 无语法错误</td></tr>
+        <tr><td>API cleanup</td><td>调用旧 op</td><td>返回 unsupported removed op</td></tr>
+        <tr><td>Object</td><td>HBM/DDR create/open/describe/release</td><td>lease、placement、address_kind 正确</td></tr>
+        <tr><td>Transfer</td><td>HBM->DDR、DDR->HBM、同卡 HBM->HBM、跨卡 HBM->HBM、DDR->DDR</td><td>event completed，数据校验通过</td></tr>
+        <tr><td>Channel</td><td>H2D/D2H 1/2/4 lanes、bidir、budget、reaper</td><td>lane stats 正确，无 silent fallback</td></tr>
+        <tr><td>Trace</td><td>disabled / hot / summary</td><td>disabled 不产物；hot trace 可解析</td></tr>
+        <tr><td>Monitor</td><td><code>/v1/observability</code>、<code>/v1/capabilities</code>、<code>/v1/command</code></td><td>状态、能力、command 透传正确</td></tr>
+        <tr><td>Cleanup</td><td>查进程和 NPU</td><td>无残留 daemon/benchmark/monitor，HBM 释放</td></tr>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

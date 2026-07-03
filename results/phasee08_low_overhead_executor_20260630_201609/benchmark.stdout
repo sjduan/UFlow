@@ -1,0 +1,2 @@
+UFLOW_E08_OUTPUT csv=/tmp/proj_output/phasee08_low_overhead_executor_20260630_201609/direct_executor_summary.csv summary=/tmp/proj_output/phasee08_low_overhead_executor_20260630_201609/summary.md
+UFLOW_E08_LOW_OVERHEAD_PASS sizes=64MiB,256MiB,1GiB,2GiB directions=h2d,d2h repeats=3 mode=auto

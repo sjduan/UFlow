@@ -1,0 +1,5709 @@
+{
+  "traceEvents": [
+    {
+      "name": "process_name",
+      "ph": "M",
+      "pid": 1,
+      "tid": 0,
+      "args": {
+        "name": "PhaseA-08 UFlow Direct Serving"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 1,
+      "tid": 10,
+      "args": {
+        "name": "pypto-serving"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 1,
+      "tid": 20,
+      "args": {
+        "name": "UFlow daemon"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 1,
+      "tid": 30,
+      "args": {
+        "name": "ACL stream"
+      }
+    },
+    {
+      "name": "thread_name",
+      "ph": "M",
+      "pid": 1,
+      "tid": 40,
+      "args": {
+        "name": "PyPTO layer task"
+      }
+    },
+    {
+      "name": "prefill.layer0",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 0.0,
+      "dur": 13703.765,
+      "args": {
+        "start_ns": 1782185707590357605,
+        "end_ns": 1782185707604061370
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 0.0,
+      "dur": 13703.765,
+      "args": {
+        "start_ns": 1782185707590357605,
+        "end_ns": 1782185707604061370
+      }
+    },
+    {
+      "name": "event 30000",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 8009690.293,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185715600047898,
+        "end_ns": 1782185715600547898
+      }
+    },
+    {
+      "name": "prefill.layer1",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 200229.633,
+      "dur": 12745.289,
+      "args": {
+        "start_ns": 1782185707790587238,
+        "end_ns": 1782185707803332527
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 200229.633,
+      "dur": 12745.289,
+      "args": {
+        "start_ns": 1782185707790587238,
+        "end_ns": 1782185707803332527
+      }
+    },
+    {
+      "name": "event 30001",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 9810997.386,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185717401354991,
+        "end_ns": 1782185717401854991
+      }
+    },
+    {
+      "name": "prefill.layer2",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 400476.236,
+      "dur": 12572.599,
+      "args": {
+        "start_ns": 1782185707990833841,
+        "end_ns": 1782185708003406440
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 400476.236,
+      "dur": 12572.599,
+      "args": {
+        "start_ns": 1782185707990833841,
+        "end_ns": 1782185708003406440
+      }
+    },
+    {
+      "name": "event 30002",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10311562.938,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185717901920543,
+        "end_ns": 1782185717902420543
+      }
+    },
+    {
+      "name": "prefill.layer3",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 600717.739,
+      "dur": 12444.588,
+      "args": {
+        "start_ns": 1782185708191075344,
+        "end_ns": 1782185708203519932
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 600717.739,
+      "dur": 12444.588,
+      "args": {
+        "start_ns": 1782185708191075344,
+        "end_ns": 1782185708203519932
+      }
+    },
+    {
+      "name": "event 30003",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10812177.571,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185718402535176,
+        "end_ns": 1782185718403035176
+      }
+    },
+    {
+      "name": "prefill.layer4",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 800971.782,
+      "dur": 12325.567,
+      "args": {
+        "start_ns": 1782185708391329387,
+        "end_ns": 1782185708403654954
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 800971.782,
+      "dur": 12325.567,
+      "args": {
+        "start_ns": 1782185708391329387,
+        "end_ns": 1782185708403654954
+      }
+    },
+    {
+      "name": "event 30004",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11312757.033,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185718903114638,
+        "end_ns": 1782185718903614638
+      }
+    },
+    {
+      "name": "prefill.layer5",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1001208.905,
+      "dur": 12202.757,
+      "args": {
+        "start_ns": 1782185708591566510,
+        "end_ns": 1782185708603769267
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 1001208.905,
+      "dur": 12202.757,
+      "args": {
+        "start_ns": 1782185708591566510,
+        "end_ns": 1782185708603769267
+      }
+    },
+    {
+      "name": "event 30005",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11813322.326,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185719403679931,
+        "end_ns": 1782185719404179931
+      }
+    },
+    {
+      "name": "prefill.layer6",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1201431.138,
+      "dur": 12117.036,
+      "args": {
+        "start_ns": 1782185708791788743,
+        "end_ns": 1782185708803905779
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 1201431.138,
+      "dur": 12117.036,
+      "args": {
+        "start_ns": 1782185708791788743,
+        "end_ns": 1782185708803905779
+      }
+    },
+    {
+      "name": "event 30006",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12313911.888,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185719904269493,
+        "end_ns": 1782185719904769493
+      }
+    },
+    {
+      "name": "prefill.layer7",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1401686.261,
+      "dur": 12322.478,
+      "args": {
+        "start_ns": 1782185708992043866,
+        "end_ns": 1782185709004366344
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 1401686.261,
+      "dur": 12322.478,
+      "args": {
+        "start_ns": 1782185708992043866,
+        "end_ns": 1782185709004366344
+      }
+    },
+    {
+      "name": "event 30007",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12814497.651,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185720404855256,
+        "end_ns": 1782185720405355256
+      }
+    },
+    {
+      "name": "prefill.layer8",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1601936.444,
+      "dur": 12155.087,
+      "args": {
+        "start_ns": 1782185709192294049,
+        "end_ns": 1782185709204449136
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 1601936.444,
+      "dur": 12155.087,
+      "args": {
+        "start_ns": 1782185709192294049,
+        "end_ns": 1782185709204449136
+      }
+    },
+    {
+      "name": "event 30008",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13315064.033,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185720905421638,
+        "end_ns": 1782185720905921638
+      }
+    },
+    {
+      "name": "prefill.layer9",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1802180.057,
+      "dur": 12069.786,
+      "args": {
+        "start_ns": 1782185709392537662,
+        "end_ns": 1782185709404607448
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 1802180.057,
+      "dur": 12069.786,
+      "args": {
+        "start_ns": 1782185709392537662,
+        "end_ns": 1782185709404607448
+      }
+    },
+    {
+      "name": "event 30009",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13815618.726,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185721405976331,
+        "end_ns": 1782185721406476331
+      }
+    },
+    {
+      "name": "prefill.layer10",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2002397.86,
+      "dur": 12100.266,
+      "args": {
+        "start_ns": 1782185709592755465,
+        "end_ns": 1782185709604855731
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 2002397.86,
+      "dur": 12100.266,
+      "args": {
+        "start_ns": 1782185709592755465,
+        "end_ns": 1782185709604855731
+      }
+    },
+    {
+      "name": "event 30010",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14316217.308,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185721906574913,
+        "end_ns": 1782185721907074913
+      }
+    },
+    {
+      "name": "prefill.layer11",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2202654.794,
+      "dur": 12041.455,
+      "args": {
+        "start_ns": 1782185709793012399,
+        "end_ns": 1782185709805053854
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 2202654.794,
+      "dur": 12041.455,
+      "args": {
+        "start_ns": 1782185709793012399,
+        "end_ns": 1782185709805053854
+      }
+    },
+    {
+      "name": "event 30011",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14816807.391,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185722407164996,
+        "end_ns": 1782185722407664996
+      }
+    },
+    {
+      "name": "prefill.layer12",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2402896.137,
+      "dur": 12093.076,
+      "args": {
+        "start_ns": 1782185709993253742,
+        "end_ns": 1782185710005346818
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 2402896.137,
+      "dur": 12093.076,
+      "args": {
+        "start_ns": 1782185709993253742,
+        "end_ns": 1782185710005346818
+      }
+    },
+    {
+      "name": "event 30012",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15317392.264,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185722907749869,
+        "end_ns": 1782185722908249869
+      }
+    },
+    {
+      "name": "prefill.layer13",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2603179.75,
+      "dur": 12052.616,
+      "args": {
+        "start_ns": 1782185710193537355,
+        "end_ns": 1782185710205589971
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 2603179.75,
+      "dur": 12052.616,
+      "args": {
+        "start_ns": 1782185710193537355,
+        "end_ns": 1782185710205589971
+      }
+    },
+    {
+      "name": "event 30013",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15817990.846,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185723408348451,
+        "end_ns": 1782185723408848451
+      }
+    },
+    {
+      "name": "prefill.layer14",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2803396.623,
+      "dur": 12089.456,
+      "args": {
+        "start_ns": 1782185710393754228,
+        "end_ns": 1782185710405843684
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 2803396.623,
+      "dur": 12089.456,
+      "args": {
+        "start_ns": 1782185710393754228,
+        "end_ns": 1782185710405843684
+      }
+    },
+    {
+      "name": "event 30014",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16318566.339,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185723908923944,
+        "end_ns": 1782185723909423944
+      }
+    },
+    {
+      "name": "prefill.layer15",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3003638.546,
+      "dur": 12071.316,
+      "args": {
+        "start_ns": 1782185710593996151,
+        "end_ns": 1782185710606067467
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 3003638.546,
+      "dur": 12071.316,
+      "args": {
+        "start_ns": 1782185710593996151,
+        "end_ns": 1782185710606067467
+      }
+    },
+    {
+      "name": "event 30015",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16819156.721,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185724409514326,
+        "end_ns": 1782185724410014326
+      }
+    },
+    {
+      "name": "prefill.layer16",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3203889.309,
+      "dur": 12183.407,
+      "args": {
+        "start_ns": 1782185710794246914,
+        "end_ns": 1782185710806430321
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 3203889.309,
+      "dur": 12183.407,
+      "args": {
+        "start_ns": 1782185710794246914,
+        "end_ns": 1782185710806430321
+      }
+    },
+    {
+      "name": "event 30016",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17319770.354,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185724910127959,
+        "end_ns": 1782185724910627959
+      }
+    },
+    {
+      "name": "prefill.layer17",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3404137.782,
+      "dur": 12140.066,
+      "args": {
+        "start_ns": 1782185710994495387,
+        "end_ns": 1782185711006635453
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 3404137.782,
+      "dur": 12140.066,
+      "args": {
+        "start_ns": 1782185710994495387,
+        "end_ns": 1782185711006635453
+      }
+    },
+    {
+      "name": "event 30017",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17820388.607,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185725410746212,
+        "end_ns": 1782185725411246212
+      }
+    },
+    {
+      "name": "prefill.layer18",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3604395.865,
+      "dur": 12193.687,
+      "args": {
+        "start_ns": 1782185711194753470,
+        "end_ns": 1782185711206947157
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 3604395.865,
+      "dur": 12193.687,
+      "args": {
+        "start_ns": 1782185711194753470,
+        "end_ns": 1782185711206947157
+      }
+    },
+    {
+      "name": "event 30018",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18320950.289,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185725911307894,
+        "end_ns": 1782185725911807894
+      }
+    },
+    {
+      "name": "prefill.layer19",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3804648.128,
+      "dur": 12570.199,
+      "args": {
+        "start_ns": 1782185711395005733,
+        "end_ns": 1782185711407575932
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 3804648.128,
+      "dur": 12570.199,
+      "args": {
+        "start_ns": 1782185711395005733,
+        "end_ns": 1782185711407575932
+      }
+    },
+    {
+      "name": "event 30019",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18821533.442,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185726411891047,
+        "end_ns": 1782185726412391047
+      }
+    },
+    {
+      "name": "prefill.layer20",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4004876.691,
+      "dur": 12278.967,
+      "args": {
+        "start_ns": 1782185711595234296,
+        "end_ns": 1782185711607513263
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 4004876.691,
+      "dur": 12278.967,
+      "args": {
+        "start_ns": 1782185711595234296,
+        "end_ns": 1782185711607513263
+      }
+    },
+    {
+      "name": "event 30020",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19322083.584,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185726912441189,
+        "end_ns": 1782185726912941189
+      }
+    },
+    {
+      "name": "prefill.layer21",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4205106.034,
+      "dur": 12089.676,
+      "args": {
+        "start_ns": 1782185711795463639,
+        "end_ns": 1782185711807553315
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 4205106.034,
+      "dur": 12089.676,
+      "args": {
+        "start_ns": 1782185711795463639,
+        "end_ns": 1782185711807553315
+      }
+    },
+    {
+      "name": "event 30021",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19822686.777,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185727413044382,
+        "end_ns": 1782185727413544382
+      }
+    },
+    {
+      "name": "prefill.layer22",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4405350.998,
+      "dur": 12063.845,
+      "args": {
+        "start_ns": 1782185711995708603,
+        "end_ns": 1782185712007772448
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 4405350.998,
+      "dur": 12063.845,
+      "args": {
+        "start_ns": 1782185711995708603,
+        "end_ns": 1782185712007772448
+      }
+    },
+    {
+      "name": "event 30022",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20323281.379,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185727913638984,
+        "end_ns": 1782185727914138984
+      }
+    },
+    {
+      "name": "prefill.layer23",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4605594.291,
+      "dur": 12252.246,
+      "args": {
+        "start_ns": 1782185712195951896,
+        "end_ns": 1782185712208204142
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 4605594.291,
+      "dur": 12252.246,
+      "args": {
+        "start_ns": 1782185712195951896,
+        "end_ns": 1782185712208204142
+      }
+    },
+    {
+      "name": "event 30023",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20823854.692,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185728414212297,
+        "end_ns": 1782185728414712297
+      }
+    },
+    {
+      "name": "prefill.layer24",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4805796.673,
+      "dur": 12110.937,
+      "args": {
+        "start_ns": 1782185712396154278,
+        "end_ns": 1782185712408265215
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 4805796.673,
+      "dur": 12110.937,
+      "args": {
+        "start_ns": 1782185712396154278,
+        "end_ns": 1782185712408265215
+      }
+    },
+    {
+      "name": "event 30024",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21324479.055,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185728914836660,
+        "end_ns": 1782185728915336660
+      }
+    },
+    {
+      "name": "prefill.layer25",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5006021.376,
+      "dur": 12034.796,
+      "args": {
+        "start_ns": 1782185712596378981,
+        "end_ns": 1782185712608413777
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 5006021.376,
+      "dur": 12034.796,
+      "args": {
+        "start_ns": 1782185712596378981,
+        "end_ns": 1782185712608413777
+      }
+    },
+    {
+      "name": "event 30025",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21825079.977,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185729415437582,
+        "end_ns": 1782185729415937582
+      }
+    },
+    {
+      "name": "prefill.layer26",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5206268.75,
+      "dur": 12090.096,
+      "args": {
+        "start_ns": 1782185712796626355,
+        "end_ns": 1782185712808716451
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 5206268.75,
+      "dur": 12090.096,
+      "args": {
+        "start_ns": 1782185712796626355,
+        "end_ns": 1782185712808716451
+      }
+    },
+    {
+      "name": "event 30026",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22325690.14,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185729916047745,
+        "end_ns": 1782185729916547745
+      }
+    },
+    {
+      "name": "prefill.layer27",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5406503.663,
+      "dur": 12488.988,
+      "args": {
+        "start_ns": 1782185712996861268,
+        "end_ns": 1782185713009350256
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 5406503.663,
+      "dur": 12488.988,
+      "args": {
+        "start_ns": 1782185712996861268,
+        "end_ns": 1782185713009350256
+      }
+    },
+    {
+      "name": "event 30027",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22826261.622,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185730416619227,
+        "end_ns": 1782185730417119227
+      }
+    },
+    {
+      "name": "prefill.layer28",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5606742.326,
+      "dur": 12326.177,
+      "args": {
+        "start_ns": 1782185713197099931,
+        "end_ns": 1782185713209426108
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 5606742.326,
+      "dur": 12326.177,
+      "args": {
+        "start_ns": 1782185713197099931,
+        "end_ns": 1782185713209426108
+      }
+    },
+    {
+      "name": "event 30028",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23326865.275,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185730917222880,
+        "end_ns": 1782185730917722880
+      }
+    },
+    {
+      "name": "prefill.layer29",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5806993.409,
+      "dur": 12167.726,
+      "args": {
+        "start_ns": 1782185713397351014,
+        "end_ns": 1782185713409518740
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 5806993.409,
+      "dur": 12167.726,
+      "args": {
+        "start_ns": 1782185713397351014,
+        "end_ns": 1782185713409518740
+      }
+    },
+    {
+      "name": "event 30029",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23827512.248,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185731417869853,
+        "end_ns": 1782185731418369853
+      }
+    },
+    {
+      "name": "prefill.layer30",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6007182.732,
+      "dur": 12520.858,
+      "args": {
+        "start_ns": 1782185713597540337,
+        "end_ns": 1782185713610061195
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 6007182.732,
+      "dur": 12520.858,
+      "args": {
+        "start_ns": 1782185713597540337,
+        "end_ns": 1782185713610061195
+      }
+    },
+    {
+      "name": "event 30030",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24328035.24,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185731918392845,
+        "end_ns": 1782185731918892845
+      }
+    },
+    {
+      "name": "prefill.layer31",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6207424.005,
+      "dur": 12248.216,
+      "args": {
+        "start_ns": 1782185713797781610,
+        "end_ns": 1782185713810029826
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 6207424.005,
+      "dur": 12248.216,
+      "args": {
+        "start_ns": 1782185713797781610,
+        "end_ns": 1782185713810029826
+      }
+    },
+    {
+      "name": "event 30031",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24828655.613,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185732419013218,
+        "end_ns": 1782185732419513218
+      }
+    },
+    {
+      "name": "prefill.layer32",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6407665.928,
+      "dur": 12134.146,
+      "args": {
+        "start_ns": 1782185713998023533,
+        "end_ns": 1782185714010157679
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 6407665.928,
+      "dur": 12134.146,
+      "args": {
+        "start_ns": 1782185713998023533,
+        "end_ns": 1782185714010157679
+      }
+    },
+    {
+      "name": "event 30032",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25329278.766,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185732919636371,
+        "end_ns": 1782185732920136371
+      }
+    },
+    {
+      "name": "prefill.layer33",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6607910.881,
+      "dur": 12248.187,
+      "args": {
+        "start_ns": 1782185714198268486,
+        "end_ns": 1782185714210516673
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 6607910.881,
+      "dur": 12248.187,
+      "args": {
+        "start_ns": 1782185714198268486,
+        "end_ns": 1782185714210516673
+      }
+    },
+    {
+      "name": "event 30033",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25829801.978,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185733420159583,
+        "end_ns": 1782185733420659583
+      }
+    },
+    {
+      "name": "prefill.layer34",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6808146.754,
+      "dur": 12188.116,
+      "args": {
+        "start_ns": 1782185714398504359,
+        "end_ns": 1782185714410692475
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 6808146.754,
+      "dur": 12188.116,
+      "args": {
+        "start_ns": 1782185714398504359,
+        "end_ns": 1782185714410692475
+      }
+    },
+    {
+      "name": "event 30034",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26330365.23,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185733920722835,
+        "end_ns": 1782185733921222835
+      }
+    },
+    {
+      "name": "prefill.layer35",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7008380.357,
+      "dur": 12122.016,
+      "args": {
+        "start_ns": 1782185714598737962,
+        "end_ns": 1782185714610859978
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 7008380.357,
+      "dur": 12122.016,
+      "args": {
+        "start_ns": 1782185714598737962,
+        "end_ns": 1782185714610859978
+      }
+    },
+    {
+      "name": "event 30035",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26830984.673,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185734421342278,
+        "end_ns": 1782185734421842278
+      }
+    },
+    {
+      "name": "prefill.layer36",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7208623.91,
+      "dur": 12210.967,
+      "args": {
+        "start_ns": 1782185714798981515,
+        "end_ns": 1782185714811192482
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 7208623.91,
+      "dur": 12210.967,
+      "args": {
+        "start_ns": 1782185714798981515,
+        "end_ns": 1782185714811192482
+      }
+    },
+    {
+      "name": "event 30036",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27331553.216,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185734921910821,
+        "end_ns": 1782185734922410821
+      }
+    },
+    {
+      "name": "prefill.layer37",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7408869.873,
+      "dur": 12093.426,
+      "args": {
+        "start_ns": 1782185714999227478,
+        "end_ns": 1782185715011320904
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 7408869.873,
+      "dur": 12093.426,
+      "args": {
+        "start_ns": 1782185714999227478,
+        "end_ns": 1782185715011320904
+      }
+    },
+    {
+      "name": "event 30037",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27832159.438,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185735422517043,
+        "end_ns": 1782185735423017043
+      }
+    },
+    {
+      "name": "prefill.layer38",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7609110.326,
+      "dur": 12189.127,
+      "args": {
+        "start_ns": 1782185715199467931,
+        "end_ns": 1782185715211657058
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 7609110.326,
+      "dur": 12189.127,
+      "args": {
+        "start_ns": 1782185715199467931,
+        "end_ns": 1782185715211657058
+      }
+    },
+    {
+      "name": "event 30038",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28332757.251,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185735923114856,
+        "end_ns": 1782185735923614856
+      }
+    },
+    {
+      "name": "prefill.layer39",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7809345.809,
+      "dur": 12094.056,
+      "args": {
+        "start_ns": 1782185715399703414,
+        "end_ns": 1782185715411797470
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 7809345.809,
+      "dur": 12094.056,
+      "args": {
+        "start_ns": 1782185715399703414,
+        "end_ns": 1782185715411797470
+      }
+    },
+    {
+      "name": "event 30039",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28833345.084,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185736423702689,
+        "end_ns": 1782185736424202689
+      }
+    },
+    {
+      "name": "decode.decode_input_rms_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36148953.728,
+      "dur": 2355.142,
+      "args": {
+        "start_ns": 1782185743739311333,
+        "end_ns": 1782185743741666475
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 36148953.728,
+      "dur": 2355.142,
+      "args": {
+        "start_ns": 1782185743739311333,
+        "end_ns": 1782185743741666475
+      }
+    },
+    {
+      "name": "event 30040",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 36349420.352,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185743939777957,
+        "end_ns": 1782185743940277957
+      }
+    },
+    {
+      "name": "decode.decode_wq",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36649571.35,
+      "dur": 37810.357,
+      "args": {
+        "start_ns": 1782185744239928955,
+        "end_ns": 1782185744277739312
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 36649571.35,
+      "dur": 37810.357,
+      "args": {
+        "start_ns": 1782185744239928955,
+        "end_ns": 1782185744277739312
+      }
+    },
+    {
+      "name": "event 30041",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 36849977.634,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185744440335239,
+        "end_ns": 1782185744440835239
+      }
+    },
+    {
+      "name": "decode.decode_wk",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37150177.003,
+      "dur": 8589.127,
+      "args": {
+        "start_ns": 1782185744740534608,
+        "end_ns": 1782185744749123735
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 37150177.003,
+      "dur": 8589.127,
+      "args": {
+        "start_ns": 1782185744740534608,
+        "end_ns": 1782185744749123735
+      }
+    },
+    {
+      "name": "event 30042",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 37350500.187,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185744940857792,
+        "end_ns": 1782185744941357792
+      }
+    },
+    {
+      "name": "decode.decode_wv",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37650769.426,
+      "dur": 8627.237,
+      "args": {
+        "start_ns": 1782185745241127031,
+        "end_ns": 1782185745249754268
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 37650769.426,
+      "dur": 8627.237,
+      "args": {
+        "start_ns": 1782185745241127031,
+        "end_ns": 1782185745249754268
+      }
+    },
+    {
+      "name": "event 30043",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 37851164.36,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185745441521965,
+        "end_ns": 1782185745442021965
+      }
+    },
+    {
+      "name": "decode.decode_q_norm_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38151385.058,
+      "dur": 1410.268,
+      "args": {
+        "start_ns": 1782185745741742663,
+        "end_ns": 1782185745743152931
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 38151385.058,
+      "dur": 1410.268,
+      "args": {
+        "start_ns": 1782185745741742663,
+        "end_ns": 1782185745743152931
+      }
+    },
+    {
+      "name": "event 30044",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 38351795.712,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185745942153317,
+        "end_ns": 1782185745942653317
+      }
+    },
+    {
+      "name": "decode.decode_k_norm_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38652028.731,
+      "dur": 1770.52,
+      "args": {
+        "start_ns": 1782185746242386336,
+        "end_ns": 1782185746244156856
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 38652028.731,
+      "dur": 1770.52,
+      "args": {
+        "start_ns": 1782185746242386336,
+        "end_ns": 1782185746244156856
+      }
+    },
+    {
+      "name": "event 30045",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 38852377.975,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185746442735580,
+        "end_ns": 1782185746443235580
+      }
+    },
+    {
+      "name": "decode.decode_wo",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39152636.664,
+      "dur": 35805.245,
+      "args": {
+        "start_ns": 1782185746742994269,
+        "end_ns": 1782185746778799514
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 39152636.664,
+      "dur": 35805.245,
+      "args": {
+        "start_ns": 1782185746742994269,
+        "end_ns": 1782185746778799514
+      }
+    },
+    {
+      "name": "event 30046",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 39353040.778,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185746943398383,
+        "end_ns": 1782185746943898383
+      }
+    },
+    {
+      "name": "decode.decode_post_rms_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39653256.907,
+      "dur": 1730.419,
+      "args": {
+        "start_ns": 1782185747243614512,
+        "end_ns": 1782185747245344931
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 39653256.907,
+      "dur": 1730.419,
+      "args": {
+        "start_ns": 1782185747243614512,
+        "end_ns": 1782185747245344931
+      }
+    },
+    {
+      "name": "event 30047",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 39853579.13,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185747443936735,
+        "end_ns": 1782185747444436735
+      }
+    },
+    {
+      "name": "decode.decode_w_gate",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40153844.879,
+      "dur": 118222.756,
+      "args": {
+        "start_ns": 1782185747744202484,
+        "end_ns": 1782185747862425240
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 40153844.879,
+      "dur": 118222.756,
+      "args": {
+        "start_ns": 1782185747744202484,
+        "end_ns": 1782185747862425240
+      }
+    },
+    {
+      "name": "event 30048",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 40354193.353,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185747944550958,
+        "end_ns": 1782185747945050958
+      }
+    },
+    {
+      "name": "decode.decode_w_up",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40654426.382,
+      "dur": 118142.525,
+      "args": {
+        "start_ns": 1782185748244783987,
+        "end_ns": 1782185748362926512
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 40654426.382,
+      "dur": 118142.525,
+      "args": {
+        "start_ns": 1782185748244783987,
+        "end_ns": 1782185748362926512
+      }
+    },
+    {
+      "name": "event 30049",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 40854778.586,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185748445136191,
+        "end_ns": 1782185748445636191
+      }
+    },
+    {
+      "name": "decode.decode_w_down",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41155055.545,
+      "dur": 118130.954,
+      "args": {
+        "start_ns": 1782185748745413150,
+        "end_ns": 1782185748863544104
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 41155055.545,
+      "dur": 118130.954,
+      "args": {
+        "start_ns": 1782185748745413150,
+        "end_ns": 1782185748863544104
+      }
+    },
+    {
+      "name": "event 30050",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 41355456.919,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185748945814524,
+        "end_ns": 1782185748946314524
+      }
+    },
+    {
+      "name": "decode.final_norm_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41655683.867,
+      "dur": 1691.92,
+      "args": {
+        "start_ns": 1782185749246041472,
+        "end_ns": 1782185749247733392
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 41655683.867,
+      "dur": 1691.92,
+      "args": {
+        "start_ns": 1782185749246041472,
+        "end_ns": 1782185749247733392
+      }
+    },
+    {
+      "name": "event 30051",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 41856058.971,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185749446416576,
+        "end_ns": 1782185749446916576
+      }
+    },
+    {
+      "name": "decode.padded_lm_head_weight",
+      "cat": "uflow,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 42156260.13,
+      "dur": 27630.751,
+      "args": {
+        "start_ns": 1782185749746617735,
+        "end_ns": 1782185749774248486
+      }
+    },
+    {
+      "name": "acl_direct_async_thp",
+      "cat": "acl,transfer",
+      "ph": "X",
+      "pid": 1,
+      "tid": 30,
+      "ts": 42156260.13,
+      "dur": 27630.751,
+      "args": {
+        "start_ns": 1782185749746617735,
+        "end_ns": 1782185749774248486
+      }
+    },
+    {
+      "name": "event 30052",
+      "cat": "serving",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 42356606.864,
+      "dur": 500.0,
+      "args": {
+        "start_ns": 1782185749946964469,
+        "end_ns": 1782185749947464469
+      }
+    },
+    {
+      "name": "prefill.layer0",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 7809709.621,
+      "dur": 1811654.049,
+      "args": {
+        "start_ns": 1782185715400067226,
+        "end_ns": 1782185717211721275
+      }
+    },
+    {
+      "name": "prefill.layer1",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 9621401.141,
+      "dur": 500053.969,
+      "args": {
+        "start_ns": 1782185717211758746,
+        "end_ns": 1782185717711812715
+      }
+    },
+    {
+      "name": "prefill.layer2",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 10121735.742,
+      "dur": 499984.529,
+      "args": {
+        "start_ns": 1782185717712093347,
+        "end_ns": 1782185718212077876
+      }
+    },
+    {
+      "name": "prefill.layer3",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 10621919.772,
+      "dur": 499789.858,
+      "args": {
+        "start_ns": 1782185718212277377,
+        "end_ns": 1782185718712067235
+      }
+    },
+    {
+      "name": "prefill.layer4",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 11121896.231,
+      "dur": 500821.114,
+      "args": {
+        "start_ns": 1782185718712253836,
+        "end_ns": 1782185719213074950
+      }
+    },
+    {
+      "name": "prefill.layer5",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 11622918.616,
+      "dur": 499761.668,
+      "args": {
+        "start_ns": 1782185719213276221,
+        "end_ns": 1782185719713037889
+      }
+    },
+    {
+      "name": "prefill.layer6",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 12122852.485,
+      "dur": 499724.568,
+      "args": {
+        "start_ns": 1782185719713210090,
+        "end_ns": 1782185720212934658
+      }
+    },
+    {
+      "name": "prefill.layer7",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 12622774.294,
+      "dur": 500794.154,
+      "args": {
+        "start_ns": 1782185720213131899,
+        "end_ns": 1782185720713926053
+      }
+    },
+    {
+      "name": "prefill.layer8",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 13123740.439,
+      "dur": 501586.318,
+      "args": {
+        "start_ns": 1782185720714098044,
+        "end_ns": 1782185721215684362
+      }
+    },
+    {
+      "name": "prefill.layer9",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 13625524.328,
+      "dur": 499663.178,
+      "args": {
+        "start_ns": 1782185721215881933,
+        "end_ns": 1782185721715545111
+      }
+    },
+    {
+      "name": "prefill.layer10",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 14125359.087,
+      "dur": 499768.338,
+      "args": {
+        "start_ns": 1782185721715716692,
+        "end_ns": 1782185722215485030
+      }
+    },
+    {
+      "name": "prefill.layer11",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 14625314.796,
+      "dur": 500779.033,
+      "args": {
+        "start_ns": 1782185722215672401,
+        "end_ns": 1782185722716451434
+      }
+    },
+    {
+      "name": "prefill.layer12",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 15126265.31,
+      "dur": 500434.692,
+      "args": {
+        "start_ns": 1782185722716622915,
+        "end_ns": 1782185723217057607
+      }
+    },
+    {
+      "name": "prefill.layer13",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 15626890.023,
+      "dur": 500496.422,
+      "args": {
+        "start_ns": 1782185723217247628,
+        "end_ns": 1782185723717744050
+      }
+    },
+    {
+      "name": "prefill.layer14",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 16127567.406,
+      "dur": 500215.891,
+      "args": {
+        "start_ns": 1782185723717925011,
+        "end_ns": 1782185724218140902
+      }
+    },
+    {
+      "name": "prefill.layer15",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 16627963.148,
+      "dur": 501459.067,
+      "args": {
+        "start_ns": 1782185724218320753,
+        "end_ns": 1782185724719779820
+      }
+    },
+    {
+      "name": "prefill.layer16",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 17129594.296,
+      "dur": 498913.393,
+      "args": {
+        "start_ns": 1782185724719951901,
+        "end_ns": 1782185725218865294
+      }
+    },
+    {
+      "name": "prefill.layer17",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 17628704.03,
+      "dur": 500041.13,
+      "args": {
+        "start_ns": 1782185725219061635,
+        "end_ns": 1782185725719102765
+      }
+    },
+    {
+      "name": "prefill.layer18",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 18128920.091,
+      "dur": 499941.979,
+      "args": {
+        "start_ns": 1782185725719277696,
+        "end_ns": 1782185726219219675
+      }
+    },
+    {
+      "name": "prefill.layer19",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 18629049.731,
+      "dur": 501122.436,
+      "args": {
+        "start_ns": 1782185726219407336,
+        "end_ns": 1782185726720529772
+      }
+    },
+    {
+      "name": "prefill.layer20",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 19130362.638,
+      "dur": 500097.529,
+      "args": {
+        "start_ns": 1782185726720720243,
+        "end_ns": 1782185727220817772
+      }
+    },
+    {
+      "name": "prefill.layer21",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 19630660.099,
+      "dur": 501090.035,
+      "args": {
+        "start_ns": 1782185727221017704,
+        "end_ns": 1782185727722107739
+      }
+    },
+    {
+      "name": "prefill.layer22",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 20131933.445,
+      "dur": 500980.765,
+      "args": {
+        "start_ns": 1782185727722291050,
+        "end_ns": 1782185728223271815
+      }
+    },
+    {
+      "name": "prefill.layer23",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 20633105.431,
+      "dur": 500562.072,
+      "args": {
+        "start_ns": 1782185728223463036,
+        "end_ns": 1782185728724025108
+      }
+    },
+    {
+      "name": "prefill.layer24",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 21133850.634,
+      "dur": 500599.693,
+      "args": {
+        "start_ns": 1782185728724208239,
+        "end_ns": 1782185729224807932
+      }
+    },
+    {
+      "name": "prefill.layer25",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 21634628.868,
+      "dur": 501532.667,
+      "args": {
+        "start_ns": 1782185729224986473,
+        "end_ns": 1782185729726519140
+      }
+    },
+    {
+      "name": "prefill.layer26",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 22136341.106,
+      "dur": 498375.021,
+      "args": {
+        "start_ns": 1782185729726698711,
+        "end_ns": 1782185730225073732
+      }
+    },
+    {
+      "name": "prefill.layer27",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 22634916.228,
+      "dur": 500424.742,
+      "args": {
+        "start_ns": 1782185730225273833,
+        "end_ns": 1782185730725698575
+      }
+    },
+    {
+      "name": "prefill.layer28",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 23135524.051,
+      "dur": 500060.929,
+      "args": {
+        "start_ns": 1782185730725881656,
+        "end_ns": 1782185731225942585
+      }
+    },
+    {
+      "name": "prefill.layer29",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 23635784.491,
+      "dur": 500750.814,
+      "args": {
+        "start_ns": 1782185731226142096,
+        "end_ns": 1782185731726892910
+      }
+    },
+    {
+      "name": "prefill.layer30",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 24136706.706,
+      "dur": 499587.977,
+      "args": {
+        "start_ns": 1782185731727064311,
+        "end_ns": 1782185732226652288
+      }
+    },
+    {
+      "name": "prefill.layer31",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 24636497.494,
+      "dur": 501660.339,
+      "args": {
+        "start_ns": 1782185732226855099,
+        "end_ns": 1782185732728515438
+      }
+    },
+    {
+      "name": "prefill.layer32",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 25138349.184,
+      "dur": 499124.244,
+      "args": {
+        "start_ns": 1782185732728706789,
+        "end_ns": 1782185733227831033
+      }
+    },
+    {
+      "name": "prefill.layer33",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 25637655.429,
+      "dur": 501773.399,
+      "args": {
+        "start_ns": 1782185733228013034,
+        "end_ns": 1782185733729786433
+      }
+    },
+    {
+      "name": "prefill.layer34",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 26139615.829,
+      "dur": 500325.631,
+      "args": {
+        "start_ns": 1782185733729973434,
+        "end_ns": 1782185734230299065
+      }
+    },
+    {
+      "name": "prefill.layer35",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 26640143.391,
+      "dur": 498728.093,
+      "args": {
+        "start_ns": 1782185734230500996,
+        "end_ns": 1782185734729229089
+      }
+    },
+    {
+      "name": "prefill.layer36",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 27139049.065,
+      "dur": 500837.374,
+      "args": {
+        "start_ns": 1782185734729406670,
+        "end_ns": 1782185735230244044
+      }
+    },
+    {
+      "name": "prefill.layer37",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 27640076.92,
+      "dur": 500261.291,
+      "args": {
+        "start_ns": 1782185735230434525,
+        "end_ns": 1782185735730695816
+      }
+    },
+    {
+      "name": "prefill.layer38",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 28140520.482,
+      "dur": 500858.244,
+      "args": {
+        "start_ns": 1782185735730878087,
+        "end_ns": 1782185736231736331
+      }
+    },
+    {
+      "name": "prefill.layer39",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 28641601.577,
+      "dur": 500086.51,
+      "args": {
+        "start_ns": 1782185736231959182,
+        "end_ns": 1782185736732045692
+      }
+    },
+    {
+      "name": "decode.compute",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 42356859.745,
+      "dur": 308152.632,
+      "args": {
+        "start_ns": 1782185749947217350,
+        "end_ns": 1782185750255369982
+      }
+    },
+    {
+      "name": "decode.compute",
+      "cat": "pypto,compute",
+      "ph": "X",
+      "pid": 1,
+      "tid": 40,
+      "ts": 42680657.532,
+      "dur": 314339.076,
+      "args": {
+        "start_ns": 1782185750271015137,
+        "end_ns": 1782185750585354213
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer0",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 7766360.865,
+      "dur": 144806.77,
+      "args": {
+        "event_id": "30000",
+        "plan_id": "20001",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer0",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 7911167.635,
+      "dur": 98522.658,
+      "args": {
+        "event_id": "30000",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer0",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 0.0,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30000",
+        "plan_id": "20001"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 13703.765,
+      "args": {
+        "event_id": "30000",
+        "plan_id": "20001",
+        "stage": "prefill",
+        "label": "layer0",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 13703.765,
+        "actual_bandwidth_gib_s": 44.898
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer1",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 9523296.405,
+      "dur": 200156.563,
+      "args": {
+        "event_id": "30001",
+        "plan_id": "20003",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer1",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 9723452.968,
+      "dur": 87544.418,
+      "args": {
+        "event_id": "30001",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer1",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 200229.633,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30001",
+        "plan_id": "20003"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 212974.922,
+      "args": {
+        "event_id": "30001",
+        "plan_id": "20003",
+        "stage": "prefill",
+        "label": "layer1",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12745.289,
+        "actual_bandwidth_gib_s": 48.275
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer2",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10024063.279,
+      "dur": 200223.073,
+      "args": {
+        "event_id": "30002",
+        "plan_id": "20005",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer2",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10224286.352,
+      "dur": 87276.586,
+      "args": {
+        "event_id": "30002",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer2",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 400476.236,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30002",
+        "plan_id": "20005"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 413048.835,
+      "args": {
+        "event_id": "30002",
+        "plan_id": "20005",
+        "stage": "prefill",
+        "label": "layer2",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12572.599,
+        "actual_bandwidth_gib_s": 48.938
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer3",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10524267.869,
+      "dur": 200234.853,
+      "args": {
+        "event_id": "30003",
+        "plan_id": "20007",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer3",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 10724502.722,
+      "dur": 87674.849,
+      "args": {
+        "event_id": "30003",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer3",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 600717.739,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30003",
+        "plan_id": "20007"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 613162.327,
+      "args": {
+        "event_id": "30003",
+        "plan_id": "20007",
+        "stage": "prefill",
+        "label": "layer3",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12444.588,
+        "actual_bandwidth_gib_s": 49.441
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer4",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11024046.538,
+      "dur": 200246.393,
+      "args": {
+        "event_id": "30004",
+        "plan_id": "20009",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer4",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11224292.931,
+      "dur": 88464.102,
+      "args": {
+        "event_id": "30004",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer4",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 800971.782,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30004",
+        "plan_id": "20009"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 813297.349,
+      "args": {
+        "event_id": "30004",
+        "plan_id": "20009",
+        "stage": "prefill",
+        "label": "layer4",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12325.567,
+        "actual_bandwidth_gib_s": 49.918
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer5",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11525176.213,
+      "dur": 200232.743,
+      "args": {
+        "event_id": "30005",
+        "plan_id": "20011",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer5",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 11725408.956,
+      "dur": 87913.37,
+      "args": {
+        "event_id": "30005",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer5",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1001208.905,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30005",
+        "plan_id": "20011"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1013411.662,
+      "args": {
+        "event_id": "30005",
+        "plan_id": "20011",
+        "stage": "prefill",
+        "label": "layer5",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12202.757,
+        "actual_bandwidth_gib_s": 50.421
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer6",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12024980.351,
+      "dur": 200205.723,
+      "args": {
+        "event_id": "30006",
+        "plan_id": "20013",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer6",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12225186.074,
+      "dur": 88725.814,
+      "args": {
+        "event_id": "30006",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer6",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1201431.138,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30006",
+        "plan_id": "20013"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1213548.174,
+      "args": {
+        "event_id": "30006",
+        "plan_id": "20013",
+        "stage": "prefill",
+        "label": "layer6",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12117.036,
+        "actual_bandwidth_gib_s": 50.778
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer7",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12524991.531,
+      "dur": 200263.723,
+      "args": {
+        "event_id": "30007",
+        "plan_id": "20015",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer7",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 12725255.254,
+      "dur": 89242.397,
+      "args": {
+        "event_id": "30007",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer7",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1401686.261,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30007",
+        "plan_id": "20015"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1414008.739,
+      "args": {
+        "event_id": "30007",
+        "plan_id": "20015",
+        "stage": "prefill",
+        "label": "layer7",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12322.478,
+        "actual_bandwidth_gib_s": 49.931
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer8",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13025927.605,
+      "dur": 200222.073,
+      "args": {
+        "event_id": "30008",
+        "plan_id": "20017",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer8",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13226149.678,
+      "dur": 88914.355,
+      "args": {
+        "event_id": "30008",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer8",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1601936.444,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30008",
+        "plan_id": "20017"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1614091.531,
+      "args": {
+        "event_id": "30008",
+        "plan_id": "20017",
+        "stage": "prefill",
+        "label": "layer8",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12155.087,
+        "actual_bandwidth_gib_s": 50.619
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer9",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13527810.725,
+      "dur": 200232.353,
+      "args": {
+        "event_id": "30009",
+        "plan_id": "20019",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer9",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 13728043.078,
+      "dur": 87575.648,
+      "args": {
+        "event_id": "30009",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer9",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1802180.057,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30009",
+        "plan_id": "20019"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 1814249.843,
+      "args": {
+        "event_id": "30009",
+        "plan_id": "20019",
+        "stage": "prefill",
+        "label": "layer9",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12069.786,
+        "actual_bandwidth_gib_s": 50.976
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer10",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14026800.118,
+      "dur": 200219.233,
+      "args": {
+        "event_id": "30010",
+        "plan_id": "20021",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer10",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14227019.351,
+      "dur": 89197.957,
+      "args": {
+        "event_id": "30010",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer10",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2002397.86,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30010",
+        "plan_id": "20021"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2014498.126,
+      "args": {
+        "event_id": "30010",
+        "plan_id": "20021",
+        "stage": "prefill",
+        "label": "layer10",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12100.266,
+        "actual_bandwidth_gib_s": 50.848
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer11",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14527681.583,
+      "dur": 200258.553,
+      "args": {
+        "event_id": "30011",
+        "plan_id": "20023",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer11",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 14727940.136,
+      "dur": 88867.255,
+      "args": {
+        "event_id": "30011",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer11",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2202654.794,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30011",
+        "plan_id": "20023"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2214696.249,
+      "args": {
+        "event_id": "30011",
+        "plan_id": "20023",
+        "stage": "prefill",
+        "label": "layer11",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12041.455,
+        "actual_bandwidth_gib_s": 51.096
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer12",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15028397.815,
+      "dur": 200236.624,
+      "args": {
+        "event_id": "30012",
+        "plan_id": "20025",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer12",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15228634.439,
+      "dur": 88757.825,
+      "args": {
+        "event_id": "30012",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer12",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2402896.137,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30012",
+        "plan_id": "20025"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2414989.213,
+      "args": {
+        "event_id": "30012",
+        "plan_id": "20025",
+        "stage": "prefill",
+        "label": "layer12",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12093.076,
+        "actual_bandwidth_gib_s": 50.878
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer13",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15529028.389,
+      "dur": 200278.263,
+      "args": {
+        "event_id": "30013",
+        "plan_id": "20027",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer13",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 15729306.652,
+      "dur": 88684.194,
+      "args": {
+        "event_id": "30013",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer13",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2603179.75,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30013",
+        "plan_id": "20027"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2615232.366,
+      "args": {
+        "event_id": "30013",
+        "plan_id": "20027",
+        "stage": "prefill",
+        "label": "layer13",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12052.616,
+        "actual_bandwidth_gib_s": 51.049
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer14",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16029096.939,
+      "dur": 200224.913,
+      "args": {
+        "event_id": "30014",
+        "plan_id": "20029",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer14",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16229321.852,
+      "dur": 89244.487,
+      "args": {
+        "event_id": "30014",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer14",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2803396.623,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30014",
+        "plan_id": "20029"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 2815486.079,
+      "args": {
+        "event_id": "30014",
+        "plan_id": "20029",
+        "stage": "prefill",
+        "label": "layer14",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12089.456,
+        "actual_bandwidth_gib_s": 50.893
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer15",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16530299.454,
+      "dur": 200205.713,
+      "args": {
+        "event_id": "30015",
+        "plan_id": "20031",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer15",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 16730505.167,
+      "dur": 88651.554,
+      "args": {
+        "event_id": "30015",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer15",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3003638.546,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30015",
+        "plan_id": "20031"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3015709.862,
+      "args": {
+        "event_id": "30015",
+        "plan_id": "20031",
+        "stage": "prefill",
+        "label": "layer15",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12071.316,
+        "actual_bandwidth_gib_s": 50.97
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer16",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17031802.782,
+      "dur": 200248.613,
+      "args": {
+        "event_id": "30016",
+        "plan_id": "20033",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer16",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17232051.395,
+      "dur": 87718.959,
+      "args": {
+        "event_id": "30016",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer16",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3203889.309,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30016",
+        "plan_id": "20033"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3216072.716,
+      "args": {
+        "event_id": "30016",
+        "plan_id": "20033",
+        "stage": "prefill",
+        "label": "layer16",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12183.407,
+        "actual_bandwidth_gib_s": 50.501
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer17",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17530123.732,
+      "dur": 200243.883,
+      "args": {
+        "event_id": "30017",
+        "plan_id": "20035",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer17",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 17730367.615,
+      "dur": 90020.992,
+      "args": {
+        "event_id": "30017",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer17",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3404137.782,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30017",
+        "plan_id": "20035"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3416277.848,
+      "args": {
+        "event_id": "30017",
+        "plan_id": "20035",
+        "stage": "prefill",
+        "label": "layer17",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12140.066,
+        "actual_bandwidth_gib_s": 50.681
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer18",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18030458.794,
+      "dur": 200248.873,
+      "args": {
+        "event_id": "30018",
+        "plan_id": "20037",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer18",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18230707.667,
+      "dur": 90242.622,
+      "args": {
+        "event_id": "30018",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer18",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3604395.865,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30018",
+        "plan_id": "20037"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3616589.552,
+      "args": {
+        "event_id": "30018",
+        "plan_id": "20037",
+        "stage": "prefill",
+        "label": "layer18",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12193.687,
+        "actual_bandwidth_gib_s": 50.458
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer19",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18530456.842,
+      "dur": 200327.014,
+      "args": {
+        "event_id": "30019",
+        "plan_id": "20039",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer19",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 18730783.856,
+      "dur": 90749.586,
+      "args": {
+        "event_id": "30019",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer19",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3804648.128,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30019",
+        "plan_id": "20039"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 3817218.327,
+      "args": {
+        "event_id": "30019",
+        "plan_id": "20039",
+        "stage": "prefill",
+        "label": "layer19",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12570.199,
+        "actual_bandwidth_gib_s": 48.947
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer20",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19032024.271,
+      "dur": 200149.472,
+      "args": {
+        "event_id": "30020",
+        "plan_id": "20041",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer20",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19232173.743,
+      "dur": 89909.841,
+      "args": {
+        "event_id": "30020",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer20",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4004876.691,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30020",
+        "plan_id": "20041"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4017155.658,
+      "args": {
+        "event_id": "30020",
+        "plan_id": "20041",
+        "stage": "prefill",
+        "label": "layer20",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12278.967,
+        "actual_bandwidth_gib_s": 50.108
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer21",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19532235.551,
+      "dur": 200217.263,
+      "args": {
+        "event_id": "30021",
+        "plan_id": "20043",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer21",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 19732452.814,
+      "dur": 90233.963,
+      "args": {
+        "event_id": "30021",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer21",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4205106.034,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30021",
+        "plan_id": "20043"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4217195.71,
+      "args": {
+        "event_id": "30021",
+        "plan_id": "20043",
+        "stage": "prefill",
+        "label": "layer21",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12089.676,
+        "actual_bandwidth_gib_s": 50.892
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer22",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20034602.713,
+      "dur": 200280.523,
+      "args": {
+        "event_id": "30022",
+        "plan_id": "20045",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer22",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20234883.236,
+      "dur": 88398.143,
+      "args": {
+        "event_id": "30022",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer22",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4405350.998,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30022",
+        "plan_id": "20045"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4417414.843,
+      "args": {
+        "event_id": "30022",
+        "plan_id": "20045",
+        "stage": "prefill",
+        "label": "layer22",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12063.845,
+        "actual_bandwidth_gib_s": 51.001
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer23",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20535559.91,
+      "dur": 200209.902,
+      "args": {
+        "event_id": "30023",
+        "plan_id": "20047",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer23",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 20735769.812,
+      "dur": 88084.88,
+      "args": {
+        "event_id": "30023",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer23",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4605594.291,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30023",
+        "plan_id": "20047"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4617846.537,
+      "args": {
+        "event_id": "30023",
+        "plan_id": "20047",
+        "stage": "prefill",
+        "label": "layer23",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12252.246,
+        "actual_bandwidth_gib_s": 50.217
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer24",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21035480.467,
+      "dur": 200190.503,
+      "args": {
+        "event_id": "30024",
+        "plan_id": "20049",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer24",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21235670.97,
+      "dur": 88808.085,
+      "args": {
+        "event_id": "30024",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer24",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4805796.673,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30024",
+        "plan_id": "20049"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 4817907.61,
+      "args": {
+        "event_id": "30024",
+        "plan_id": "20049",
+        "stage": "prefill",
+        "label": "layer24",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12110.937,
+        "actual_bandwidth_gib_s": 50.803
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer25",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21536123.86,
+      "dur": 200217.893,
+      "args": {
+        "event_id": "30025",
+        "plan_id": "20051",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer25",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 21736341.753,
+      "dur": 88738.224,
+      "args": {
+        "event_id": "30025",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer25",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5006021.376,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30025",
+        "plan_id": "20051"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5018056.172,
+      "args": {
+        "event_id": "30025",
+        "plan_id": "20051",
+        "stage": "prefill",
+        "label": "layer25",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12034.796,
+        "actual_bandwidth_gib_s": 51.125
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer26",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22037829.459,
+      "dur": 200251.423,
+      "args": {
+        "event_id": "30026",
+        "plan_id": "20053",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer26",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22238080.882,
+      "dur": 87609.258,
+      "args": {
+        "event_id": "30026",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer26",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5206268.75,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30026",
+        "plan_id": "20053"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5218358.846,
+      "args": {
+        "event_id": "30026",
+        "plan_id": "20053",
+        "stage": "prefill",
+        "label": "layer26",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12090.096,
+        "actual_bandwidth_gib_s": 50.891
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer27",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22537567.306,
+      "dur": 200248.743,
+      "args": {
+        "event_id": "30027",
+        "plan_id": "20055",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer27",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 22737816.049,
+      "dur": 88445.573,
+      "args": {
+        "event_id": "30027",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer27",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5406503.663,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30027",
+        "plan_id": "20055"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5418992.651,
+      "args": {
+        "event_id": "30027",
+        "plan_id": "20055",
+        "stage": "prefill",
+        "label": "layer27",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12488.988,
+        "actual_bandwidth_gib_s": 49.265
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer28",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23037818.456,
+      "dur": 200234.794,
+      "args": {
+        "event_id": "30028",
+        "plan_id": "20057",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer28",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23238053.25,
+      "dur": 88812.025,
+      "args": {
+        "event_id": "30028",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer28",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5606742.326,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30028",
+        "plan_id": "20057"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5619068.503,
+      "args": {
+        "event_id": "30028",
+        "plan_id": "20057",
+        "stage": "prefill",
+        "label": "layer28",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12326.177,
+        "actual_bandwidth_gib_s": 49.916
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer29",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23537948.837,
+      "dur": 200244.123,
+      "args": {
+        "event_id": "30029",
+        "plan_id": "20059",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer29",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 23738192.96,
+      "dur": 89319.288,
+      "args": {
+        "event_id": "30029",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer29",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5806993.409,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30029",
+        "plan_id": "20059"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 5819161.135,
+      "args": {
+        "event_id": "30029",
+        "plan_id": "20059",
+        "stage": "prefill",
+        "label": "layer29",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12167.726,
+        "actual_bandwidth_gib_s": 50.566
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer30",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24039002.954,
+      "dur": 200201.722,
+      "args": {
+        "event_id": "30030",
+        "plan_id": "20061",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer30",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24239204.676,
+      "dur": 88830.564,
+      "args": {
+        "event_id": "30030",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer30",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6007182.732,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30030",
+        "plan_id": "20061"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6019703.59,
+      "args": {
+        "event_id": "30030",
+        "plan_id": "20061",
+        "stage": "prefill",
+        "label": "layer30",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12520.858,
+        "actual_bandwidth_gib_s": 49.14
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer31",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24538522.311,
+      "dur": 200197.182,
+      "args": {
+        "event_id": "30031",
+        "plan_id": "20063",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer31",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 24738719.493,
+      "dur": 89936.12,
+      "args": {
+        "event_id": "30031",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer31",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6207424.005,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30031",
+        "plan_id": "20063"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6219672.221,
+      "args": {
+        "event_id": "30031",
+        "plan_id": "20063",
+        "stage": "prefill",
+        "label": "layer31",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12248.216,
+        "actual_bandwidth_gib_s": 50.234
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer32",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25039681.894,
+      "dur": 200262.694,
+      "args": {
+        "event_id": "30032",
+        "plan_id": "20065",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer32",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25239944.588,
+      "dur": 89334.178,
+      "args": {
+        "event_id": "30032",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer32",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6407665.928,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30032",
+        "plan_id": "20065"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6419800.074,
+      "args": {
+        "event_id": "30032",
+        "plan_id": "20065",
+        "stage": "prefill",
+        "label": "layer32",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12134.146,
+        "actual_bandwidth_gib_s": 50.706
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer33",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25539130.801,
+      "dur": 200245.233,
+      "args": {
+        "event_id": "30033",
+        "plan_id": "20067",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer33",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 25739376.034,
+      "dur": 90425.944,
+      "args": {
+        "event_id": "30033",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer33",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6607910.881,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30033",
+        "plan_id": "20067"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6620159.068,
+      "args": {
+        "event_id": "30033",
+        "plan_id": "20067",
+        "stage": "prefill",
+        "label": "layer33",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12248.187,
+        "actual_bandwidth_gib_s": 50.234
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer34",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26041528.403,
+      "dur": 200191.223,
+      "args": {
+        "event_id": "30034",
+        "plan_id": "20069",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer34",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26241719.626,
+      "dur": 88645.604,
+      "args": {
+        "event_id": "30034",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer34",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6808146.754,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30034",
+        "plan_id": "20069"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 6820334.87,
+      "args": {
+        "event_id": "30034",
+        "plan_id": "20069",
+        "stage": "prefill",
+        "label": "layer34",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12188.116,
+        "actual_bandwidth_gib_s": 50.481
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer35",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26542335.257,
+      "dur": 200236.093,
+      "args": {
+        "event_id": "30035",
+        "plan_id": "20071",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer35",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 26742571.35,
+      "dur": 88413.323,
+      "args": {
+        "event_id": "30035",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer35",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7008380.357,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30035",
+        "plan_id": "20071"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7020502.373,
+      "args": {
+        "event_id": "30035",
+        "plan_id": "20071",
+        "stage": "prefill",
+        "label": "layer35",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12122.016,
+        "actual_bandwidth_gib_s": 50.757
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer36",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27041124.35,
+      "dur": 200233.283,
+      "args": {
+        "event_id": "30036",
+        "plan_id": "20073",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer36",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27241357.633,
+      "dur": 90195.583,
+      "args": {
+        "event_id": "30036",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer36",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7208623.91,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30036",
+        "plan_id": "20073"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7220834.877,
+      "args": {
+        "event_id": "30036",
+        "plan_id": "20073",
+        "stage": "prefill",
+        "label": "layer36",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12210.967,
+        "actual_bandwidth_gib_s": 50.387
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer37",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27542161.905,
+      "dur": 200251.403,
+      "args": {
+        "event_id": "30037",
+        "plan_id": "20075",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer37",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 27742413.308,
+      "dur": 89746.13,
+      "args": {
+        "event_id": "30037",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer37",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7408869.873,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30037",
+        "plan_id": "20075"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7420963.299,
+      "args": {
+        "event_id": "30037",
+        "plan_id": "20075",
+        "stage": "prefill",
+        "label": "layer37",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12093.426,
+        "actual_bandwidth_gib_s": 50.877
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer38",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28042598.887,
+      "dur": 200234.043,
+      "args": {
+        "event_id": "30038",
+        "plan_id": "20077",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer38",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28242832.93,
+      "dur": 89924.321,
+      "args": {
+        "event_id": "30038",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer38",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7609110.326,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30038",
+        "plan_id": "20077"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7621299.453,
+      "args": {
+        "event_id": "30038",
+        "plan_id": "20077",
+        "stage": "prefill",
+        "label": "layer38",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12189.127,
+        "actual_bandwidth_gib_s": 50.477
+      }
+    },
+    {
+      "name": "SubmitTransfer prefill.layer39",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28543817.463,
+      "dur": 200226.373,
+      "args": {
+        "event_id": "30039",
+        "plan_id": "20079",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "ExportCompletionProxy prefill.layer39",
+      "cat": "serving,event",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 28744043.836,
+      "dur": 89301.248,
+      "args": {
+        "event_id": "30039",
+        "completion_kind": "thread_event"
+      }
+    },
+    {
+      "name": "TransferQueued prefill.layer39",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7809345.809,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30039",
+        "plan_id": "20079"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 7821439.865,
+      "args": {
+        "event_id": "30039",
+        "plan_id": "20079",
+        "stage": "prefill",
+        "label": "layer39",
+        "nbytes": 660644864,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 12094.056,
+        "actual_bandwidth_gib_s": 50.874
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_input_rms_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 36049720.196,
+      "dur": 299700.156,
+      "args": {
+        "event_id": "30040",
+        "plan_id": "20081",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_input_rms_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36148953.728,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30040",
+        "plan_id": "20081"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36151308.87,
+      "args": {
+        "event_id": "30040",
+        "plan_id": "20081",
+        "stage": "decode",
+        "label": "decode_input_rms_weight",
+        "nbytes": 819200,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 2355.142,
+        "actual_bandwidth_gib_s": 0.324
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_wq",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 36551966.028,
+      "dur": 298011.606,
+      "args": {
+        "event_id": "30041",
+        "plan_id": "20083",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_wq",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36649571.35,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30041",
+        "plan_id": "20083"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 36687381.707,
+      "args": {
+        "event_id": "30041",
+        "plan_id": "20083",
+        "stage": "decode",
+        "label": "decode_wq",
+        "nbytes": 2097152000,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 37810.357,
+        "actual_bandwidth_gib_s": 51.656
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_wk",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 37050963.772,
+      "dur": 299536.415,
+      "args": {
+        "event_id": "30042",
+        "plan_id": "20085",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_wk",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37150177.003,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30042",
+        "plan_id": "20085"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37158766.13,
+      "args": {
+        "event_id": "30042",
+        "plan_id": "20085",
+        "stage": "decode",
+        "label": "decode_wk",
+        "nbytes": 419430400,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 8589.127,
+        "actual_bandwidth_gib_s": 45.479
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_wv",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 37551554.174,
+      "dur": 299610.186,
+      "args": {
+        "event_id": "30043",
+        "plan_id": "20087",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_wv",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37650769.426,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30043",
+        "plan_id": "20087"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 37659396.663,
+      "args": {
+        "event_id": "30043",
+        "plan_id": "20087",
+        "stage": "decode",
+        "label": "decode_wv",
+        "nbytes": 419430400,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 8627.237,
+        "actual_bandwidth_gib_s": 45.278
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_q_norm_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 38051784.995,
+      "dur": 300010.717,
+      "args": {
+        "event_id": "30044",
+        "plan_id": "20089",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_q_norm_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38151385.058,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30044",
+        "plan_id": "20089"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38152795.326,
+      "args": {
+        "event_id": "30044",
+        "plan_id": "20089",
+        "stage": "decode",
+        "label": "decode_q_norm_weight",
+        "nbytes": 20480,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 1410.268,
+        "actual_bandwidth_gib_s": 0.014
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_k_norm_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 38552476.698,
+      "dur": 299901.277,
+      "args": {
+        "event_id": "30045",
+        "plan_id": "20091",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_k_norm_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38652028.731,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30045",
+        "plan_id": "20091"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 38653799.251,
+      "args": {
+        "event_id": "30045",
+        "plan_id": "20091",
+        "stage": "decode",
+        "label": "decode_k_norm_weight",
+        "nbytes": 20480,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 1770.52,
+        "actual_bandwidth_gib_s": 0.011
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_wo",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 39054988.311,
+      "dur": 298052.467,
+      "args": {
+        "event_id": "30046",
+        "plan_id": "20093",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_wo",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39152636.664,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30046",
+        "plan_id": "20093"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39188441.909,
+      "args": {
+        "event_id": "30046",
+        "plan_id": "20093",
+        "stage": "decode",
+        "label": "decode_wo",
+        "nbytes": 2097152000,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 35805.245,
+        "actual_bandwidth_gib_s": 54.549
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_post_rms_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 39553655.483,
+      "dur": 299923.647,
+      "args": {
+        "event_id": "30047",
+        "plan_id": "20095",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_post_rms_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39653256.907,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30047",
+        "plan_id": "20095"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 39654987.326,
+      "args": {
+        "event_id": "30047",
+        "plan_id": "20095",
+        "stage": "decode",
+        "label": "decode_post_rms_weight",
+        "nbytes": 819200,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 1730.419,
+        "actual_bandwidth_gib_s": 0.441
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_w_gate",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 40043026.704,
+      "dur": 311166.649,
+      "args": {
+        "event_id": "30048",
+        "plan_id": "20097",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_w_gate",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40153844.879,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30048",
+        "plan_id": "20097"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40272067.635,
+      "args": {
+        "event_id": "30048",
+        "plan_id": "20097",
+        "stage": "decode",
+        "label": "decode_w_gate",
+        "nbytes": 7130316800,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 118222.756,
+        "actual_bandwidth_gib_s": 56.17
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_w_up",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 40543832.609,
+      "dur": 310945.977,
+      "args": {
+        "event_id": "30049",
+        "plan_id": "20099",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_w_up",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40654426.382,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30049",
+        "plan_id": "20099"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 40772568.907,
+      "args": {
+        "event_id": "30049",
+        "plan_id": "20099",
+        "stage": "decode",
+        "label": "decode_w_up",
+        "nbytes": 7130316800,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 118142.525,
+        "actual_bandwidth_gib_s": 56.209
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.decode_w_down",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 41053587.012,
+      "dur": 301869.907,
+      "args": {
+        "event_id": "30050",
+        "plan_id": "20101",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.decode_w_down",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41155055.545,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30050",
+        "plan_id": "20101"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41273186.499,
+      "args": {
+        "event_id": "30050",
+        "plan_id": "20101",
+        "stage": "decode",
+        "label": "decode_w_down",
+        "nbytes": 7130316800,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 118130.954,
+        "actual_bandwidth_gib_s": 56.214
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.final_norm_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 41556075.864,
+      "dur": 299983.107,
+      "args": {
+        "event_id": "30051",
+        "plan_id": "20103",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.final_norm_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41655683.867,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30051",
+        "plan_id": "20103"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 41657375.787,
+      "args": {
+        "event_id": "30051",
+        "plan_id": "20103",
+        "stage": "decode",
+        "label": "final_norm_weight",
+        "nbytes": 20480,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 1691.92,
+        "actual_bandwidth_gib_s": 0.011
+      }
+    },
+    {
+      "name": "SubmitTransfer decode.padded_lm_head_weight",
+      "cat": "serving,uflow",
+      "ph": "X",
+      "pid": 1,
+      "tid": 10,
+      "ts": 42066531.17,
+      "dur": 290075.694,
+      "args": {
+        "event_id": "30052",
+        "plan_id": "20105",
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "TransferQueued decode.padded_lm_head_weight",
+      "cat": "uflow,queue",
+      "ph": "X",
+      "pid": 1,
+      "tid": 20,
+      "ts": 42156260.13,
+      "dur": 0.001,
+      "args": {
+        "event_id": "30052",
+        "plan_id": "20105"
+      }
+    },
+    {
+      "name": "TransferEventComplete",
+      "cat": "uflow,event",
+      "ph": "i",
+      "s": "t",
+      "pid": 1,
+      "tid": 20,
+      "ts": 42183890.881,
+      "args": {
+        "event_id": "30052",
+        "plan_id": "20105",
+        "stage": "decode",
+        "label": "padded_lm_head_weight",
+        "nbytes": 1557135360,
+        "actual_engine": "acl_direct_async_thp",
+        "actual_path": "ddr_hbm_direct_thp",
+        "actual_latency_us": 27630.751,
+        "actual_bandwidth_gib_s": 52.485
+      }
+    }
+  ],
+  "displayTimeUnit": "ms",
+  "metadata": {
+    "title": "PhaseA-08 UFlow direct serving timeline",
+    "format": "Chrome Trace Event JSON",
+    "viewer": "Open in https://ui.perfetto.dev or chrome://tracing",
+    "base_time_ns": 1782185707590357605,
+    "transfer_count": 53,
+    "summary": [
+      {
+        "stage": "decode",
+        "events": "13",
+        "bytes": "27982950400",
+        "wall_ms": "6034.937",
+        "sum_latency_ms": "481.917",
+        "bandwidth_gib_s": "4.318",
+        "engines": "{'acl_direct_async_thp': 13}",
+        "paths": "{'ddr_hbm_direct_thp': 13}"
+      },
+      {
+        "stage": "prefill",
+        "events": "40",
+        "bytes": "26425794560",
+        "wall_ms": "7821.440",
+        "sum_latency_ms": "490.147",
+        "bandwidth_gib_s": "3.147",
+        "engines": "{'acl_direct_async_thp': 40}",
+        "paths": "{'ddr_hbm_direct_thp': 40}"
+      }
+    ],
+    "contract": {
+      "serving_path": "PlanTransfer -> SubmitTransfer -> TransferEvent -> completion proxy event",
+      "ddr_hbm_route": "UFlow daemon memfd + THP/pre-touch + aclrtMemcpyAsync",
+      "default_mode": "auto",
+      "expected_engine": "acl_direct_async_thp"
+    }
+  }
+}

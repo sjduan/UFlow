@@ -1,0 +1,11 @@
+token_line=token_ids: [264]
+real_weight_wait_count=40
+decode_reload_count=0
+layer_done_count=40
+transfer_timeline_count=40
+direct_transfer_count=40
+pinned_transfer_count=0
+all_transfers_direct=true
+reload_submitted_line=[uflow-a08] prefill_real_weight_reload_submitted layers=40 bytes=26425794560 prepare_wall_ms=1248.563 submit_wall_ms=20.271
+all_layers_waited=true
+match_token=true

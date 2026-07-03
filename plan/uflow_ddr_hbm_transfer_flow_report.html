@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UFlow DDR/HBM 数据传输流程汇报</title>
+  <style>
+    :root {
+      --ink: #18212f;
+      --muted: #5f6b7a;
+      --line: #d8dee8;
+      --panel: #ffffff;
+      --bg: #f5f7fb;
+      --hbm: #2f80ed;
+      --ddr: #159a74;
+      --pin: #d97a1f;
+      --svc: #6746c3;
+      --evt: #c0395b;
+      --ok: #1f8a5b;
+      --warn: #b96b08;
+      --bad: #b43b3b;
+      --soft-blue: #eaf2ff;
+      --soft-green: #e8f7f1;
+      --soft-orange: #fff2e4;
+      --soft-purple: #f0ebff;
+      --soft-red: #ffecef;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 28px 56px;
+    }
+
+    .hero {
+      min-height: 420px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 28px;
+      align-items: center;
+      padding: 48px;
+      color: #fff;
+      background:
+        linear-gradient(135deg, rgba(22, 32, 52, 0.94), rgba(47, 74, 112, 0.88)),
+        radial-gradient(circle at 88% 18%, rgba(21, 154, 116, 0.50), transparent 32%),
+        radial-gradient(circle at 24% 82%, rgba(217, 122, 31, 0.42), transparent 28%),
+        #172033;
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      font-size: 44px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 720px;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 18px;
+    }
+
+    .hero .stamp {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      margin-bottom: 18px;
+      color: #dff6ff;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .hero-graphic {
+      min-height: 340px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .hero-graphic svg,
+    .diagram svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    section {
+      margin-top: 28px;
+      padding: 30px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 27px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 28px 0 12px;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      padding: 18px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 132px;
+    }
+
+    .metric strong {
+      font-size: 26px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .tag.hbm { color: #14549e; background: var(--soft-blue); }
+    .tag.ddr { color: #0a6d52; background: var(--soft-green); }
+    .tag.pin { color: #9c560c; background: var(--soft-orange); }
+    .tag.svc { color: #4d33a3; background: var(--soft-purple); }
+    .tag.evt { color: #9b2845; background: var(--soft-red); }
+    .tag.ok { color: #176d47; background: #e5f6ed; }
+    .tag.warn { color: #8d5200; background: #fff4d8; }
+    .tag.bad { color: #8f2828; background: #ffe5e5; }
+
+    .flow {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcff;
+    }
+
+    .num {
+      display: inline-flex;
+      width: 30px;
+      height: 30px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--svc);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .diagram {
+      margin: 16px 0 4px;
+      padding: 18px;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow-x: auto;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      color: #354255;
+      background: #f2f5fa;
+      font-weight: 720;
+    }
+
+    td.numval {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .callout {
+      padding: 16px 18px;
+      border-radius: 12px;
+      border: 1px solid;
+      margin-top: 16px;
+    }
+
+    .callout.ok {
+      background: #f0fbf6;
+      border-color: #b9ead2;
+    }
+
+    .callout.warn {
+      background: #fff8e8;
+      border-color: #f2d49b;
+    }
+
+    .callout.info {
+      background: #eef5ff;
+      border-color: #bdd6fb;
+    }
+
+    .callout strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      color: #293344;
+      background: #f3f6fa;
+      border: 1px solid #dde4ee;
+      padding: 2px 5px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .roadmap .item {
+      padding: 14px;
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcff;
+    }
+
+    .roadmap .item strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .grid.cols-2,
+      .grid.cols-3,
+      .grid.cols-4,
+      .roadmap {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 28px;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+      }
+
+      section {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <div class="stamp">UFlow PhaseE · DDR/HBM Transfer Report · 2026-06-15</div>
+        <h1>UFlow DDR/HBM 数据传输流程汇报</h1>
+        <p>
+          本报告总结当前 UFlow 在本机 DDR、NPU HBM、跨 NPU HBM 之间的数据管理与传输流程。
+          当前核心原则是：UFlow 服务进程持有数据对象的权威视图和可传输地址，client 通过 lease/shareable handle 获得计算侧访问权，官方数据移动统一由 UFlow 产生 TransferEvent。
+        </p>
+      </div>
+      <div class="hero-graphic" aria-label="UFlow transfer overview">
+        <svg viewBox="0 0 620 360" role="img">
+          <defs>
+            <marker id="arrowHero" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#ffffff"/>
+            </marker>
+          </defs>
+          <rect x="18" y="35" width="154" height="76" rx="12" fill="#2f80ed" opacity="0.95"/>
+          <text x="95" y="66" fill="#fff" text-anchor="middle" font-size="18" font-weight="700">HBM</text>
+          <text x="95" y="92" fill="#eaf2ff" text-anchor="middle" font-size="13">physical + service VA</text>
+
+          <rect x="448" y="35" width="154" height="76" rx="12" fill="#159a74" opacity="0.95"/>
+          <text x="525" y="66" fill="#fff" text-anchor="middle" font-size="18" font-weight="700">DDR</text>
+          <text x="525" y="92" fill="#e8f7f1" text-anchor="middle" font-size="13">memfd shared object</text>
+
+          <rect x="235" y="145" width="150" height="86" rx="14" fill="#6746c3"/>
+          <text x="310" y="178" fill="#fff" text-anchor="middle" font-size="18" font-weight="700">UFlow daemon</text>
+          <text x="310" y="204" fill="#f0ebff" text-anchor="middle" font-size="13">planner · runtime · executor</text>
+
+          <rect x="80" y="265" width="154" height="60" rx="12" fill="#d97a1f"/>
+          <text x="157" y="291" fill="#fff" text-anchor="middle" font-size="16" font-weight="700">Pinned Pool</text>
+          <text x="157" y="312" fill="#fff4e6" text-anchor="middle" font-size="12">aclrtMallocHost</text>
+
+          <rect x="386" y="265" width="154" height="60" rx="12" fill="#c0395b"/>
+          <text x="463" y="291" fill="#fff" text-anchor="middle" font-size="16" font-weight="700">TransferEvent</text>
+          <text x="463" y="312" fill="#ffecef" text-anchor="middle" font-size="12">poll · wait · cancel</text>
+
+          <path d="M176 73 C230 74, 252 126, 287 145" fill="none" stroke="#fff" stroke-width="3" marker-end="url(#arrowHero)"/>
+          <path d="M446 73 C390 76, 364 126, 333 145" fill="none" stroke="#fff" stroke-width="3" marker-end="url(#arrowHero)"/>
+          <path d="M260 230 C225 250, 196 265, 168 265" fill="none" stroke="#fff" stroke-width="3" marker-end="url(#arrowHero)"/>
+          <path d="M362 230 C389 250, 427 264, 455 265" fill="none" stroke="#fff" stroke-width="3" marker-end="url(#arrowHero)"/>
+          <path d="M176 294 C265 332, 372 332, 448 294" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="7 6" marker-end="url(#arrowHero)"/>
+          <text x="310" y="344" fill="#ffffff" text-anchor="middle" font-size="13">default hot path: DDR memfd ↔ pinned pool ↔ HBM service VA</text>
+        </svg>
+      </div>
+    </header>
+
+    <section>
+      <h2>1. 当前结论</h2>
+      <p class="lead">当前 DDR/HBM 传输已经从“client 拿到指针后自己 copy”收敛为“UFlow 服务侧统一执行并记录事件”。这让后续跨介质、跨卡、跨节点路径能被同一套 cost/event 模型管理。</p>
+      <div class="grid cols-4">
+        <div class="card metric">
+          <span class="tag ddr">DDR 默认对象</span>
+          <strong>memfd_shared</strong>
+          <span>作为 authoritative DDR DataObject，适合 fd passing、lease 准入和服务化生命周期管理。</span>
+        </div>
+        <div class="card metric">
+          <span class="tag pin">DDR-HBM 热路径</span>
+          <strong>pinned staging</strong>
+          <span>memfd mmap 与 aclrtMallocHost pinned pool 之间做 CPU copy，再由 ACL 做 H2D/D2H。</span>
+        </div>
+        <div class="card metric">
+          <span class="tag hbm">HBM-HBM</span>
+          <strong>ACL D2D direct</strong>
+          <span>同卡和跨卡均由 daemon 使用 service VA 执行 direct D2D，跨卡已验证 NPU7→NPU6。</span>
+        </div>
+        <div class="card metric">
+          <span class="tag evt">同步模型</span>
+          <strong>async-first</strong>
+          <span>同步只是 SubmitTransfer + WaitEvent；每次传输都产生 TransferEvent 和实际路径统计。</span>
+        </div>
+      </div>
+      <div class="callout info">
+        <strong>关键边界</strong>
+        Client 可以 import/map shareable HBM handle 用于计算，但 client 自行调用 <span class="code">aclrtMemcpy</span> 或 kernel 修改不会被 UFlow 自动感知。正式传输必须走 <span class="code">SubmitTransfer</span>；client 写入后必须用 <span class="code">MarkDirty</span> / <span class="code">MarkReady</span> 或后续 external event/barrier 对齐。
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 总体架构：Client 接口、UFlow 模块与冷热路径</h2>
+      <p class="lead">UFlow 的服务边界分成 client 接入面、服务控制面、placement runtime、传输执行面和介质后端。Client 侧只消费 DataHandle / runtime descriptor / TransferEvent；UFlow 侧负责对象目录、lease、数据状态、路径规划、实际传输和统计回写。</p>
+
+      <h3>2.0 一图讲清：接口、模块、冷热数据与冷热路径</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 1400 920" role="img" aria-label="UFlow layered architecture map">
+          <defs>
+            <marker id="archArrow" markerWidth="11" markerHeight="11" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#354255"/>
+            </marker>
+            <marker id="archHotArrow" markerWidth="11" markerHeight="11" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#d97a1f"/>
+            </marker>
+            <marker id="archHbmArrow" markerWidth="11" markerHeight="11" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#2f80ed"/>
+            </marker>
+            <marker id="archDdrArrow" markerWidth="11" markerHeight="11" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#159a74"/>
+            </marker>
+            <marker id="archEvtArrow" markerWidth="11" markerHeight="11" refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#c0395b"/>
+            </marker>
+          </defs>
+
+          <rect x="28" y="20" width="1344" height="880" rx="24" fill="#ffffff" stroke="#d8dee8"/>
+
+          <text x="70" y="60" font-size="18" font-weight="800" fill="#4d33a3">1. Client / Application</text>
+          <rect x="150" y="78" width="1100" height="118" rx="22" fill="#f6f8fc" stroke="#cbd4e2" stroke-width="2"/>
+          <text x="700" y="122" text-anchor="middle" font-size="26" font-weight="800" fill="#18212f">pypto-serving / other apps</text>
+          <text x="700" y="154" text-anchor="middle" font-size="14" fill="#5f6b7a">业务框架不直接关心底层介质：只拿 DataHandle / runtime descriptor / TransferEvent</text>
+          <rect x="260" y="166" width="190" height="28" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="355" y="185" text-anchor="middle" font-size="12" fill="#18212f">allocator wrapper</text>
+          <rect x="480" y="166" width="190" height="28" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="575" y="185" text-anchor="middle" font-size="12" fill="#18212f">runtime adapter</text>
+          <rect x="700" y="166" width="190" height="28" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="795" y="185" text-anchor="middle" font-size="12" fill="#18212f">scheduler hooks</text>
+          <rect x="920" y="166" width="190" height="28" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="1015" y="185" text-anchor="middle" font-size="12" fill="#18212f">ops / test tools</text>
+
+          <path d="M700 198 L700 270" stroke="#354255" stroke-width="3" marker-end="url(#archArrow)"/>
+          <rect x="475" y="214" width="450" height="42" rx="18" fill="#f0ebff" stroke="#b9a8f7"/>
+          <text x="700" y="241" text-anchor="middle" font-size="15" font-weight="800" fill="#4d33a3">UFlow API：Create/Open · Transfer · WaitEvent · Dirty/Ready · Stats</text>
+
+          <text x="70" y="278" font-size="18" font-weight="800" fill="#4d33a3">2. UFlow unified data service</text>
+          <rect x="80" y="296" width="1240" height="260" rx="24" fill="#fbfcff" stroke="#cbd4e2" stroke-width="2"/>
+          <text x="116" y="334" font-size="24" font-weight="900" fill="#18212f">UFlow</text>
+          <text x="210" y="334" font-size="14" fill="#5f6b7a">服务侧统一保存对象元数据、lease、service VA 与传输状态；client 可以 map/use，但正式数据搬运由 UFlow 发起和统计。</text>
+
+          <rect x="116" y="360" width="236" height="70" rx="16" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="234" y="388" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Object Catalog</text>
+          <text x="234" y="412" text-anchor="middle" font-size="12" fill="#5f6b7a">DataObject / Placement / Role</text>
+
+          <rect x="382" y="360" width="236" height="70" rx="16" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="500" y="388" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Lease &amp; State</text>
+          <text x="500" y="412" text-anchor="middle" font-size="12" fill="#5f6b7a">share / owner / dirty / ready</text>
+
+          <rect x="648" y="360" width="236" height="70" rx="16" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="766" y="388" text-anchor="middle" font-size="15" font-weight="800" fill="#18212f">Planner &amp; Cost</text>
+          <text x="766" y="412" text-anchor="middle" font-size="12" fill="#5f6b7a">介质选择 / 路径选择 / fallback</text>
+
+          <rect x="914" y="360" width="236" height="70" rx="16" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="1032" y="388" text-anchor="middle" font-size="15" font-weight="800" fill="#9b2845">TransferEvent</text>
+          <text x="1032" y="412" text-anchor="middle" font-size="12" fill="#5f6b7a">async first / sync = wait</text>
+
+          <rect x="116" y="458" width="184" height="64" rx="15" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="208" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#14549e">HBM Manager</text>
+          <text x="208" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">physical + service VA</text>
+
+          <rect x="330" y="458" width="184" height="64" rx="15" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="422" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#0a6d52">DDR Manager</text>
+          <text x="422" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">memfd / fd / mmap</text>
+
+          <rect x="544" y="458" width="184" height="64" rx="15" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="636" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#9c560c">Pinned DDR Pool</text>
+          <text x="636" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">aclrtMallocHost</text>
+
+          <rect x="758" y="458" width="184" height="64" rx="15" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="850" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#18212f">Transfer Engine</text>
+          <text x="850" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">ACL memcpy / CPU copy</text>
+
+          <rect x="972" y="458" width="184" height="64" rx="15" fill="#f6f8fc" stroke="#d8dee8"/>
+          <text x="1064" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#18212f">Backend Plugins</text>
+          <text x="1064" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">HBM / DDR / UB / SSU</text>
+
+          <rect x="1184" y="458" width="100" height="64" rx="15" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="1234" y="484" text-anchor="middle" font-size="14" font-weight="800" fill="#18212f">Stats</text>
+          <text x="1234" y="506" text-anchor="middle" font-size="12" fill="#5f6b7a">cost trace</text>
+
+          <path d="M208 522 L208 596" stroke="#2f80ed" stroke-width="3" marker-end="url(#archHbmArrow)"/>
+          <path d="M422 522 L422 596" stroke="#159a74" stroke-width="3" marker-end="url(#archDdrArrow)"/>
+          <path d="M636 522 L636 596" stroke="#d97a1f" stroke-width="3" marker-end="url(#archHotArrow)"/>
+          <path d="M850 522 L850 596" stroke="#354255" stroke-width="3" marker-end="url(#archArrow)"/>
+          <path d="M1032 430 C1070 468, 1094 522, 1118 596" fill="none" stroke="#c0395b" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#archEvtArrow)"/>
+
+          <line x1="58" y1="590" x2="1342" y2="590" stroke="#9aa6b2" stroke-width="2" stroke-dasharray="12 10"/>
+          <text x="70" y="624" font-size="18" font-weight="800" fill="#4d33a3">3. Resource / transfer domains</text>
+
+          <rect x="66" y="648" width="292" height="202" rx="22" fill="#eaf2ff" stroke="#a8c8f6" stroke-width="2"/>
+          <text x="94" y="686" font-size="20" font-weight="900" fill="#14549e">D2D：HBM &lt;-&gt; HBM</text>
+          <text x="94" y="714" font-size="13" fill="#5f6b7a">同卡复制、跨卡 D2D、未来 UB peer。</text>
+          <rect x="94" y="742" width="94" height="64" rx="14" fill="#ffffff" stroke="#bdd6fb"/>
+          <text x="141" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#14549e">NPU7</text>
+          <text x="141" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">HBM-D</text>
+          <rect x="236" y="742" width="94" height="64" rx="14" fill="#ffffff" stroke="#bdd6fb"/>
+          <text x="283" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#14549e">NPU8</text>
+          <text x="283" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">HBM-D</text>
+          <path d="M188 774 L232 774" stroke="#2f80ed" stroke-width="2.8" marker-end="url(#archHbmArrow)"/>
+          <text x="94" y="830" font-size="12" fill="#5f6b7a">热数据：当前层权重、KVCache、kernel I/O。</text>
+
+          <rect x="390" y="648" width="292" height="202" rx="22" fill="#fff8e8" stroke="#f2d49b" stroke-width="2"/>
+          <text x="418" y="686" font-size="20" font-weight="900" fill="#8d5200">D2H / H2D：HBM &lt;-&gt; DDR</text>
+          <text x="418" y="714" font-size="13" fill="#5f6b7a">权重/KV offload、reload、预取和回写。</text>
+          <rect x="418" y="742" width="94" height="64" rx="14" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="465" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#14549e">HBM</text>
+          <text x="465" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">device ptr</text>
+          <rect x="560" y="742" width="94" height="64" rx="14" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="607" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#9c560c">Pinned</text>
+          <text x="607" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">fast host</text>
+          <path d="M512 764 C528 746, 544 746, 560 764" fill="none" stroke="#d97a1f" stroke-width="2.8" marker-end="url(#archHotArrow)"/>
+          <path d="M560 786 C544 806, 528 806, 512 786" fill="none" stroke="#d97a1f" stroke-width="2.8" marker-end="url(#archHotArrow)"/>
+          <text x="418" y="830" font-size="12" fill="#5f6b7a">热路径优先 pinned；普通 DDR 作为 fallback。</text>
+
+          <rect x="714" y="648" width="292" height="202" rx="22" fill="#e8f7f1" stroke="#9ddcc9" stroke-width="2"/>
+          <text x="742" y="686" font-size="20" font-weight="900" fill="#0a6d52">H2H Hot：DDR shared hot</text>
+          <text x="742" y="714" font-size="13" fill="#5f6b7a">进程间共享、准入 lease、NUMA local。</text>
+          <rect x="742" y="742" width="98" height="64" rx="14" fill="#ffffff" stroke="#9ddcc9"/>
+          <text x="791" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#0a6d52">memfd</text>
+          <text x="791" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">fd + mmap</text>
+          <rect x="880" y="742" width="98" height="64" rx="14" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="929" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#9c560c">Pinned</text>
+          <text x="929" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">reuse pool</text>
+          <path d="M840 774 L876 774" stroke="#159a74" stroke-width="2.8" marker-end="url(#archDdrArrow)"/>
+          <text x="742" y="830" font-size="12" fill="#5f6b7a">温数据：可复用权重影子、KV offload。</text>
+
+          <rect x="1038" y="648" width="292" height="202" rx="22" fill="#f6f8fc" stroke="#cbd4e2" stroke-width="2"/>
+          <text x="1066" y="686" font-size="20" font-weight="900" fill="#354255">H2H Cold / future</text>
+          <text x="1066" y="714" font-size="13" fill="#5f6b7a">容量优先；未来接入 UB、SSU、DFS。</text>
+          <rect x="1066" y="742" width="92" height="64" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="1112" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#18212f">SSD/DFS</text>
+          <text x="1112" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">files</text>
+          <rect x="1190" y="742" width="112" height="64" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="1246" y="769" text-anchor="middle" font-size="13" font-weight="800" fill="#18212f">Remote/UB</text>
+          <text x="1246" y="790" text-anchor="middle" font-size="12" fill="#5f6b7a">DDR / SSU LBA</text>
+          <path d="M1158 774 L1186 774" stroke="#354255" stroke-width="2.4" stroke-dasharray="7 5" marker-end="url(#archArrow)"/>
+          <text x="1066" y="830" font-size="12" fill="#5f6b7a">冷数据：按 cost 异步预取到 DDR/HBM。</text>
+
+          <rect x="96" y="866" width="1208" height="28" rx="14" fill="#ffffff" stroke="#d8dee8"/>
+          <circle cx="122" cy="880" r="6" fill="#2f80ed"/>
+          <text x="136" y="885" font-size="12" fill="#5f6b7a">HBM device data</text>
+          <circle cx="286" cy="880" r="6" fill="#159a74"/>
+          <text x="300" y="885" font-size="12" fill="#5f6b7a">DDR shared fd/mmap</text>
+          <circle cx="486" cy="880" r="6" fill="#d97a1f"/>
+          <text x="500" y="885" font-size="12" fill="#5f6b7a">pinned fast path</text>
+          <circle cx="668" cy="880" r="6" fill="#c0395b"/>
+          <text x="682" y="885" font-size="12" fill="#5f6b7a">event/status feedback</text>
+          <line x1="880" y1="880" x2="926" y2="880" stroke="#354255" stroke-width="2" stroke-dasharray="7 5"/>
+          <text x="940" y="885" font-size="12" fill="#5f6b7a">future UB / SSU / cross-node path</text>
+        </svg>
+      </div>
+      <div class="callout ok">
+        <strong>这张图的讲法</strong>
+        从上到下讲三层：应用只通过统一 API 申请/打开对象并提交传输；UFlow 服务层统一管理对象目录、lease、service VA、传输规划、事件和统计；底部按资源域展开 D2D、D2H/H2D、H2H Hot 与 H2H Cold，分别对应 HBM 热数据、DDR-HBM 快速换入换出、进程间共享热/温数据，以及未来 UB/SSU/DFS 的冷数据扩展。
+      </div>
+
+      <h3>2.1 Client 侧接口与能力</h3>
+      <div class="grid cols-4">
+        <div class="card">
+          <span class="tag svc">Allocator / SDK</span>
+          <h3>Create / Open</h3>
+          <p>申请 HBM 或 DDR DataObject，获得 lease、placement、shareable handle 或 memfd descriptor。</p>
+        </div>
+        <div class="card">
+          <span class="tag hbm">Runtime Adapter</span>
+          <h3>Descriptor</h3>
+          <p>把 DataHandle 解析成 PyPTO/Simpler 可消费的 device ptr、child memory 或 mmap view。</p>
+        </div>
+        <div class="card">
+          <span class="tag evt">Transfer API</span>
+          <h3>Plan / Submit / Wait</h3>
+          <p>只表达数据移动意图，不直接做 copy；同步调用也会产生 TransferEvent。</p>
+        </div>
+        <div class="card">
+          <span class="tag warn">State API</span>
+          <h3>Dirty / Ready</h3>
+          <p>client 自行写入后显式标记数据状态，避免 UFlow 用未完成数据执行传输。</p>
+        </div>
+      </div>
+
+      <div class="diagram">
+        <svg viewBox="0 0 1180 520" role="img">
+          <defs>
+            <marker id="arrowArchA" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+            <marker id="arrowArchBlue" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#2f80ed"/>
+            </marker>
+            <marker id="arrowArchGreen" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#159a74"/>
+            </marker>
+            <marker id="arrowArchOrange" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#d97a1f"/>
+            </marker>
+          </defs>
+
+          <rect x="24" y="32" width="1132" height="108" rx="18" fill="#f6f8fc" stroke="#d8dee8"/>
+          <text x="48" y="64" font-size="17" font-weight="700" fill="#18212f">Client side</text>
+          <rect x="54" y="82" width="190" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="149" y="108" text-anchor="middle" font-size="13" fill="#18212f">pypto-serving wrapper</text>
+          <rect x="272" y="82" width="190" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="367" y="108" text-anchor="middle" font-size="13" fill="#18212f">PyPTO/Simpler adapter</text>
+          <rect x="490" y="82" width="190" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="585" y="108" text-anchor="middle" font-size="13" fill="#18212f">Scheduler / prefetcher</text>
+          <rect x="708" y="82" width="190" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="803" y="108" text-anchor="middle" font-size="13" fill="#18212f">Ops / warmup tools</text>
+          <rect x="926" y="82" width="190" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="1021" y="108" text-anchor="middle" font-size="13" fill="#18212f">future UB clients</text>
+
+          <rect x="24" y="182" width="1132" height="142" rx="18" fill="#fff" stroke="#d8dee8"/>
+          <text x="48" y="214" font-size="17" font-weight="700" fill="#18212f">UFlow control plane</text>
+          <rect x="54" y="236" width="160" height="62" rx="12" fill="#f0ebff" stroke="#b9a8f7"/>
+          <text x="134" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#4d33a3">API Gateway</text>
+          <text x="134" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">RPC / SDK / CLI</text>
+          <rect x="246" y="236" width="160" height="62" rx="12" fill="#fff" stroke="#d8dee8"/>
+          <text x="326" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#18212f">Catalog</text>
+          <text x="326" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">Object / Placement</text>
+          <rect x="438" y="236" width="160" height="62" rx="12" fill="#fff" stroke="#d8dee8"/>
+          <text x="518" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#18212f">Lease & State</text>
+          <text x="518" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">Ready / Dirty / ACL</text>
+          <rect x="630" y="236" width="160" height="62" rx="12" fill="#fff" stroke="#d8dee8"/>
+          <text x="710" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#18212f">Planner</text>
+          <text x="710" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">placement / transfer</text>
+          <rect x="822" y="236" width="160" height="62" rx="12" fill="#fff" stroke="#d8dee8"/>
+          <text x="902" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#18212f">Cost Model</text>
+          <text x="902" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">hot/cold effort</text>
+          <rect x="1014" y="236" width="110" height="62" rx="12" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="1069" y="262" text-anchor="middle" font-size="14" font-weight="700" fill="#9b2845">Event</text>
+          <text x="1069" y="282" text-anchor="middle" font-size="12" fill="#5f6b7a">poll/wait</text>
+
+          <rect x="24" y="364" width="1132" height="116" rx="18" fill="#fbfcff" stroke="#d8dee8"/>
+          <text x="48" y="396" font-size="17" font-weight="700" fill="#18212f">UFlow data plane / runtime</text>
+          <rect x="70" y="420" width="160" height="42" rx="11" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="150" y="446" text-anchor="middle" font-size="13" fill="#14549e">HBM Manager</text>
+          <rect x="258" y="420" width="160" height="42" rx="11" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="338" y="446" text-anchor="middle" font-size="13" fill="#0a6d52">DDR Manager</text>
+          <rect x="446" y="420" width="160" height="42" rx="11" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="526" y="446" text-anchor="middle" font-size="13" fill="#9c560c">Pinned Pool</text>
+          <rect x="634" y="420" width="160" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="714" y="446" text-anchor="middle" font-size="13" fill="#18212f">Transfer Executor</text>
+          <rect x="822" y="420" width="160" height="42" rx="11" fill="#fff" stroke="#d8dee8"/>
+          <text x="902" y="446" text-anchor="middle" font-size="13" fill="#18212f">Stats / History</text>
+          <rect x="1010" y="420" width="110" height="42" rx="11" fill="#f6f8fc" stroke="#d8dee8"/>
+          <text x="1065" y="446" text-anchor="middle" font-size="13" fill="#18212f">Backends</text>
+
+          <path d="M585 124 L585 182" stroke="#354255" stroke-width="2.2" marker-end="url(#arrowArchA)"/>
+          <path d="M214 267 L246 267" stroke="#354255" stroke-width="2.1" marker-end="url(#arrowArchA)"/>
+          <path d="M406 267 L438 267" stroke="#354255" stroke-width="2.1" marker-end="url(#arrowArchA)"/>
+          <path d="M598 267 L630 267" stroke="#354255" stroke-width="2.1" marker-end="url(#arrowArchA)"/>
+          <path d="M790 267 L822 267" stroke="#354255" stroke-width="2.1" marker-end="url(#arrowArchA)"/>
+          <path d="M982 267 L1014 267" stroke="#354255" stroke-width="2.1" marker-end="url(#arrowArchA)"/>
+          <path d="M710 298 L714 420" stroke="#6746c3" stroke-width="2.2" marker-end="url(#arrowArchA)"/>
+          <path d="M714 420 C654 386, 190 388, 150 420" fill="none" stroke="#2f80ed" stroke-width="2.3" marker-end="url(#arrowArchBlue)"/>
+          <path d="M714 420 C645 400, 392 398, 338 420" fill="none" stroke="#159a74" stroke-width="2.3" marker-end="url(#arrowArchGreen)"/>
+          <path d="M714 420 C650 438, 585 438, 526 420" fill="none" stroke="#d97a1f" stroke-width="2.3" marker-end="url(#arrowArchOrange)"/>
+          <path d="M902 420 C916 360, 1018 340, 1069 298" fill="none" stroke="#c0395b" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowArchA)"/>
+        </svg>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--svc)"></i> 控制面：对象、lease、规划和事件</span>
+          <span><i class="dot" style="background:var(--hbm)"></i> HBM：physical handle + service VA + D2D</span>
+          <span><i class="dot" style="background:var(--ddr)"></i> DDR：memfd/mmap authoritative object</span>
+          <span><i class="dot" style="background:var(--pin)"></i> pinned pool：默认热传输 buffer</span>
+        </div>
+      </div>
+
+      <h3>2.2 UFlow 内部数据管理与传输模块</h3>
+      <div class="grid cols-3">
+        <div class="card">
+          <span class="tag svc">Object 管理</span>
+          <h3>Catalog / Namespace / Lease</h3>
+          <p>记录 DataObject、DataPlacement、client lease、allowed range、state、dirty range 和生命周期。</p>
+        </div>
+        <div class="card">
+          <span class="tag hbm">HBM 管理</span>
+          <h3>Physical + service VA</h3>
+          <p>使用 physical HBM、shareable handle、daemon-side VMM map，支持 H2D/D2H/D2D。</p>
+        </div>
+        <div class="card">
+          <span class="tag ddr">DDR 管理</span>
+          <h3>memfd / mmap</h3>
+          <p>默认 authoritative DDR object 是 memfd_shared；daemon 和 client 分别 mmap，同一份数据由 lease 控制准入。</p>
+        </div>
+        <div class="card">
+          <span class="tag pin">Pinned 管理</span>
+          <h3>Transfer pool</h3>
+          <p>预分配/复用 aclrtMallocHost pinned chunk，用于高吞吐 DDR↔HBM 热路径。</p>
+        </div>
+        <div class="card">
+          <span class="tag evt">Transfer 管理</span>
+          <h3>Plan / Execute / Event</h3>
+          <p>根据 DataPlacement 和 cost 选择 direct、pinned staging、D2D、DDR memcpy 或未来 UB/SSU 路径。</p>
+        </div>
+        <div class="card">
+          <span class="tag warn">Policy 管理</span>
+          <h3>Hot/cold + fallback</h3>
+          <p>热数据优先 HBM/near DDR；热路径优先 pinned/D2D；冷数据走 DDR/SSD/DFS/SSU，按 cost 预取。</p>
+        </div>
+      </div>
+
+      <h3>2.3 冷热数据和冷热路径示意</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 1180 520" role="img">
+          <defs>
+            <marker id="arrowHotCold" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+            <marker id="arrowHotColdH" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#d97a1f"/>
+            </marker>
+          </defs>
+          <rect x="36" y="36" width="1108" height="110" rx="18" fill="#fff8e8" stroke="#f2d49b"/>
+          <text x="62" y="70" font-size="17" font-weight="700" fill="#8d5200">Hot data / hot path</text>
+          <rect x="72" y="90" width="178" height="38" rx="10" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="161" y="114" text-anchor="middle" font-size="13" fill="#14549e">HBM resident weights</text>
+          <rect x="278" y="90" width="178" height="38" rx="10" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="367" y="114" text-anchor="middle" font-size="13" fill="#14549e">HBM KVCache</text>
+          <rect x="484" y="90" width="178" height="38" rx="10" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="573" y="114" text-anchor="middle" font-size="13" fill="#9c560c">Pinned staging</text>
+          <rect x="690" y="90" width="178" height="38" rx="10" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="779" y="114" text-anchor="middle" font-size="13" fill="#14549e">HBM-HBM D2D</text>
+          <rect x="896" y="90" width="178" height="38" rx="10" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="985" y="114" text-anchor="middle" font-size="13" fill="#9b2845">TransferEvent</text>
+
+          <rect x="36" y="202" width="1108" height="112" rx="18" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="62" y="236" font-size="17" font-weight="700" fill="#0a6d52">Warm data / warm path</text>
+          <rect x="72" y="258" width="200" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="172" y="282" text-anchor="middle" font-size="13" fill="#18212f">memfd DDR shadow</text>
+          <rect x="312" y="258" width="200" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="412" y="282" text-anchor="middle" font-size="13" fill="#18212f">direct shared DDR fallback</text>
+          <rect x="552" y="258" width="200" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="652" y="282" text-anchor="middle" font-size="13" fill="#18212f">registered mmap opt-in</text>
+          <rect x="792" y="258" width="200" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="892" y="282" text-anchor="middle" font-size="13" fill="#18212f">DDR-DDR mmap memcpy</text>
+
+          <rect x="36" y="370" width="1108" height="112" rx="18" fill="#f6f8fc" stroke="#d8dee8"/>
+          <text x="62" y="404" font-size="17" font-weight="700" fill="#354255">Cold data / cold path</text>
+          <rect x="72" y="426" width="178" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="161" y="450" text-anchor="middle" font-size="13" fill="#18212f">SSD / model files</text>
+          <rect x="278" y="426" width="178" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="367" y="450" text-anchor="middle" font-size="13" fill="#18212f">SSU / LBA-direct</text>
+          <rect x="484" y="426" width="178" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="573" y="450" text-anchor="middle" font-size="13" fill="#18212f">DFS / checkpoint</text>
+          <rect x="690" y="426" width="178" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="779" y="450" text-anchor="middle" font-size="13" fill="#18212f">remote DDR / UB import</text>
+          <rect x="896" y="426" width="178" height="38" rx="10" fill="#ffffff" stroke="#d8dee8"/>
+          <text x="985" y="450" text-anchor="middle" font-size="13" fill="#18212f">relay / prefetch</text>
+
+          <path d="M573 128 C570 166, 540 194, 412 258" fill="none" stroke="#d97a1f" stroke-width="2.8" marker-end="url(#arrowHotColdH)"/>
+          <path d="M172 296 C214 340, 246 386, 161 426" fill="none" stroke="#354255" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowHotCold)"/>
+          <path d="M779 426 C828 360, 820 170, 779 128" fill="none" stroke="#354255" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowHotCold)"/>
+          <path d="M985 426 C1040 332, 1040 190, 985 128" fill="none" stroke="#c0395b" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowHotCold)"/>
+        </svg>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>数据热度</th>
+            <th>典型数据</th>
+            <th>默认位置</th>
+            <th>默认路径</th>
+            <th>策略目标</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tag hbm">Hot</span></td>
+            <td>当前请求 KVCache、正在计算的权重/激活、kernel 输入输出</td>
+            <td>HBM service VA + client descriptor</td>
+            <td>descriptor pass-through、HBM-HBM D2D、pinned H2D/D2H</td>
+            <td>最低延迟、避免多余 copy、和 PyPTO DAG event 对齐</td>
+          </tr>
+          <tr>
+            <td><span class="tag ddr">Warm</span></td>
+            <td>可复用权重影子、可换入 KV、短期共享 CPU 数据</td>
+            <td>memfd_shared DDR object</td>
+            <td>memfd ↔ pinned pool ↔ HBM；必要时 direct_shared_ddr</td>
+            <td>跨进程共享、稳定回收、可预取/回写</td>
+          </tr>
+          <tr>
+            <td><span class="tag warn">Cold</span></td>
+            <td>SSD/DFS 模型文件、checkpoint、远端 DDR/SSU 数据</td>
+            <td>SSD / DFS / SSU / remote domain</td>
+            <td>先进入 DDR memfd 或未来 UB import，再按 cost 进入 HBM</td>
+            <td>容量优先、异步预取、低优先级迁移</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>汇报口径</strong>
+        当前 solid 能力集中在本机 HBM、DDR、pinned host 和 HBM-HBM D2D；UB remote DDR、SSU、DFS 属于同一架构下的冷路径/远端路径扩展，后续进入 backend 和 cost model，而不是改变 client 接口。
+      </div>
+    </section>
+
+    <section>
+      <h2>3. HBM 数据生命周期与访问流程</h2>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>3.1 HBM 创建与服务侧 VA</h3>
+          <div class="flow">
+            <div class="step"><span class="num">1</span><div><strong>CreateDataObject(hint=mandatory:hbm)</strong><p>client 只表达逻辑对象、size、target npu；不直接申请 device pointer。</p></div></div>
+            <div class="step"><span class="num">2</span><div><strong>aclrtMallocPhysical</strong><p>UFlow daemon 在目标 NPU 上申请 physical HBM handle。</p></div></div>
+            <div class="step"><span class="num">3</span><div><strong>Export shareable handle</strong><p>daemon 导出 shareable token，用于授权 client 计算侧访问。</p></div></div>
+            <div class="step"><span class="num">4</span><div><strong>Reserve/Map/MemSetAccess</strong><p>daemon 立即把同一段 physical HBM map 成自己的 service_device_ptr，并设置 READWRITE 权限。</p></div></div>
+            <div class="step"><span class="num">5</span><div><strong>保存 PlacementRuntime</strong><p>catalog 保存 public metadata；runtime map 保存 raw handle、service VA、device id、mapped bytes。</p></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>3.2 Client 访问权</h3>
+          <div class="flow">
+            <div class="step"><span class="num">1</span><div><strong>Open / lease</strong><p>client 注册 PID/bare TGID，UFlow 记录 lease 和访问范围。</p></div></div>
+            <div class="step"><span class="num">2</span><div><strong>aclrtMemSetPidToShareableHandle</strong><p>daemon 给目标进程授权 shareable handle。</p></div></div>
+            <div class="step"><span class="num">3</span><div><strong>client import/map</strong><p>client 获得自己的 device VA，可传给 kernel 或 runtime descriptor。</p></div></div>
+            <div class="step"><span class="num">4</span><div><strong>计算侧写入后同步</strong><p>client 修改数据后必须显式 <span class="code">MarkDirty</span> / <span class="code">MarkReady</span>，否则 UFlow transfer 会拒绝或视为未定义。</p></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="callout ok">
+        <strong>已验证事实</strong>
+        PhaseE-02 已证明 daemon service VA 与 client import VA 指向同一份 physical HBM；client 写入后通过 MarkDirty + MarkReady，daemon 后续 HBM→DDR 可读到修改。not-ready source 会被拒绝并产生 failed event。
+      </div>
+    </section>
+
+    <section>
+      <h2>4. DDR 数据生命周期与默认选型</h2>
+      <p class="lead">DDR 不再简单等同于普通 host tensor。当前将 DDR 分成 authoritative shared object、pinned transfer pool、direct fallback、registered/hugepage/NUMA opt-in 四类语义。</p>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 320" role="img">
+          <defs>
+            <marker id="arrowDdr" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+          </defs>
+          <rect x="28" y="92" width="190" height="92" rx="14" fill="#f0ebff" stroke="#b9a8f7"/>
+          <text x="123" y="128" text-anchor="middle" font-size="17" font-weight="700" fill="#4d33a3">Create DDR Object</text>
+          <text x="123" y="154" text-anchor="middle" font-size="13" fill="#5f6b7a">hint=mandatory:ddr</text>
+
+          <rect x="288" y="42" width="204" height="92" rx="14" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="390" y="78" text-anchor="middle" font-size="17" font-weight="700" fill="#0a6d52">memfd_shared</text>
+          <text x="390" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">默认权威 DDR object</text>
+
+          <rect x="288" y="184" width="204" height="92" rx="14" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="390" y="220" text-anchor="middle" font-size="17" font-weight="700" fill="#9c560c">Pinned Pool</text>
+          <text x="390" y="246" text-anchor="middle" font-size="13" fill="#5f6b7a">transfer only</text>
+
+          <rect x="582" y="42" width="204" height="92" rx="14" fill="#eef5ff" stroke="#bdd6fb"/>
+          <text x="684" y="78" text-anchor="middle" font-size="17" font-weight="700" fill="#14549e">Client mmap</text>
+          <text x="684" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">fd passing / lease 准入</text>
+
+          <rect x="582" y="184" width="204" height="92" rx="14" fill="#fff" stroke="#d8dee8"/>
+          <text x="684" y="220" text-anchor="middle" font-size="17" font-weight="700" fill="#18212f">Service mmap</text>
+          <text x="684" y="246" text-anchor="middle" font-size="13" fill="#5f6b7a">daemon 读写和 transfer</text>
+
+          <rect x="872" y="92" width="204" height="92" rx="14" fill="#fff" stroke="#d8dee8"/>
+          <text x="974" y="128" text-anchor="middle" font-size="17" font-weight="700" fill="#18212f">Policy/Fallback</text>
+          <text x="974" y="154" text-anchor="middle" font-size="13" fill="#5f6b7a">direct / registered / debug</text>
+
+          <path d="M218 138 L288 90" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowDdr)"/>
+          <path d="M218 138 L288 228" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowDdr)"/>
+          <path d="M492 88 L582 88" stroke="#159a74" stroke-width="2.6" marker-end="url(#arrowDdr)"/>
+          <path d="M492 88 C538 110, 546 202, 582 230" fill="none" stroke="#159a74" stroke-width="2.6" marker-end="url(#arrowDdr)"/>
+          <path d="M786 230 C830 210, 844 156, 872 140" fill="none" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowDdr)"/>
+          <path d="M492 230 L582 230" stroke="#d97a1f" stroke-width="2.6" marker-end="url(#arrowDdr)"/>
+        </svg>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>DDR 形态</th>
+            <th>角色</th>
+            <th>当前决策</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="code">memfd_shared</span></td>
+            <td>authoritative DDR DataObject</td>
+            <td><span class="tag ok">默认</span> 共享语义清楚，不暴露 path，适合 fd passing 和 lease。</td>
+          </tr>
+          <tr>
+            <td><span class="code">aclrtMallocHost pinned</span></td>
+            <td>transfer pool</td>
+            <td><span class="tag ok">默认热传输</span> 性能最高，但非独立进程共享对象。</td>
+          </tr>
+          <tr>
+            <td><span class="code">direct shared DDR</span></td>
+            <td>no-bounce fallback</td>
+            <td><span class="tag warn">备选</span> 稳定可用，吞吐低于 pinned staging。</td>
+          </tr>
+          <tr>
+            <td><span class="code">registered mmap</span></td>
+            <td>experimental / opt-in</td>
+            <td><span class="tag warn">可用但非默认</span> V1 register 成功，16MiB register 约 10ms，当前无吞吐优势。</td>
+          </tr>
+          <tr>
+            <td><span class="code">tmpfs_mmap_shared</span></td>
+            <td>debug/simple backend</td>
+            <td><span class="tag ok">保留</span> 便于调试和早期部署。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>5. 传输路径总览</h2>
+      <p class="lead">当前所有官方路径都通过 TransferPlan/TransferEvent 表达，实际 copy 在 daemon 侧执行。下面是每条路径的默认实现、fallback 和验证状态。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>路径</th>
+            <th>默认执行流</th>
+            <th>fallback / opt-in</th>
+            <th>事件与状态</th>
+            <th>验证状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>DDR → HBM</strong></td>
+            <td>memfd service mmap → CPU copy to pinned chunk → ACL H2D sync/async → HBM service VA</td>
+            <td>direct shared DDR → HBM；registered mmap opt-in</td>
+            <td>dst HBM ready；event 记录 actual_engine/bandwidth</td>
+            <td><span class="tag ok">已通过</span></td>
+          </tr>
+          <tr>
+            <td><strong>HBM → DDR</strong></td>
+            <td>HBM service VA → ACL D2H sync/async to pinned chunk → CPU copy to memfd service mmap</td>
+            <td>direct HBM → shared DDR；registered mmap opt-in</td>
+            <td>dst DDR ready；source 需 ready</td>
+            <td><span class="tag ok">已通过</span></td>
+          </tr>
+          <tr>
+            <td><strong>同卡 HBM → HBM</strong></td>
+            <td>src service VA → ACL D2D sync/async → dst service VA</td>
+            <td>host relay 仅作为失败 fallback</td>
+            <td>dst HBM ready；不走 DDR relay</td>
+            <td><span class="tag ok">已通过 direct</span></td>
+          </tr>
+          <tr>
+            <td><strong>跨卡 HBM → HBM</strong></td>
+            <td>enable peer access 后，src NPU service VA → ACL D2D peer → dst NPU service VA</td>
+            <td>peer 不可用时才 relay</td>
+            <td>event 标注 peer/direct/fallback</td>
+            <td><span class="tag ok">NPU7→NPU6 已通过</span></td>
+          </tr>
+          <tr>
+            <td><strong>DDR → DDR</strong></td>
+            <td>daemon mmap src/dst → CPU memcpy</td>
+            <td>后续可接 NUMA/UB remote DDR cost path</td>
+            <td>dst DDR ready；event 记录 latency</td>
+            <td><span class="tag ok">已通过</span></td>
+          </tr>
+          <tr>
+            <td><strong>client 写 HBM</strong></td>
+            <td>client import shareable handle → kernel/copy 写自己的 VA</td>
+            <td>非官方 transfer；必须 MarkDirty/MarkReady</td>
+            <td>未 MarkReady 时 UFlow transfer 拒绝</td>
+            <td><span class="tag ok">负例已通过</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. DDR ↔ HBM 默认热路径</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 380" role="img">
+          <defs>
+            <marker id="arrowHot" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+          </defs>
+          <rect x="40" y="126" width="190" height="96" rx="14" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="135" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#0a6d52">DDR memfd</text>
+          <text x="135" y="192" text-anchor="middle" font-size="13" fill="#5f6b7a">service mmap view</text>
+
+          <rect x="330" y="80" width="210" height="96" rx="14" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="435" y="118" text-anchor="middle" font-size="18" font-weight="700" fill="#9c560c">Pinned Chunk</text>
+          <text x="435" y="146" text-anchor="middle" font-size="13" fill="#5f6b7a">aclrtMallocHost pool</text>
+
+          <rect x="330" y="236" width="210" height="96" rx="14" fill="#eef5ff" stroke="#bdd6fb"/>
+          <text x="435" y="274" text-anchor="middle" font-size="18" font-weight="700" fill="#14549e">Direct Fallback</text>
+          <text x="435" y="302" text-anchor="middle" font-size="13" fill="#5f6b7a">memfd ptr ↔ HBM</text>
+
+          <rect x="650" y="126" width="190" height="96" rx="14" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="745" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#14549e">HBM</text>
+          <text x="745" y="192" text-anchor="middle" font-size="13" fill="#5f6b7a">service_device_ptr</text>
+
+          <rect x="910" y="126" width="170" height="96" rx="14" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="995" y="164" text-anchor="middle" font-size="18" font-weight="700" fill="#9b2845">Event</text>
+          <text x="995" y="192" text-anchor="middle" font-size="13" fill="#5f6b7a">complete / failed</text>
+
+          <path d="M230 174 L330 128" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowHot)"/>
+          <text x="280" y="138" text-anchor="middle" font-size="13" fill="#9c560c">CPU copy</text>
+          <path d="M540 128 L650 174" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowHot)"/>
+          <text x="596" y="138" text-anchor="middle" font-size="13" fill="#9c560c">ACL H2D/D2H</text>
+
+          <path d="M230 188 C312 260, 452 300, 650 188" fill="none" stroke="#2f80ed" stroke-width="2.5" stroke-dasharray="8 6" marker-end="url(#arrowHot)"/>
+          <text x="448" y="354" text-anchor="middle" font-size="13" fill="#14549e">no-bounce fallback: direct shared DDR ↔ HBM</text>
+
+          <path d="M840 174 L910 174" stroke="#c0395b" stroke-width="2.6" marker-end="url(#arrowHot)"/>
+        </svg>
+      </div>
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>为什么默认走 pinned staging</h3>
+          <p>PhaseE-03 100KiB-512MiB sweep 里，64MiB 以上 pinned staging H2D/D2H 约 12-15 GiB/s；direct shared DDR 多数约 3.7-6.6 GiB/s。虽然多一次 CPU copy，但整体更快。</p>
+        </div>
+        <div class="card">
+          <h3>为什么 DDR object 仍用 memfd</h3>
+          <p>pinned host memory 不天然可跨独立进程共享；memfd 的生命周期和授权更适合服务化对象，因此 authoritative storage 与 transfer pool 分层。</p>
+        </div>
+        <div class="card">
+          <h3>为什么 registered mmap 非默认</h3>
+          <p><span class="code">aclrtHostRegister</span> V1 能注册 mmap VA；register 不计入热路径后，registered memfd 在大对象上仍未超过 memfd+pinned staging。</p>
+        </div>
+      </div>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 330" role="img">
+          <defs>
+            <marker id="arrowChunk" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+          </defs>
+          <text x="560" y="34" text-anchor="middle" font-size="20" font-weight="800" fill="#18212f">Chunked pinned pool: direction-aware ping-pong</text>
+          <text x="560" y="60" text-anchor="middle" font-size="13" fill="#5f6b7a">pinned pool 是中转站，不按 memfd object 大小申请；H2D 默认 2x16MiB，D2H 默认 2x64MiB。</text>
+
+          <rect x="50" y="110" width="210" height="90" rx="12" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="155" y="144" text-anchor="middle" font-size="17" font-weight="700" fill="#0a6d52">memfd object</text>
+          <text x="155" y="170" text-anchor="middle" font-size="13" fill="#5f6b7a">chunk0, chunk1, ...</text>
+
+          <rect x="360" y="82" width="180" height="72" rx="12" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="450" y="112" text-anchor="middle" font-size="16" font-weight="700" fill="#9c560c">pinned[0]</text>
+          <text x="450" y="136" text-anchor="middle" font-size="12" fill="#5f6b7a">16/32/64MiB</text>
+
+          <rect x="360" y="186" width="180" height="72" rx="12" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="450" y="216" text-anchor="middle" font-size="16" font-weight="700" fill="#9c560c">pinned[1]</text>
+          <text x="450" y="240" text-anchor="middle" font-size="12" fill="#5f6b7a">ping-pong pair</text>
+
+          <rect x="650" y="110" width="210" height="90" rx="12" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="755" y="144" text-anchor="middle" font-size="17" font-weight="700" fill="#14549e">HBM object</text>
+          <text x="755" y="170" text-anchor="middle" font-size="13" fill="#5f6b7a">same chunk ranges</text>
+
+          <rect x="930" y="110" width="150" height="90" rx="12" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="1005" y="144" text-anchor="middle" font-size="17" font-weight="700" fill="#9b2845">TransferHandle</text>
+          <text x="1005" y="170" text-anchor="middle" font-size="12" fill="#5f6b7a">aggregate events</text>
+
+          <path d="M260 140 L360 118" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowChunk)"/>
+          <text x="310" y="112" text-anchor="middle" font-size="12" fill="#9c560c">CPU copy chunk i</text>
+          <path d="M540 118 L650 140" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowChunk)"/>
+          <text x="595" y="112" text-anchor="middle" font-size="12" fill="#9c560c">ACL async</text>
+
+          <path d="M260 176 L360 222" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowChunk)"/>
+          <text x="310" y="232" text-anchor="middle" font-size="12" fill="#9c560c">CPU copy chunk i+1</text>
+          <path d="M540 222 L650 176" stroke="#d97a1f" stroke-width="3" marker-end="url(#arrowChunk)"/>
+          <text x="595" y="232" text-anchor="middle" font-size="12" fill="#9c560c">overlap DMA</text>
+
+          <path d="M860 155 L930 155" stroke="#c0395b" stroke-width="2.6" marker-end="url(#arrowChunk)"/>
+          <text x="560" y="298" text-anchor="middle" font-size="13" fill="#5f6b7a">实测：H2D 2x16MiB 最优；D2H 大对象 2x64MiB 最优；均衡模式 2x32MiB。</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. HBM ↔ HBM direct 路径</h2>
+      <p class="lead">PhaseE-02 之后，同卡和跨卡 HBM-HBM 都不再依赖 host relay。UFlow daemon 持有 src/dst 的 service VA，传输由 daemon 在正确 device/context 下执行。</p>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 300" role="img">
+          <defs>
+            <marker id="arrowHbm" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#2f80ed"/>
+            </marker>
+          </defs>
+          <rect x="60" y="92" width="190" height="96" rx="14" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="155" y="130" text-anchor="middle" font-size="18" font-weight="700" fill="#14549e">HBM src</text>
+          <text x="155" y="158" text-anchor="middle" font-size="13" fill="#5f6b7a">NPU7 service VA</text>
+
+          <rect x="465" y="64" width="190" height="96" rx="14" fill="#f0ebff" stroke="#b9a8f7"/>
+          <text x="560" y="102" text-anchor="middle" font-size="18" font-weight="700" fill="#4d33a3">ACL D2D</text>
+          <text x="560" y="130" text-anchor="middle" font-size="13" fill="#5f6b7a">same device / peer</text>
+
+          <rect x="465" y="190" width="190" height="72" rx="14" fill="#fff8e8" stroke="#f2d49b"/>
+          <text x="560" y="222" text-anchor="middle" font-size="16" font-weight="700" fill="#8d5200">Fallback</text>
+          <text x="560" y="244" text-anchor="middle" font-size="13" fill="#5f6b7a">host relay only if needed</text>
+
+          <rect x="870" y="92" width="190" height="96" rx="14" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="965" y="130" text-anchor="middle" font-size="18" font-weight="700" fill="#14549e">HBM dst</text>
+          <text x="965" y="158" text-anchor="middle" font-size="13" fill="#5f6b7a">NPU6/7 service VA</text>
+
+          <path d="M250 140 L465 112" stroke="#2f80ed" stroke-width="3" marker-end="url(#arrowHbm)"/>
+          <path d="M655 112 L870 140" stroke="#2f80ed" stroke-width="3" marker-end="url(#arrowHbm)"/>
+          <path d="M250 160 C360 244, 734 244, 870 160" fill="none" stroke="#b96b08" stroke-width="2.5" stroke-dasharray="8 6"/>
+          <text x="560" y="35" text-anchor="middle" font-size="14" fill="#5f6b7a">同卡: acl_d2d / acl_d2d_async · 跨卡: enable peer + acl_d2d_peer / async</text>
+        </svg>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>场景</th>
+            <th>同步路径</th>
+            <th>异步路径</th>
+            <th>验证证据</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>同卡 HBM→HBM</td>
+            <td><span class="code">acl_d2d</span></td>
+            <td><span class="code">acl_d2d_async</span></td>
+            <td><span class="code">phasee02_sync_20260613_205723</span> / <span class="code">phasee02_20260613_205122</span></td>
+          </tr>
+          <tr>
+            <td>跨卡 HBM→HBM</td>
+            <td><span class="code">acl_d2d_peer</span></td>
+            <td><span class="code">acl_d2d_async</span></td>
+            <td>NPU7→NPU6 已通过，fallback_used=false</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. 状态、同步和事件模型</h2>
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>Data State</h3>
+          <p><span class="code">Created</span> / <span class="code">Ready</span> / <span class="code">Dirty</span> / <span class="code">Released</span> 是 transfer 消费源数据的前置约束。not-ready source 会产生 failed event。</p>
+        </div>
+        <div class="card">
+          <h3>Dirty / Ready</h3>
+          <p>client 计算侧写 HBM 或 DDR 后，需要调用 <span class="code">MarkDirty</span> 标注修改范围，再调用 <span class="code">MarkReady</span> 允许 daemon transfer 消费。</p>
+        </div>
+        <div class="card">
+          <h3>Async-first</h3>
+          <p><span class="code">SubmitTransfer</span> 总是创建 <span class="code">TransferEvent</span>；同步调用只是提交后等待。event 回写实际 path、engine、latency、bandwidth 和 fallback reason。</p>
+        </div>
+      </div>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 260" role="img">
+          <defs>
+            <marker id="arrowState" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+          </defs>
+          <rect x="40" y="88" width="140" height="70" rx="14" fill="#fff" stroke="#d8dee8"/>
+          <text x="110" y="130" text-anchor="middle" font-size="17" font-weight="700">Created</text>
+          <rect x="260" y="88" width="140" height="70" rx="14" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="330" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#0a6d52">Ready</text>
+          <rect x="480" y="88" width="140" height="70" rx="14" fill="#fff8e8" stroke="#f2d49b"/>
+          <text x="550" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#8d5200">Dirty</text>
+          <rect x="700" y="88" width="140" height="70" rx="14" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="770" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#0a6d52">Ready</text>
+          <rect x="920" y="88" width="140" height="70" rx="14" fill="#ffecef" stroke="#efb4c1"/>
+          <text x="990" y="130" text-anchor="middle" font-size="17" font-weight="700" fill="#9b2845">TransferEvent</text>
+
+          <path d="M180 123 L260 123" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowState)"/>
+          <text x="220" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">initial upload</text>
+          <path d="M400 123 L480 123" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowState)"/>
+          <text x="440" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">client writes</text>
+          <path d="M620 123 L700 123" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowState)"/>
+          <text x="660" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">MarkReady</text>
+          <path d="M840 123 L920 123" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowState)"/>
+          <text x="880" y="104" text-anchor="middle" font-size="13" fill="#5f6b7a">SubmitTransfer</text>
+          <path d="M110 158 C142 222, 288 222, 330 158" fill="none" stroke="#b43b3b" stroke-width="2.2" stroke-dasharray="7 6"/>
+          <text x="220" y="235" text-anchor="middle" font-size="13" fill="#8f2828">Created/not-ready source → transfer failed</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>9. 已验证性能与能力证据</h2>
+      <p class="lead">下表保留当前汇报最需要的硬证据：远端 run dir、路径结论和大对象代表性吞吐。完整 JSONL/CSV 在 2 号机对应 run dir 中。</p>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>PhaseE-02 service-owned transfer</h3>
+          <table>
+            <tbody>
+              <tr><th>异步 run</th><td><span class="code">/tmp/proj_output/phasee02_20260613_205122</span></td></tr>
+              <tr><th>同步 run</th><td><span class="code">/tmp/proj_output/phasee02_sync_20260613_205723</span></td></tr>
+              <tr><th>Dirty/ready run</th><td><span class="code">/tmp/proj_output/phasee02_dirty_20260613_205502</span></td></tr>
+              <tr><th>结论</th><td>HBM↔DDR、HBM↔HBM、DDR↔DDR 均由 daemon service VA / mmap view 执行并通过。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>PhaseE-03 DDR strategy benchmark</h3>
+          <table>
+            <tbody>
+              <tr><th>大尺寸 run</th><td><span class="code">/tmp/proj_output/phasee03_sizesweep_20260617_111106</span></td></tr>
+              <tr><th>设备</th><td>NPU7</td></tr>
+              <tr><th>size</th><td>100KiB 到 512MiB，13 档，每组 10 次正式计时。</td></tr>
+              <tr><th>结果</th><td>2225 行 results.jsonl；fail=0，skip=0；推荐 memfd_shared + memfd_plus_pinned_staging。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>PhaseE-03 chunk pipeline benchmark</h3>
+          <table>
+            <tbody>
+              <tr><th>chunk run</th><td><span class="code">/tmp/proj_output/phasee03_chunk_pipeline_20260617_144038</span></td></tr>
+              <tr><th>设备</th><td>NPU7</td></tr>
+              <tr><th>矩阵</th><td>64MiB 到 1GiB object；8/16/32/64/128MiB chunk；1/2/3 buffer。</td></tr>
+              <tr><th>结果</th><td>617 行 chunk_results.jsonl；fail=0；H2D 默认 2x16MiB，D2H 默认 2x64MiB。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <h3>大对象代表吞吐</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>size</th>
+            <th>strategy</th>
+            <th>DDR-DDR</th>
+            <th>H2D sync</th>
+            <th>D2H sync</th>
+            <th>H2D async</th>
+            <th>D2H async</th>
+            <th>角色</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>64MiB</td>
+            <td><span class="code">memfd_plus_pinned_staging</span></td>
+            <td class="numval">22.053</td>
+            <td class="numval">15.252</td>
+            <td class="numval">15.441</td>
+            <td class="numval">14.736</td>
+            <td class="numval">14.842</td>
+            <td>默认热传输</td>
+          </tr>
+          <tr>
+            <td>64MiB</td>
+            <td><span class="code">memfd_shared</span></td>
+            <td class="numval">21.792</td>
+            <td class="numval">3.717</td>
+            <td class="numval">3.745</td>
+            <td class="numval">3.685</td>
+            <td class="numval">3.691</td>
+            <td>默认 DDR object / no-bounce fallback</td>
+          </tr>
+          <tr>
+            <td>64MiB</td>
+            <td><span class="code">registered_memfd_shared</span></td>
+            <td class="numval">21.738</td>
+            <td class="numval">3.716</td>
+            <td class="numval">3.733</td>
+            <td class="numval">1.912</td>
+            <td class="numval">1.879</td>
+            <td>opt-in experimental</td>
+          </tr>
+          <tr>
+            <td>512MiB</td>
+            <td><span class="code">memfd_plus_pinned_staging</span></td>
+            <td class="numval">17.930</td>
+            <td class="numval">13.539</td>
+            <td class="numval">12.463</td>
+            <td class="numval">13.530</td>
+            <td class="numval">12.571</td>
+            <td>默认热传输</td>
+          </tr>
+          <tr>
+            <td>512MiB</td>
+            <td><span class="code">memfd_shared</span></td>
+            <td class="numval">17.731</td>
+            <td class="numval">3.947</td>
+            <td class="numval">6.624</td>
+            <td class="numval">3.900</td>
+            <td class="numval">6.616</td>
+            <td>默认 DDR object / no-bounce fallback</td>
+          </tr>
+          <tr>
+            <td>512MiB</td>
+            <td><span class="code">registered_memfd_shared</span></td>
+            <td class="numval">17.880</td>
+            <td class="numval">3.923</td>
+            <td class="numval">6.613</td>
+            <td class="numval">3.720</td>
+            <td class="numval">5.716</td>
+            <td>opt-in experimental</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="lead">单位：GiB/s。pinned staging 计时包含 memfd↔pinned CPU copy 和 pinned↔HBM ACL copy；register 成本不计入 registered memfd 热路径。</p>
+      <h3>Chunk pipeline 默认配置</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>object</th>
+            <th>op</th>
+            <th>full-size pinned</th>
+            <th>2 x 16MiB</th>
+            <th>2 x 32MiB</th>
+            <th>2 x 64MiB</th>
+            <th>结论</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>512MiB</td>
+            <td>H2D</td>
+            <td class="numval">10.786</td>
+            <td class="numval">17.082</td>
+            <td class="numval">15.779</td>
+            <td class="numval">14.303</td>
+            <td>H2D 选择 2x16MiB</td>
+          </tr>
+          <tr>
+            <td>512MiB</td>
+            <td>D2H</td>
+            <td class="numval">12.515</td>
+            <td class="numval">13.606</td>
+            <td class="numval">14.275</td>
+            <td class="numval">14.476</td>
+            <td>D2H 选择 2x64MiB</td>
+          </tr>
+          <tr>
+            <td>1GiB</td>
+            <td>H2D</td>
+            <td class="numval">10.791</td>
+            <td class="numval">17.428</td>
+            <td class="numval">16.405</td>
+            <td class="numval">15.323</td>
+            <td>H2D 选择 2x16MiB</td>
+          </tr>
+          <tr>
+            <td>1GiB</td>
+            <td>D2H</td>
+            <td class="numval">12.634</td>
+            <td class="numval">13.669</td>
+            <td class="numval">14.720</td>
+            <td class="numval">15.039</td>
+            <td>D2H 选择 2x64MiB</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="lead">单位：GiB/s。2-buffer ping-pong 是稳定最优形态；3-buffer 没有持续收益，full-size pinned mirror 占用大且 H2D 明显更慢。</p>
+    </section>
+
+    <section>
+      <h2>10. 决策树</h2>
+      <div class="diagram">
+        <svg viewBox="0 0 1120 420" role="img">
+          <defs>
+            <marker id="arrowTree" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L8,3 z" fill="#354255"/>
+            </marker>
+          </defs>
+          <rect x="448" y="24" width="224" height="70" rx="14" fill="#f0ebff" stroke="#b9a8f7"/>
+          <text x="560" y="66" text-anchor="middle" font-size="18" font-weight="700" fill="#4d33a3">需要 DDR/HBM 数据流动?</text>
+
+          <rect x="70" y="150" width="210" height="88" rx="14" fill="#e8f7f1" stroke="#9ddcc9"/>
+          <text x="175" y="185" text-anchor="middle" font-size="17" font-weight="700" fill="#0a6d52">长期共享 DDR</text>
+          <text x="175" y="212" text-anchor="middle" font-size="13" fill="#5f6b7a">memfd_shared</text>
+
+          <rect x="330" y="150" width="210" height="88" rx="14" fill="#fff2e4" stroke="#efc38f"/>
+          <text x="435" y="185" text-anchor="middle" font-size="17" font-weight="700" fill="#9c560c">热传输优先</text>
+          <text x="435" y="212" text-anchor="middle" font-size="13" fill="#5f6b7a">pinned staging</text>
+
+          <rect x="590" y="150" width="210" height="88" rx="14" fill="#eef5ff" stroke="#bdd6fb"/>
+          <text x="695" y="185" text-anchor="middle" font-size="17" font-weight="700" fill="#14549e">避免额外 buffer</text>
+          <text x="695" y="212" text-anchor="middle" font-size="13" fill="#5f6b7a">direct_shared_ddr</text>
+
+          <rect x="850" y="150" width="210" height="88" rx="14" fill="#fff8e8" stroke="#f2d49b"/>
+          <text x="955" y="185" text-anchor="middle" font-size="17" font-weight="700" fill="#8d5200">实验能力</text>
+          <text x="955" y="212" text-anchor="middle" font-size="13" fill="#5f6b7a">registered / THP / hugepage</text>
+
+          <rect x="330" y="310" width="210" height="70" rx="14" fill="#eaf2ff" stroke="#a8c8f6"/>
+          <text x="435" y="352" text-anchor="middle" font-size="17" font-weight="700" fill="#14549e">HBM-HBM</text>
+          <text x="435" y="374" text-anchor="middle" font-size="12" fill="#5f6b7a">acl_d2d / peer direct</text>
+
+          <rect x="590" y="310" width="210" height="70" rx="14" fill="#fff" stroke="#d8dee8"/>
+          <text x="695" y="352" text-anchor="middle" font-size="17" font-weight="700" fill="#18212f">DDR-DDR</text>
+          <text x="695" y="374" text-anchor="middle" font-size="12" fill="#5f6b7a">daemon mmap memcpy</text>
+
+          <path d="M500 94 L175 150" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+          <path d="M540 94 L435 150" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+          <path d="M580 94 L695 150" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+          <path d="M620 94 L955 150" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+          <path d="M435 238 L435 310" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+          <path d="M695 238 L695 310" stroke="#354255" stroke-width="2.4" marker-end="url(#arrowTree)"/>
+        </svg>
+      </div>
+      <div class="callout warn">
+        <strong>不要把 pinned host 当成 DDR DataObject</strong>
+        pinned host memory 是当前最快的 Host↔Device DMA buffer，但它不是天然跨进程共享对象。UFlow 的正式设计是“共享对象”和“传输池”分层，而不是把一个内存形态强行承担两种语义。
+      </div>
+    </section>
+
+    <section>
+      <h2>11. 后续接入方向</h2>
+      <div class="roadmap">
+        <div class="item"><strong>memfd fd passing</strong><span>把 PhaseE-03 选型纳入 daemon catalog 和 RPC，client 通过 lease 获取 fd。</span></div>
+        <div class="item"><strong>pinned pool policy</strong><span>按 size、并发、NUMA/TopologyDomain 调整 chunk size 和复用策略。</span></div>
+        <div class="item"><strong>PyPTO event 对齐</strong><span>TransferEvent 对齐 PyPTO DAG dependency，支持外部 event wait/record。</span></div>
+        <div class="item"><strong>Cost feedback</strong><span>把 actual bandwidth/latency 回写 cost model，动态选择 direct 或 staging。</span></div>
+        <div class="item"><strong>UB/remote backend</strong><span>把同一套 DataPlacement/TransferPlan 推广到 remote DDR、SSU、DFS 和 UB shmem。</span></div>
+      </div>
+    </section>
+
+    <footer>
+      Sources: PhaseE-00 / PhaseE-01 / PhaseE-02 / PhaseE-03 planning and validation docs under data-service/plan. Generated for UFlow DDR/HBM transfer reporting.
+    </footer>
+  </main>
+</body>
+</html>

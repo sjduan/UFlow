@@ -1,0 +1,14 @@
+UFLOW_E08_LOW_OVERHEAD_BEGIN
+run_dir=/tmp/proj_output/phasee08_low_overhead_executor_20260630_201609
+device=7
+sizes=64MiB,256MiB,1GiB,2GiB
+directions=h2d,d2h
+repeats=3
+mode=auto
+transfer_workers=1
+direct_h2d_max_lanes=1
+direct_d2h_max_lanes=1
+direct_idle_ttl_ms=30000
+ddr_use_memfd=1
+ddr_pretouch_on_create=1
+ddr_madvise_hugepage=1

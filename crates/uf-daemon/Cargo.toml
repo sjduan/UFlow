@@ -1,0 +1,13 @@
+[package]
+name = "uf-daemon"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "uf-daemon"
+path = "src/main.rs"
+
+[dependencies]
+libc = "0.2"
+uf-acl-sys = { path = "../uf-acl-sys" }
+uf-core = { path = "../uf-core" }

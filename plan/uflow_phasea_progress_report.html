@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UFlow PhaseA 最新进展</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --ink: #17202f;
+      --muted: #657085;
+      --line: #d8dee8;
+      --panel: #ffffff;
+      --uf: #0f7f9f;
+      --pypto: #7446b8;
+      --hbm: #2563eb;
+      --ddr: #15946f;
+      --evt: #bd315f;
+      --ok: #11845b;
+      --warn: #a86512;
+      --soft-uf: #e6f8fb;
+      --soft-pypto: #f0ebff;
+      --soft-hbm: #eaf2ff;
+      --soft-ddr: #e8f7f1;
+      --soft-evt: #ffedf3;
+      --soft-ok: #e7f7ef;
+      --soft-warn: #fff4e6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.48;
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 30px 28px 64px;
+    }
+
+    .hero {
+      min-height: 520px;
+      padding: 44px;
+      border-radius: 18px;
+      color: #fff;
+      background: linear-gradient(135deg, #142038, #23415d);
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 0.76fr 1.24fr;
+      gap: 34px;
+      align-items: center;
+    }
+
+    .stamp {
+      display: inline-flex;
+      padding: 7px 12px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 999px;
+      color: rgba(255,255,255,0.84);
+      background: rgba(255,255,255,0.08);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 48px;
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 540px;
+      color: rgba(255,255,255,0.78);
+      font-size: 17px;
+    }
+
+    section {
+      margin-top: 24px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 25px;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin: -8px 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .metric {
+      min-height: 126px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 28px;
+      line-height: 1.08;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tag.ok { color: var(--ok); background: var(--soft-ok); }
+    .tag.uf { color: var(--uf); background: var(--soft-uf); }
+    .tag.pypto { color: var(--pypto); background: var(--soft-pypto); }
+    .tag.hbm { color: var(--hbm); background: var(--soft-hbm); }
+    .tag.ddr { color: var(--ddr); background: var(--soft-ddr); }
+    .tag.evt { color: var(--evt); background: var(--soft-evt); }
+    .tag.warn { color: var(--warn); background: var(--soft-warn); }
+
+    .diagram {
+      width: 100%;
+      overflow-x: auto;
+      padding: 8px 0;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-width: 900px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: #3f4b5f;
+      background: #f8fafc;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .run {
+      color: #39465a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .cols-3,
+      .cols-4 { grid-template-columns: 1fr; }
+      h1 { font-size: 36px; }
+      .hero { padding: 30px; }
+      section { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="stamp">UFlow PhaseA · 最新进展 · 2026-06-16</div>
+          <h1>UFlow 接管 PyPTO Serving 重数据</h1>
+          <p>当前已经完成本机 HBM/DDR 数据管理、Qwen3-14B L2 权重与 KVCache 接管，以及基于 event 的 DDR→HBM 异步权重加载测试。</p>
+        </div>
+        <div class="diagram">
+          <svg viewBox="0 0 940 500" role="img" aria-label="UFlow and pypto-serving relationship">
+            <defs>
+              <marker id="arrowWhite" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6 Z" fill="#ffffff" opacity="0.9" />
+              </marker>
+              <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.20" />
+              </filter>
+            </defs>
+
+            <rect x="30" y="30" width="880" height="430" rx="24" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.18)" />
+
+            <rect x="80" y="72" width="320" height="102" rx="16" fill="#f0ebff" filter="url(#shadow)" />
+            <text x="240" y="113" text-anchor="middle" fill="#39246a" font-size="24" font-weight="800">pypto-serving</text>
+            <text x="240" y="142" text-anchor="middle" fill="#61517a" font-size="14">Qwen3-14B · model runner · scheduler</text>
+
+            <rect x="80" y="222" width="320" height="102" rx="16" fill="#ffffff" filter="url(#shadow)" />
+            <text x="240" y="263" text-anchor="middle" fill="#243044" font-size="24" font-weight="800">python/core/uflow</text>
+            <text x="240" y="292" text-anchor="middle" fill="#657085" font-size="14">client adapter · fallback · WorkerTensor bridge</text>
+
+            <rect x="510" y="144" width="320" height="118" rx="16" fill="#e6f8fb" filter="url(#shadow)" />
+            <text x="670" y="188" text-anchor="middle" fill="#0c5364" font-size="24" font-weight="800">UFlow daemon</text>
+            <text x="670" y="217" text-anchor="middle" fill="#45636d" font-size="14">DataObject · lease · stats · lazy allocation</text>
+            <text x="670" y="242" text-anchor="middle" fill="#45636d" font-size="13">service-owned HBM/DDR runtime view</text>
+
+            <rect x="510" y="326" width="140" height="82" rx="14" fill="#eaf2ff" filter="url(#shadow)" />
+            <text x="580" y="360" text-anchor="middle" fill="#174f9a" font-size="21" font-weight="800">HBM</text>
+            <text x="580" y="386" text-anchor="middle" fill="#4e6b9f" font-size="13">npu:device</text>
+
+            <rect x="690" y="326" width="140" height="82" rx="14" fill="#e8f7f1" filter="url(#shadow)" />
+            <text x="760" y="360" text-anchor="middle" fill="#0b664f" font-size="21" font-weight="800">DDR</text>
+            <text x="760" y="386" text-anchor="middle" fill="#4f776c" font-size="13">host:0</text>
+
+            <path d="M240 174 L240 220" stroke="#fff" stroke-width="3" marker-end="url(#arrowWhite)" />
+            <path d="M400 273 C456 260 470 214 510 204" stroke="#fff" stroke-width="3" fill="none" marker-end="url(#arrowWhite)" />
+            <path d="M610 262 L585 326" stroke="#fff" stroke-width="3" marker-end="url(#arrowWhite)" />
+            <path d="M720 262 L755 326" stroke="#fff" stroke-width="3" marker-end="url(#arrowWhite)" />
+
+            <text x="470" y="96" fill="#fff" opacity="0.86" font-size="15" font-weight="700">关系结论</text>
+            <text x="470" y="124" fill="#fff" opacity="0.74" font-size="13">pypto-serving 是 client；UFlow 是独立数据服务。</text>
+            <text x="470" y="402" fill="#fff" opacity="0.74" font-size="13">PyPTO/Simpler 只拿 HBM pointer 引用，不接触分配协议。</text>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <section>
+      <h2>最新进展总览</h2>
+      <div class="grid cols-4">
+        <div class="metric">
+          <strong>HBM</strong>
+          <span><span class="tag ok">Done</span> UFlow daemon 管理本机 NPU HBM object，支持 shareable handle、lease、stats、release。</span>
+        </div>
+        <div class="metric">
+          <strong>DDR</strong>
+          <span><span class="tag ok">Done</span> 本机 DDR object 与 HBM↔DDR roundtrip 已跑通，权重/KVCache 可形成 DDR shadow。</span>
+        </div>
+        <div class="metric">
+          <strong>Qwen L2</strong>
+          <span><span class="tag ok">Done</span> PyPTO Serving Qwen3-14B 默认 L2 权重和 KVCache 已可走 UFlow HBM。</span>
+        </div>
+        <div class="metric">
+          <strong>Event</strong>
+          <span><span class="tag ok">Done</span> UFlow DDR→HBM reload completion event 可被 PyPTO layer task wait。</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>UFlow 与 pypto-serving 的边界</h2>
+      <p class="sub">这张图是当前 PhaseA 的核心结构：pypto-serving 只做少量数据面调用，UFlow 负责数据对象和物理内存。</p>
+      <div class="diagram">
+        <svg viewBox="0 0 1320 560" role="img" aria-label="Boundary between UFlow and pypto-serving">
+          <defs>
+            <marker id="arrowUf" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#0f7f9f" />
+            </marker>
+            <marker id="arrowPy" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#7446b8" />
+            </marker>
+          </defs>
+
+          <rect x="36" y="48" width="430" height="414" rx="18" fill="#f0ebff" stroke="#cfbdf2" />
+          <text x="251" y="88" text-anchor="middle" fill="#4c2d86" font-size="24" font-weight="800">pypto-serving / other app</text>
+
+          <rect x="86" y="126" width="330" height="62" rx="10" fill="#fff" stroke="#d8caef" />
+          <text x="251" y="164" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">模型加载 / scheduler / request lifecycle</text>
+
+          <rect x="86" y="220" width="330" height="62" rx="10" fill="#fff" stroke="#d8caef" />
+          <text x="251" y="258" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">Qwen runner 少量接入点</text>
+
+          <rect x="86" y="314" width="330" height="62" rx="10" fill="#fff" stroke="#d8caef" />
+          <text x="251" y="352" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">python/core/uflow adapter</text>
+
+          <text x="251" y="422" text-anchor="middle" fill="#6b5b84" font-size="14">只暴露 WorkerTensor / child-memory descriptor</text>
+
+          <rect x="532" y="48" width="360" height="414" rx="18" fill="#e6f8fb" stroke="#acdce6" />
+          <text x="712" y="88" text-anchor="middle" fill="#0c5364" font-size="24" font-weight="800">UFlow service</text>
+
+          <rect x="580" y="126" width="264" height="62" rx="10" fill="#fff" stroke="#bfe1e8" />
+          <text x="712" y="164" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">Create / Open / Release DataObject</text>
+
+          <rect x="580" y="220" width="264" height="62" rx="10" fill="#fff" stroke="#bfe1e8" />
+          <text x="712" y="258" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">Catalog / Lease / Stats</text>
+
+          <rect x="580" y="314" width="264" height="62" rx="10" fill="#fff" stroke="#bfe1e8" />
+          <text x="712" y="352" text-anchor="middle" fill="#243044" font-size="16" font-weight="800">TransferEvent / stream / event</text>
+
+          <text x="712" y="422" text-anchor="middle" fill="#4f6a74" font-size="14">隐藏 ACL、shareable handle、PID 授权、backend 差异</text>
+
+          <rect x="960" y="84" width="278" height="128" rx="18" fill="#eaf2ff" stroke="#b7cdf5" />
+          <text x="1099" y="130" text-anchor="middle" fill="#174f9a" font-size="24" font-weight="800">HBM backend</text>
+          <text x="1099" y="162" text-anchor="middle" fill="#425c8f" font-size="14">ACL physical HBM</text>
+          <text x="1099" y="188" text-anchor="middle" fill="#425c8f" font-size="13">runtime placement</text>
+
+          <rect x="960" y="298" width="278" height="128" rx="18" fill="#e8f7f1" stroke="#abdcc9" />
+          <text x="1099" y="344" text-anchor="middle" fill="#0b664f" font-size="24" font-weight="800">DDR backend</text>
+          <text x="1099" y="376" text-anchor="middle" fill="#4f776c" font-size="14">local host DDR object</text>
+          <text x="1099" y="402" text-anchor="middle" fill="#4f776c" font-size="13">authoritative / shadow placement</text>
+
+          <path d="M416 345 L580 345" stroke="#0f7f9f" stroke-width="3" marker-end="url(#arrowUf)" />
+          <text x="498" y="328" text-anchor="middle" fill="#0f7f9f" font-size="13" font-weight="800">UFlow SDK API</text>
+
+          <path d="M844 157 L960 148" stroke="#0f7f9f" stroke-width="3" marker-end="url(#arrowUf)" />
+          <path d="M844 345 L960 362" stroke="#0f7f9f" stroke-width="3" marker-end="url(#arrowUf)" />
+
+          <path d="M960 148 C850 42 506 42 320 126" stroke="#7446b8" stroke-width="3" fill="none" marker-end="url(#arrowPy)" />
+          <text x="626" y="30" text-anchor="middle" fill="#7446b8" font-size="13" font-weight="800">PyPTO/Simpler 使用的是引用/descriptor</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>当前测试方案：Qwen3-14B event-driven 权重流水</h2>
+      <p class="sub">这是最新已通过的 PhaseA-08 Gate D 数据路径：prefill 按层换入，decode 整图常驻。</p>
+      <div class="diagram">
+        <svg viewBox="0 0 1320 690" role="img" aria-label="Current test data flow">
+          <defs>
+            <marker id="arrowDdr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#15946f" />
+            </marker>
+            <marker id="arrowHbm" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb" />
+            </marker>
+            <marker id="arrowEvt" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#bd315f" />
+            </marker>
+          </defs>
+
+          <text x="72" y="52" fill="#243044" font-size="18" font-weight="800">Prefill: per-layer reload + event wait + release</text>
+          <rect x="64" y="78" width="260" height="94" rx="15" fill="#ffffff" stroke="#d7dde7" />
+          <text x="194" y="116" text-anchor="middle" fill="#243044" font-size="18" font-weight="800">CPU kernel weights</text>
+          <text x="194" y="143" text-anchor="middle" fill="#657085" font-size="13">layer0 ... layer39</text>
+
+          <rect x="390" y="78" width="260" height="94" rx="15" fill="#e8f7f1" stroke="#abdcc9" />
+          <text x="520" y="116" text-anchor="middle" fill="#0b664f" font-size="18" font-weight="800">UFlow DDR object</text>
+          <text x="520" y="143" text-anchor="middle" fill="#4f776c" font-size="13">per-layer pack · authoritative</text>
+
+          <rect x="716" y="78" width="260" height="94" rx="15" fill="#eaf2ff" stroke="#b7cdf5" />
+          <text x="846" y="116" text-anchor="middle" fill="#174f9a" font-size="18" font-weight="800">UFlow HBM object</text>
+          <text x="846" y="143" text-anchor="middle" fill="#425c8f" font-size="13">registered async H2D</text>
+
+          <rect x="1042" y="78" width="220" height="94" rx="15" fill="#ffedf3" stroke="#efb8ca" />
+          <text x="1152" y="116" text-anchor="middle" fill="#8d2149" font-size="18" font-weight="800">reload event</text>
+          <text x="1152" y="143" text-anchor="middle" fill="#845265" font-size="13">PyPTO wait</text>
+
+          <path d="M324 125 L390 125" stroke="#15946f" stroke-width="4" marker-end="url(#arrowDdr)" />
+          <path d="M650 125 L716 125" stroke="#15946f" stroke-width="4" marker-end="url(#arrowDdr)" />
+          <path d="M976 125 L1042 125" stroke="#bd315f" stroke-width="4" marker-end="url(#arrowEvt)" />
+
+          <rect x="210" y="240" width="260" height="94" rx="15" fill="#f0ebff" stroke="#cfbdf2" />
+          <text x="340" y="278" text-anchor="middle" fill="#4c2d86" font-size="18" font-weight="800">prefill layer task</text>
+          <text x="340" y="305" text-anchor="middle" fill="#6b5b84" font-size="13">wait reload_event</text>
+
+          <rect x="558" y="240" width="260" height="94" rx="15" fill="#f0ebff" stroke="#cfbdf2" />
+          <text x="688" y="278" text-anchor="middle" fill="#4c2d86" font-size="18" font-weight="800">record compute_done</text>
+          <text x="688" y="305" text-anchor="middle" fill="#6b5b84" font-size="13">layer finished</text>
+
+          <rect x="906" y="240" width="260" height="94" rx="15" fill="#eaf2ff" stroke="#b7cdf5" />
+          <text x="1036" y="278" text-anchor="middle" fill="#174f9a" font-size="18" font-weight="800">release layer HBM</text>
+          <text x="1036" y="305" text-anchor="middle" fill="#425c8f" font-size="13">DDR remains authoritative</text>
+
+          <path d="M1152 172 C1090 216 484 196 350 240" stroke="#bd315f" stroke-width="4" fill="none" marker-end="url(#arrowEvt)" />
+          <path d="M470 287 L558 287" stroke="#bd315f" stroke-width="4" marker-end="url(#arrowEvt)" />
+          <path d="M818 287 L906 287" stroke="#2563eb" stroke-width="4" marker-end="url(#arrowHbm)" />
+
+          <line x1="64" y1="384" x2="1256" y2="384" stroke="#d8dee8" stroke-width="2" />
+          <text x="72" y="432" fill="#243044" font-size="18" font-weight="800">Decode: reload once + keep resident until generation ends</text>
+
+          <rect x="64" y="460" width="260" height="94" rx="15" fill="#e8f7f1" stroke="#abdcc9" />
+          <text x="194" y="498" text-anchor="middle" fill="#0b664f" font-size="18" font-weight="800">DDR stacked weights</text>
+          <text x="194" y="525" text-anchor="middle" fill="#4f776c" font-size="13">13 decode objects</text>
+
+          <rect x="390" y="460" width="260" height="94" rx="15" fill="#eaf2ff" stroke="#b7cdf5" />
+          <text x="520" y="498" text-anchor="middle" fill="#174f9a" font-size="18" font-weight="800">HBM resident weights</text>
+          <text x="520" y="525" text-anchor="middle" fill="#425c8f" font-size="13">reload once</text>
+
+          <rect x="716" y="460" width="260" height="94" rx="15" fill="#ffedf3" stroke="#efb8ca" />
+          <text x="846" y="498" text-anchor="middle" fill="#8d2149" font-size="18" font-weight="800">barrier event</text>
+          <text x="846" y="525" text-anchor="middle" fill="#845265" font-size="13">all reload complete</text>
+
+          <rect x="1042" y="460" width="220" height="94" rx="15" fill="#f0ebff" stroke="#cfbdf2" />
+          <text x="1152" y="498" text-anchor="middle" fill="#4c2d86" font-size="18" font-weight="800">fused decode</text>
+          <text x="1152" y="525" text-anchor="middle" fill="#6b5b84" font-size="13">reuse resident HBM</text>
+
+          <path d="M324 507 L390 507" stroke="#15946f" stroke-width="4" marker-end="url(#arrowDdr)" />
+          <path d="M650 507 L716 507" stroke="#bd315f" stroke-width="4" marker-end="url(#arrowEvt)" />
+          <path d="M976 507 L1042 507" stroke="#bd315f" stroke-width="4" marker-end="url(#arrowEvt)" />
+
+          <path d="M1152 554 C1152 612 520 612 520 554" stroke="#2563eb" stroke-width="4" fill="none" marker-end="url(#arrowHbm)" />
+          <text x="836" y="638" text-anchor="middle" fill="#2563eb" font-size="14" font-weight="800">decode_real_weight_reuse · decode_reload_count = 1</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <h2>当前已通过的关键验证</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>验证项</th>
+            <th>结果</th>
+            <th>Run Dir</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Qwen3-14B baseline，不使用 UFlow</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">PhaseA-04 baseline</td>
+          </tr>
+          <tr>
+            <td>Qwen L2 权重 + KVCache 走 UFlow HBM</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea06_global_adapter_weights_kv_10_20260611_234234</td>
+          </tr>
+          <tr>
+            <td>权重 + KVCache 同步 HBM→DDR→HBM roundtrip</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea07_qwen_ddr_roundtrip_tmp_bounce10_20260612_000616</td>
+          </tr>
+          <tr>
+            <td>UFlow 裸能力：HBM/DDR/HBM-HBM/DDR-DDR + event IDL</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea08_gatea_20260616_003501</td>
+          </tr>
+          <tr>
+            <td>Qwen prefill 拆成 40 个 layer task</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea08_gateb_prefill_layer_20260616_012449</td>
+          </tr>
+          <tr>
+            <td>PyPTO wait UFlow reload completion event</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea08_gatec_20260616_013129</td>
+          </tr>
+          <tr>
+            <td>真实权重 event-driven prefill + decode keep-resident</td>
+            <td><span class="tag ok">PASS</span></td>
+            <td class="run">/tmp/proj_output/phasea08_gated_real_weights_20260616_023217</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>现在的边界</h2>
+      <div class="grid cols-3">
+        <div class="metric">
+          <strong>Client event bridge</strong>
+          <span><span class="tag warn">当前形态</span> UFlow 管 object/lease，client 本进程 enqueue ACL H2D 并 record event。</span>
+        </div>
+        <div class="metric">
+          <strong>Decode resident</strong>
+          <span><span class="tag ok">已验证</span> 第一次 decode 前 reload，后续 decode step 复用 HBM，结束后释放。</span>
+        </div>
+        <div class="metric">
+          <strong>Layout reuse</strong>
+          <span><span class="tag warn">后续优化</span> prefill per-layer pack 和 decode stacked DDR object 后面可以合并规划。</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

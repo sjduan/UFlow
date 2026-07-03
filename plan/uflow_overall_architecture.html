@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UFlow Overall Architecture</title>
+  <style>
+    :root {
+      --ink: #17212f;
+      --muted: #667085;
+      --paper: #ffffff;
+      --bg: #f5f7fb;
+      --line: #d0d7e2;
+      --soft-line: #e5eaf1;
+      --client: #eaf3ff;
+      --api: #ecf8f2;
+      --core: #fff7e6;
+      --exec: #fff1ec;
+      --backend: #eef7ff;
+      --media: #f4f0ff;
+      --obs: #edf8f5;
+      --future: #f6f7f9;
+      --control: #3151b7;
+      --data: #b54708;
+      --hot: #b42318;
+      --sync: #6d28d9;
+      --observe: #087f5b;
+      --fallback: #9a6700;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.45;
+    }
+    header {
+      padding: 24px 30px 18px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      max-width: 1180px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    main {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+    section {
+      margin: 0 0 22px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    }
+    .section-head {
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--soft-line);
+      background: #fbfcff;
+    }
+    h2 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .section-note {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .canvas {
+      padding: 14px 16px 18px;
+      overflow-x: auto;
+    }
+    svg {
+      display: block;
+      width: 100%;
+      min-width: 1120px;
+      height: auto;
+      background: #fff;
+    }
+    .caption {
+      padding: 0 18px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .title { font-size: 18px; font-weight: 800; fill: var(--ink); }
+    .note { font-size: 12px; fill: var(--muted); }
+    .box-title { font-size: 14px; font-weight: 800; fill: var(--ink); }
+    .box-text { font-size: 11px; fill: #475467; }
+    .tiny { font-size: 10px; fill: #5f6b7a; }
+    .port-text { font-size: 10px; font-weight: 700; fill: #344054; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .box {
+      fill: #fff;
+      stroke: #98a2b3;
+      stroke-width: 1.2;
+      rx: 8;
+    }
+    .client-box { fill: var(--client); stroke: #5b9fed; }
+    .api-box { fill: var(--api); stroke: #3a9368; }
+    .core-box { fill: var(--core); stroke: #c88a12; }
+    .exec-box { fill: var(--exec); stroke: #cf6f37; }
+    .backend-box { fill: var(--backend); stroke: #3b82c4; }
+    .media-box { fill: var(--media); stroke: #8b5cf6; }
+    .obs-box { fill: var(--obs); stroke: #15956a; }
+    .future-box { fill: var(--future); stroke: #98a2b3; stroke-dasharray: 6 4; }
+    .port {
+      fill: #fff;
+      stroke: #98a2b3;
+      stroke-width: 1.1;
+      rx: 5;
+    }
+    .port-control { stroke: var(--control); fill: #eef3ff; }
+    .port-data { stroke: var(--data); fill: #fff7ed; }
+    .port-sync { stroke: var(--sync); fill: #f4f0ff; }
+    .port-obs { stroke: var(--observe); fill: #edf8f5; }
+    .port-fallback { stroke: var(--fallback); fill: #fffaeb; }
+
+    .arrow {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .control { stroke: var(--control); marker-end: url(#arrow-control); }
+    .data { stroke: var(--data); marker-end: url(#arrow-data); }
+    .hot { stroke: var(--hot); stroke-width: 3; marker-end: url(#arrow-hot); }
+    .sync { stroke: var(--sync); stroke-width: 2; stroke-dasharray: 7 4; marker-end: url(#arrow-sync); }
+    .observe { stroke: var(--observe); stroke-width: 2; stroke-dasharray: 3 5; marker-end: url(#arrow-observe); }
+    .fallback { stroke: var(--fallback); stroke-width: 2.4; stroke-dasharray: 8 5; marker-end: url(#arrow-fallback); }
+    .future-flow { stroke: #667085; stroke-width: 2; stroke-dasharray: 6 6; marker-end: url(#arrow-future); }
+    .line { fill: none; stroke: var(--line); stroke-width: 1.3; }
+
+    .badge {
+      fill: #fff;
+      stroke: #d0d5dd;
+      stroke-width: 1;
+      rx: 9;
+    }
+    .solid { fill: #087443; font-size: 10px; font-weight: 800; }
+    .planned { fill: #a15c07; font-size: 10px; font-weight: 800; }
+    .future { fill: #667085; font-size: 10px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UFlow Overall Architecture</h1>
+    <div class="subtitle">
+      结构版总图：第一张图只保留主模块和跨模块接口流；后续 section 逐个展开模块内部结构。目标是先形成整体感，再按模块下钻细节。
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="section-head">
+        <h2>0. Legend</h2>
+        <div class="section-note">后续所有图统一使用这些线型。主图只画跨模块接口线，模块内部流向放到对应 subsection。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 120" role="img" aria-label="UFlow diagram legend">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+            <marker id="arrow-fallback" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#9a6700" /></marker>
+            <marker id="arrow-future" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#667085" /></marker>
+          </defs>
+
+          <path d="M34 34 L110 34" class="arrow control" />
+          <text x="128" y="39" class="box-text">control/API: command, lifecycle, planning</text>
+          <path d="M34 66 L110 66" class="arrow hot" />
+          <text x="128" y="71" class="box-text">hot data path: high bandwidth DDR&lt;-&gt;HBM / HBM&lt;-&gt;HBM</text>
+          <path d="M34 98 L110 98" class="arrow sync" />
+          <text x="128" y="103" class="box-text">sync/event: completion, wait, dependency handoff</text>
+
+          <path d="M500 34 L576 34" class="arrow observe" />
+          <text x="594" y="39" class="box-text">observability: stats, trace, monitor output</text>
+          <path d="M500 66 L576 66" class="arrow fallback" />
+          <text x="594" y="71" class="box-text">fallback/staging: pinned pool, chunk pipeline</text>
+          <path d="M500 98 L576 98" class="arrow future-flow" />
+          <text x="594" y="103" class="box-text">future extension: SSD, UB, remote node, topology policy</text>
+
+          <rect x="970" y="25" width="54" height="20" class="badge" />
+          <text x="982" y="39" class="solid">solid</text>
+          <rect x="970" y="55" width="70" height="20" class="badge" />
+          <text x="982" y="69" class="planned">planned</text>
+          <rect x="970" y="85" width="62" height="20" class="badge" />
+          <text x="982" y="99" class="future">future</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>1. Main Architecture</h2>
+        <div class="section-note">主图只保留 UFlow 的主模块。每条线都表示模块边界上的接口流，不展开模块内部调用。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 690" role="img" aria-label="UFlow main architecture overview">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+            <marker id="arrow-fallback" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#9a6700" /></marker>
+            <marker id="arrow-future" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#667085" /></marker>
+          </defs>
+
+          <!-- top client module -->
+          <rect x="70" y="36" width="1040" height="104" class="box client-box" />
+          <text x="96" y="66" class="box-title">Client / Consumer Layer</text>
+          <text x="96" y="88" class="box-text">pypto-serving, PyPTO runtime, benchmarks, other apps, monitor UI / CLI</text>
+          <rect x="96" y="106" width="138" height="24" class="port port-control" />
+          <text x="112" y="122" class="port-text">object API</text>
+          <rect x="254" y="106" width="138" height="24" class="port port-control" />
+          <text x="270" y="122" class="port-text">transfer API</text>
+          <rect x="412" y="106" width="138" height="24" class="port port-sync" />
+          <text x="428" y="122" class="port-text">event wait</text>
+          <rect x="570" y="106" width="138" height="24" class="port port-data" />
+          <text x="586" y="122" class="port-text">lease/ref</text>
+          <rect x="728" y="106" width="138" height="24" class="port port-obs" />
+          <text x="744" y="122" class="port-text">monitor</text>
+
+          <!-- API row -->
+          <rect x="120" y="210" width="940" height="92" class="box api-box" />
+          <text x="146" y="240" class="box-title">Public API / Protocol Boundary</text>
+          <text x="146" y="262" class="box-text">Python SDK facade + Monitor HTTP API + Unix socket command protocol + stable IDL</text>
+          <rect x="188" y="276" width="130" height="20" class="port port-control" />
+          <text x="204" y="290" class="port-text">Create/Open</text>
+          <rect x="342" y="276" width="130" height="20" class="port port-control" />
+          <text x="358" y="290" class="port-text">Plan/Submit</text>
+          <rect x="496" y="276" width="130" height="20" class="port port-sync" />
+          <text x="512" y="290" class="port-text">Poll/Wait</text>
+          <rect x="650" y="276" width="130" height="20" class="port port-obs" />
+          <text x="666" y="290" class="port-text">Stats/Trace</text>
+          <rect x="804" y="276" width="130" height="20" class="port port-control" />
+          <text x="820" y="290" class="port-text">Capabilities</text>
+
+          <!-- core row -->
+          <rect x="120" y="366" width="940" height="116" class="box core-box" />
+          <text x="146" y="398" class="box-title">UFlow Daemon Core</text>
+          <text x="146" y="420" class="box-text">router, object service, catalog, transfer planner, event registry, capabilities, policy hooks</text>
+          <rect x="170" y="444" width="145" height="24" class="port port-control" />
+          <text x="186" y="460" class="port-text">object lifecycle</text>
+          <rect x="340" y="444" width="145" height="24" class="port port-data" />
+          <text x="356" y="460" class="port-text">placement view</text>
+          <rect x="510" y="444" width="145" height="24" class="port port-control" />
+          <text x="526" y="460" class="port-text">transfer plan</text>
+          <rect x="680" y="444" width="145" height="24" class="port port-sync" />
+          <text x="696" y="460" class="port-text">event state</text>
+          <rect x="850" y="444" width="145" height="24" class="port port-obs" />
+          <text x="866" y="460" class="port-text">stats/trace</text>
+
+          <!-- executor/backend/media rows -->
+          <rect x="74" y="550" width="304" height="86" class="box exec-box" />
+          <text x="98" y="580" class="box-title">Transfer Executor</text>
+          <text x="98" y="602" class="box-text">direct path, fallback channel, event completion</text>
+          <text x="98" y="622" class="box-text">DDR&lt;-&gt;HBM, HBM&lt;-&gt;HBM, DDR&lt;-&gt;DDR</text>
+
+          <rect x="438" y="550" width="304" height="86" class="box backend-box" />
+          <text x="462" y="580" class="box-title">Backend Runtime</text>
+          <text x="462" y="602" class="box-text">ACL runtime, HBM memory, DDR mmap, host memory</text>
+          <text x="462" y="622" class="box-text">device copy sync/async, stream/event</text>
+
+          <rect x="802" y="550" width="304" height="86" class="box media-box" />
+          <text x="826" y="580" class="box-title">Data Media / Placement</text>
+          <text x="826" y="602" class="box-text">HBM DataObject, DDR DataObject, pinned workspace</text>
+          <text x="826" y="622" class="box-text">future SSD / UB / remote node</text>
+
+          <!-- clean main arrows -->
+          <path d="M235 132 L235 210" class="arrow control" />
+          <path d="M392 132 L392 210" class="arrow control" />
+          <path d="M551 132 L551 210" class="arrow sync" />
+          <path d="M797 132 L797 210" class="arrow observe" />
+
+          <path d="M253 296 L253 366" class="arrow control" />
+          <path d="M407 296 L407 366" class="arrow control" />
+          <path d="M561 296 L561 366" class="arrow sync" />
+          <path d="M715 296 L715 366" class="arrow observe" />
+          <path d="M869 296 L869 366" class="arrow control" />
+
+          <path d="M555 468 C500 508 380 526 226 550" class="arrow data" />
+          <path d="M681 468 C650 506 601 525 590 550" class="arrow sync" />
+          <path d="M922 468 C938 512 974 530 1010 550" class="arrow observe" />
+          <path d="M378 593 L438 593" class="arrow hot" />
+          <path d="M742 593 L802 593" class="arrow hot" />
+          <path d="M226 550 C255 508 405 496 510 468" class="arrow sync" />
+
+          <text x="252" y="184" class="tiny">control commands</text>
+          <text x="575" y="184" class="tiny">event dependency</text>
+          <text x="822" y="184" class="tiny">observability</text>
+          <text x="268" y="535" class="tiny">official data movement request</text>
+          <text x="385" y="584" class="tiny">execute</text>
+          <text x="748" y="584" class="tiny">allocate/copy/map</text>
+        </svg>
+      </div>
+      <div class="caption">
+        主图刻意不画 core 内部的细线。它只表达：client 通过统一 API 进入 daemon core；core 负责对象、计划和事件；executor 负责官方数据传输；backend 和 media 承担具体设备/介质能力。
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>2. Client & API Boundary</h2>
+        <div class="section-note">client 侧只表达意图：申请对象、提交传输、等待事件、查看状态。是否走 HBM、DDR、fallback、direct，由 UFlow 服务侧决定。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 470" role="img" aria-label="Client and API boundary">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+          </defs>
+
+          <rect x="50" y="45" width="210" height="90" class="box client-box" />
+          <text x="72" y="76" class="box-title">pypto-serving</text>
+          <text x="72" y="98" class="box-text">weights / KVCache adapter</text>
+          <text x="72" y="116" class="box-text">minimal data-plane edits</text>
+
+          <rect x="50" y="170" width="210" height="90" class="box client-box" />
+          <text x="72" y="201" class="box-title">PyPTO runtime</text>
+          <text x="72" y="223" class="box-text">future layer-task event wait</text>
+          <text x="72" y="241" class="box-text">dependency bridge</text>
+
+          <rect x="50" y="295" width="210" height="90" class="box client-box" />
+          <text x="72" y="326" class="box-title">Other app / benchmark</text>
+          <text x="72" y="348" class="box-text">generic object + transfer</text>
+          <text x="72" y="366" class="box-text">no LLM-specific concepts</text>
+
+          <rect x="340" y="60" width="260" height="150" class="box api-box" />
+          <text x="364" y="92" class="box-title">Python SDK Facade</text>
+          <text x="364" y="116" class="box-text mono">UFlowClient</text>
+          <text x="364" y="136" class="box-text mono">create_data_object()</text>
+          <text x="364" y="156" class="box-text mono">plan_transfer()</text>
+          <text x="364" y="176" class="box-text mono">submit_transfer(), wait_event()</text>
+
+          <rect x="340" y="260" width="260" height="110" class="box api-box" />
+          <text x="364" y="292" class="box-title">Monitor / CLI API</text>
+          <text x="364" y="316" class="box-text">health, stats, trace, command</text>
+          <text x="364" y="336" class="box-text">human/debug operations</text>
+          <text x="364" y="356" class="box-text">same daemon protocol backend</text>
+
+          <rect x="680" y="95" width="220" height="240" class="box api-box" />
+          <text x="704" y="127" class="box-title">Protocol Envelope</text>
+          <text x="704" y="153" class="box-text">op + request id</text>
+          <text x="704" y="173" class="box-text">client/model/object ids</text>
+          <text x="704" y="193" class="box-text">placement hint</text>
+          <text x="704" y="213" class="box-text">transfer request</text>
+          <text x="704" y="233" class="box-text">wait policy</text>
+          <text x="704" y="253" class="box-text">trace flags</text>
+          <rect x="704" y="278" width="148" height="24" class="port port-control" />
+          <text x="720" y="294" class="port-text">Unix socket KV</text>
+
+          <rect x="975" y="95" width="150" height="240" class="box core-box" />
+          <text x="998" y="127" class="box-title">Daemon Router</text>
+          <text x="998" y="153" class="box-text">validate op</text>
+          <text x="998" y="173" class="box-text">capability check</text>
+          <text x="998" y="193" class="box-text">dispatch service</text>
+          <text x="998" y="213" class="box-text">format response</text>
+          <text x="998" y="253" class="box-text">trace command</text>
+          <text x="998" y="273" class="box-text">unified error</text>
+
+          <path d="M260 88 C295 88 304 103 340 112" class="arrow control" />
+          <path d="M260 212 C300 212 300 158 340 148" class="arrow sync" />
+          <path d="M260 340 C296 340 304 324 340 316" class="arrow control" />
+          <path d="M600 135 L680 176" class="arrow control" />
+          <path d="M600 315 L680 256" class="arrow observe" />
+          <path d="M852 290 C902 290 922 236 975 217" class="arrow control" />
+          <path d="M975 265 C918 382 690 415 470 370" class="arrow observe" />
+
+          <text x="286" y="78" class="tiny">object/transfer intent</text>
+          <text x="285" y="233" class="tiny">event wait</text>
+          <text x="608" y="126" class="tiny">command</text>
+          <text x="612" y="336" class="tiny">monitor ops</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>3. Daemon Core Services</h2>
+        <div class="section-note">核心层只做状态、规则和计划，不直接暴露 ACL 细节。所有对象状态和传输事件都在这里被统一管理。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 520" role="img" aria-label="UFlow daemon core services">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+          </defs>
+
+          <rect x="52" y="64" width="180" height="110" class="box core-box" />
+          <text x="76" y="96" class="box-title">Router</text>
+          <text x="76" y="120" class="box-text">op dispatch</text>
+          <text x="76" y="140" class="box-text">validation</text>
+          <text x="76" y="160" class="box-text">error normalization</text>
+
+          <rect x="306" y="44" width="220" height="150" class="box core-box" />
+          <text x="330" y="76" class="box-title">Object Service</text>
+          <text x="330" y="102" class="box-text">RegisterClient / RegisterModel</text>
+          <text x="330" y="122" class="box-text">Create/Open/Release Object</text>
+          <text x="330" y="142" class="box-text">Open/Close Lease</text>
+          <text x="330" y="162" class="box-text">MarkReady/Dirty/Modified</text>
+
+          <rect x="614" y="44" width="220" height="150" class="box core-box" />
+          <text x="638" y="76" class="box-title">Catalog</text>
+          <text x="638" y="102" class="box-text">DataObject metadata</text>
+          <text x="638" y="122" class="box-text">Placement record</text>
+          <text x="638" y="142" class="box-text">Lease / liveness</text>
+          <text x="638" y="162" class="box-text">TransferEvent registry</text>
+
+          <rect x="922" y="44" width="210" height="150" class="box core-box" />
+          <text x="946" y="76" class="box-title">Capabilities</text>
+          <text x="946" y="102" class="box-text">solid / planned ops</text>
+          <text x="946" y="122" class="box-text">placement support</text>
+          <text x="946" y="142" class="box-text">transfer path support</text>
+          <text x="946" y="162" class="box-text">trace support</text>
+
+          <rect x="306" y="284" width="220" height="150" class="box core-box" />
+          <text x="330" y="316" class="box-title">Transfer Planner</text>
+          <text x="330" y="342" class="box-text">classify source/destination</text>
+          <text x="330" y="362" class="box-text">estimate cost</text>
+          <text x="330" y="382" class="box-text">select engine/mode</text>
+          <text x="330" y="402" class="box-text">produce TransferPlan</text>
+
+          <rect x="614" y="284" width="220" height="150" class="box exec-box" />
+          <text x="638" y="316" class="box-title">Executor Facade</text>
+          <text x="638" y="342" class="box-text">SubmitTransfer</text>
+          <text x="638" y="362" class="box-text">CancelEvent</text>
+          <text x="638" y="382" class="box-text">event completion callback</text>
+          <text x="638" y="402" class="box-text">data correctness boundary</text>
+
+          <rect x="922" y="284" width="210" height="150" class="box obs-box" />
+          <text x="946" y="316" class="box-title">Stats / Trace API</text>
+          <text x="946" y="342" class="box-text">GetStats snapshot</text>
+          <text x="946" y="362" class="box-text">Start/Stop/FlushTrace</text>
+          <text x="946" y="382" class="box-text">ExportTrace artifact</text>
+          <text x="946" y="402" class="box-text">observability view</text>
+
+          <path d="M232 118 L306 118" class="arrow control" />
+          <path d="M526 118 L614 118" class="arrow data" />
+          <path d="M834 118 L922 118" class="arrow control" />
+          <path d="M416 194 L416 284" class="arrow control" />
+          <path d="M724 194 L724 284" class="arrow data" />
+          <path d="M526 358 L614 358" class="arrow control" />
+          <path d="M834 358 L922 358" class="arrow observe" />
+          <path d="M724 284 C720 238 662 217 614 180" class="arrow sync" />
+          <path d="M922 402 C770 482 258 474 142 174" class="arrow observe" />
+
+          <text x="245" y="105" class="tiny">validated op</text>
+          <text x="544" y="105" class="tiny">object state</text>
+          <text x="446" y="246" class="tiny">transfer request</text>
+          <text x="544" y="346" class="tiny">plan</text>
+          <text x="850" y="346" class="tiny">event/stat</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>4. Transfer Executor</h2>
+        <div class="section-note">这里展开“数据怎么走”。主路径是 direct async，pinned chunk lane 是 fallback/对照能力，事件统一回到 core。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 560" role="img" aria-label="UFlow transfer executor detail">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-fallback" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#9a6700" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+          </defs>
+
+          <rect x="44" y="58" width="190" height="96" class="box core-box" />
+          <text x="68" y="90" class="box-title">TransferPlan</text>
+          <text x="68" y="114" class="box-text">src/dst object</text>
+          <text x="68" y="134" class="box-text">bytes, offset, mode</text>
+
+          <rect x="310" y="54" width="220" height="104" class="box exec-box" />
+          <text x="334" y="86" class="box-title">Executor Router</text>
+          <text x="334" y="112" class="box-text">path classification</text>
+          <text x="334" y="132" class="box-text">engine selection</text>
+
+          <rect x="610" y="40" width="240" height="132" class="box exec-box" />
+          <text x="634" y="72" class="box-title">Direct Async Executor</text>
+          <text x="634" y="98" class="box-text">DDR-&gt;HBM: mmap VA to HBM VA</text>
+          <text x="634" y="118" class="box-text">HBM-&gt;DDR: HBM VA to mmap VA</text>
+          <text x="634" y="138" class="box-text">HBM-&gt;HBM: device copy</text>
+          <text x="634" y="158" class="box-text">default high-bandwidth path</text>
+
+          <rect x="610" y="230" width="240" height="132" class="box exec-box" />
+          <text x="634" y="262" class="box-title">Pinned Channel Fallback</text>
+          <text x="634" y="288" class="box-text">lazy lanes by direction</text>
+          <text x="634" y="308" class="box-text">chunk ping-pong buffers</text>
+          <text x="634" y="328" class="box-text">budget + idle reaper</text>
+          <text x="634" y="348" class="box-text">forced by mode=pinned_async</text>
+
+          <rect x="914" y="60" width="210" height="104" class="box backend-box" />
+          <text x="938" y="92" class="box-title">ACL Device Copy</text>
+          <text x="938" y="118" class="box-text">aclrtMemcpyAsync</text>
+          <text x="938" y="138" class="box-text">stream/event wait</text>
+
+          <rect x="914" y="245" width="210" height="104" class="box backend-box" />
+          <text x="938" y="277" class="box-title">Host Workspace</text>
+          <text x="938" y="303" class="box-text">aclrtMallocHost chunks</text>
+          <text x="938" y="323" class="box-text">CPU copy + ACL async</text>
+
+          <rect x="310" y="406" width="220" height="96" class="box core-box" />
+          <text x="334" y="438" class="box-title">TransferEvent</text>
+          <text x="334" y="462" class="box-text">Pending -&gt; Running -&gt; Done</text>
+          <text x="334" y="482" class="box-text">error / cancel / timeout</text>
+
+          <rect x="610" y="406" width="240" height="96" class="box obs-box" />
+          <text x="634" y="438" class="box-title">Trace / Metrics</text>
+          <text x="634" y="462" class="box-text">submit_us, wait_us, wall_us</text>
+          <text x="634" y="482" class="box-text">lane wait, chunk count, GiB/s</text>
+
+          <path d="M234 106 L310 106" class="arrow control" />
+          <path d="M530 106 L610 106" class="arrow hot" />
+          <path d="M530 128 C570 168 570 246 610 296" class="arrow fallback" />
+          <path d="M850 106 L914 112" class="arrow hot" />
+          <path d="M850 296 L914 297" class="arrow fallback" />
+          <path d="M1019 164 C1020 220 1008 228 1019 245" class="arrow sync" />
+          <path d="M730 172 C704 272 574 384 530 454" class="arrow sync" />
+          <path d="M730 362 C694 390 572 422 530 454" class="arrow sync" />
+          <path d="M850 454 C910 454 954 406 995 349" class="arrow observe" />
+          <path d="M530 454 L610 454" class="arrow observe" />
+
+          <text x="250" y="94" class="tiny">submit</text>
+          <text x="544" y="92" class="tiny">auto direct</text>
+          <text x="548" y="210" class="tiny">fallback</text>
+          <text x="872" y="96" class="tiny">DMA</text>
+          <text x="536" y="438" class="tiny">completion</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>5. Backend Runtime</h2>
+        <div class="section-note">backend 层负责把统一对象和传输请求落到具体介质、ACL runtime 和 OS memory 能力上。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 520" role="img" aria-label="UFlow backend runtime detail">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+          </defs>
+
+          <rect x="54" y="58" width="220" height="134" class="box backend-box" />
+          <text x="78" y="90" class="box-title">acl_runtime</text>
+          <text x="78" y="116" class="box-text">aclInit / finalize</text>
+          <text x="78" y="136" class="box-text">set device / context</text>
+          <text x="78" y="156" class="box-text">stream / event lifecycle</text>
+          <text x="78" y="176" class="box-text">startup probe</text>
+
+          <rect x="358" y="58" width="220" height="134" class="box backend-box" />
+          <text x="382" y="90" class="box-title">hbm_memory</text>
+          <text x="382" y="116" class="box-text">physical alloc/free</text>
+          <text x="382" y="136" class="box-text">service-owned VA map</text>
+          <text x="382" y="156" class="box-text">shareable handle export</text>
+          <text x="382" y="176" class="box-text">PID authorization</text>
+
+          <rect x="662" y="58" width="220" height="134" class="box backend-box" />
+          <text x="686" y="90" class="box-title">ddr_backend</text>
+          <text x="686" y="116" class="box-text">memfd / mmap file</text>
+          <text x="686" y="136" class="box-text">THP madvise</text>
+          <text x="686" y="156" class="box-text">pre-touch setup</text>
+          <text x="686" y="176" class="box-text">NUMA metadata</text>
+
+          <rect x="966" y="58" width="160" height="134" class="box backend-box" />
+          <text x="990" y="90" class="box-title">host_memory</text>
+          <text x="990" y="116" class="box-text">aclrtMallocHost</text>
+          <text x="990" y="136" class="box-text">HostRegisterV2</text>
+          <text x="990" y="156" class="box-text">pinned chunks</text>
+
+          <rect x="358" y="300" width="220" height="130" class="box backend-box" />
+          <text x="382" y="332" class="box-title">device_copy</text>
+          <text x="382" y="358" class="box-text">H2D async/sync</text>
+          <text x="382" y="378" class="box-text">D2H async/sync</text>
+          <text x="382" y="398" class="box-text">D2D same/peer device</text>
+          <text x="382" y="418" class="box-text">record/sync event</text>
+
+          <rect x="662" y="300" width="220" height="130" class="box obs-box" />
+          <text x="686" y="332" class="box-title">backend telemetry</text>
+          <text x="686" y="358" class="box-text">alloc/free counters</text>
+          <text x="686" y="378" class="box-text">copy timing</text>
+          <text x="686" y="398" class="box-text">fallback reason</text>
+          <text x="686" y="418" class="box-text">capability probe result</text>
+
+          <path d="M274 124 L358 124" class="arrow control" />
+          <path d="M578 124 L662 124" class="arrow data" />
+          <path d="M882 124 L966 124" class="arrow data" />
+          <path d="M468 192 L468 300" class="arrow hot" />
+          <path d="M772 192 C752 250 635 285 578 334" class="arrow hot" />
+          <path d="M1046 192 C1014 260 678 278 578 365" class="arrow data" />
+          <path d="M578 365 L662 365" class="arrow observe" />
+          <path d="M164 192 C190 286 274 352 358 365" class="arrow control" />
+
+          <text x="295" y="112" class="tiny">context/device</text>
+          <text x="590" y="112" class="tiny">VA/handle</text>
+          <text x="894" y="112" class="tiny">fallback workspace</text>
+          <text x="486" y="248" class="tiny">HBM endpoint</text>
+          <text x="785" y="250" class="tiny">DDR endpoint</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>6. DataObject & Placement</h2>
+        <div class="section-note">UFlow 的统一抽象是 DataObject。不同介质只是 placement/backend 不同；client 拿到的是 lease/reference，不是传输所有权。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 530" role="img" aria-label="UFlow data object and placement detail">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-data" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b54708" /></marker>
+            <marker id="arrow-hot" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#b42318" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+            <marker id="arrow-future" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#667085" /></marker>
+          </defs>
+
+          <rect x="58" y="58" width="250" height="158" class="box core-box" />
+          <text x="82" y="90" class="box-title">DataObject Metadata</text>
+          <text x="82" y="118" class="box-text">object_id, model_id, name</text>
+          <text x="82" y="138" class="box-text">role, dtype, shape, bytes</text>
+          <text x="82" y="158" class="box-text">state: Empty/Ready/Dirty</text>
+          <text x="82" y="178" class="box-text">immutable / lifecycle</text>
+          <rect x="82" y="188" width="138" height="20" class="port port-control" />
+          <text x="98" y="202" class="port-text">catalog key</text>
+
+          <rect x="402" y="58" width="260" height="158" class="box media-box" />
+          <text x="426" y="90" class="box-title">Placement Record</text>
+          <text x="426" y="118" class="box-text">kind: hbm / ddr / pinned / future</text>
+          <text x="426" y="138" class="box-text">target: npu:X / host:node</text>
+          <text x="426" y="158" class="box-text">service VA / mmap path</text>
+          <text x="426" y="178" class="box-text">shareable handle / lease view</text>
+          <rect x="426" y="188" width="150" height="20" class="port port-data" />
+          <text x="442" y="202" class="port-text">data endpoint</text>
+
+          <rect x="756" y="58" width="250" height="158" class="box core-box" />
+          <text x="780" y="90" class="box-title">Lease / Access Control</text>
+          <text x="780" y="118" class="box-text">open lease by client pid</text>
+          <text x="780" y="138" class="box-text">shareable handle authorization</text>
+          <text x="780" y="158" class="box-text">close lease / cleanup</text>
+          <text x="780" y="178" class="box-text">stale lease detection</text>
+          <rect x="780" y="188" width="150" height="20" class="port port-sync" />
+          <text x="796" y="202" class="port-text">lease reference</text>
+
+          <rect x="84" y="306" width="190" height="118" class="box media-box" />
+          <text x="108" y="338" class="box-title">HBM Object</text>
+          <text x="108" y="364" class="box-text">device physical memory</text>
+          <text x="108" y="384" class="box-text">service VA mapped</text>
+          <text x="108" y="404" class="box-text">shareable to client</text>
+
+          <rect x="340" y="306" width="190" height="118" class="box media-box" />
+          <text x="364" y="338" class="box-title">DDR Object</text>
+          <text x="364" y="364" class="box-text">memfd/mmap shared DDR</text>
+          <text x="364" y="384" class="box-text">THP + pre-touch profile</text>
+          <text x="364" y="404" class="box-text">shared across process</text>
+
+          <rect x="596" y="306" width="190" height="118" class="box media-box" />
+          <text x="620" y="338" class="box-title">Pinned Workspace</text>
+          <text x="620" y="364" class="box-text">not authoritative data</text>
+          <text x="620" y="384" class="box-text">fallback staging chunks</text>
+          <text x="620" y="404" class="box-text">lazy lane owned</text>
+
+          <rect x="852" y="306" width="190" height="118" class="box future-box" />
+          <text x="876" y="338" class="box-title">SSD / UB / Remote</text>
+          <text x="876" y="364" class="box-text">future placement kinds</text>
+          <text x="876" y="384" class="box-text">topology-aware policy</text>
+          <text x="876" y="404" class="box-text">same DataObject API</text>
+
+          <path d="M308 137 L402 137" class="arrow control" />
+          <path d="M662 137 L756 137" class="arrow sync" />
+          <path d="M532 216 C464 268 271 276 179 306" class="arrow hot" />
+          <path d="M532 216 C517 263 440 281 435 306" class="arrow data" />
+          <path d="M532 216 C566 264 671 280 691 306" class="arrow data" />
+          <path d="M662 194 C760 242 860 262 947 306" class="arrow future-flow" />
+          <path d="M881 216 C800 278 740 328 786 365" class="arrow sync" />
+
+          <text x="322" y="124" class="tiny">metadata binds placement</text>
+          <text x="676" y="124" class="tiny">lease protects access</text>
+          <text x="187" y="292" class="tiny">mandatory:hbm</text>
+          <text x="433" y="292" class="tiny">mandatory:ddr</text>
+          <text x="685" y="292" class="tiny">fallback only</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>7. Observability: Monitor + Trace</h2>
+        <div class="section-note">monitor 是常开低频状态；trace 是按需打开的细粒度事件。两者统一从 daemon 输出，不和数据面耦合。</div>
+      </div>
+      <div class="canvas">
+        <svg viewBox="0 0 1180 480" role="img" aria-label="UFlow observability detail">
+          <defs>
+            <marker id="arrow-control" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#3151b7" /></marker>
+            <marker id="arrow-observe" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#087f5b" /></marker>
+            <marker id="arrow-sync" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#6d28d9" /></marker>
+          </defs>
+
+          <rect x="60" y="64" width="225" height="126" class="box core-box" />
+          <text x="84" y="96" class="box-title">Daemon Runtime Events</text>
+          <text x="84" y="122" class="box-text">command handle</text>
+          <text x="84" y="142" class="box-text">object lifecycle</text>
+          <text x="84" y="162" class="box-text">transfer submit/complete</text>
+          <text x="84" y="182" class="box-text">backend alloc/copy</text>
+
+          <rect x="380" y="42" width="235" height="150" class="box obs-box" />
+          <text x="404" y="74" class="box-title">Stats Service</text>
+          <text x="404" y="100" class="box-text">low-frequency snapshot</text>
+          <text x="404" y="120" class="box-text">objects, leases, bytes</text>
+          <text x="404" y="140" class="box-text">transfer counters</text>
+          <text x="404" y="160" class="box-text">backend capability/probe</text>
+
+          <rect x="380" y="256" width="235" height="150" class="box obs-box" />
+          <text x="404" y="288" class="box-title">Trace Collector</text>
+          <text x="404" y="314" class="box-text">disabled by default</text>
+          <text x="404" y="334" class="box-text">bounded ring buffer</text>
+          <text x="404" y="354" class="box-text">category: hot/full/summary</text>
+          <text x="404" y="374" class="box-text">drop counter when full</text>
+
+          <rect x="720" y="62" width="210" height="126" class="box api-box" />
+          <text x="744" y="94" class="box-title">Monitor HTTP API</text>
+          <text x="744" y="120" class="box-text mono">/healthz</text>
+          <text x="744" y="140" class="box-text mono">/v1/observability</text>
+          <text x="744" y="160" class="box-text mono">/v1/stats</text>
+          <text x="744" y="180" class="box-text mono">/v1/command</text>
+
+          <rect x="720" y="256" width="210" height="150" class="box api-box" />
+          <text x="744" y="288" class="box-title">Trace Artifacts</text>
+          <text x="744" y="314" class="box-text mono">trace_events.json</text>
+          <text x="744" y="334" class="box-text mono">trace_summary.json</text>
+          <text x="744" y="354" class="box-text mono">trace_summary.csv</text>
+          <text x="744" y="374" class="box-text mono">summary.md</text>
+
+          <rect x="1000" y="158" width="130" height="126" class="box client-box" />
+          <text x="1024" y="190" class="box-title">UI / CLI</text>
+          <text x="1024" y="216" class="box-text">status panel</text>
+          <text x="1024" y="236" class="box-text">send command</text>
+          <text x="1024" y="256" class="box-text">download trace</text>
+
+          <path d="M285 120 L380 117" class="arrow observe" />
+          <path d="M285 165 C328 210 334 292 380 331" class="arrow observe" />
+          <path d="M615 117 L720 125" class="arrow observe" />
+          <path d="M615 331 L720 331" class="arrow observe" />
+          <path d="M930 125 C980 132 1002 163 1000 204" class="arrow observe" />
+          <path d="M930 331 C980 324 1006 282 1000 244" class="arrow observe" />
+          <path d="M1000 226 C918 226 776 228 615 331" class="arrow control" />
+
+          <text x="302" y="107" class="tiny">aggregate</text>
+          <text x="314" y="252" class="tiny">fine events</text>
+          <text x="944" y="147" class="tiny">read</text>
+          <text x="913" y="314" class="tiny">download</text>
+          <text x="828" y="230" class="tiny">start/stop/flush trace</text>
+        </svg>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

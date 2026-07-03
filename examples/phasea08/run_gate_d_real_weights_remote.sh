@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source /home/sj/git/all_env.sh 2>/dev/null || true
+cd /home/sj/git/data-service
+
+device="${UF_A08_DEVICE:-7}"
+model_dir="${UF_A08_MODEL_DIR:-/data/models/Qwen/Qwen3-14B}"
+prompt="${UF_A08_PROMPT:-Huawei is}"
+max_seq_len="${UF_A08_MAX_SEQ_LEN:-128}"
+max_new_tokens="${UF_A08_MAX_NEW_TOKENS:-1}"
+layer_limit="${UF_A08_PREFILL_LAYER_LIMIT:-40}"
+expected_token_line="${UF_A08_EXPECT_TOKEN_LINE-token_ids: [264]}"
+run_id="phasea08_gated_real_weights_$(date +%Y%m%d_%H%M%S)"
+run_dir="/tmp/proj_output/${run_id}"
+sock="/tmp/${run_id}.sock"
+ddr_base="${UF_H2D_BW_DDR_BASE:-/tmp}"
+ddr_root="${UF_DDR_ROOT:-${ddr_base}/${run_id}_ddr}"
+
+mkdir -p "${run_dir}/kernels" "${ddr_root}"
+rm -f "${sock}"
+
+export LD_LIBRARY_PATH="/home/sj/git/data-service/build/lib:${LD_LIBRARY_PATH:-}"
+export PYTHONPATH="/home/sj/git/data-service/sdk/python:/home/sj/git/pypto-serving:/home/sj/git/pypto/python:/home/sj/git/pypto/runtime/python:${PYTHONPATH:-}"
+export UF_ACL_LIB="${UF_ACL_LIB:-/home/sj/git/data-service/build/lib/libuf_acl_shim.so}"
+export UF_DDR_ROOT="${ddr_root}"
+export UF_DDR_USE_MEMFD="${UF_DDR_USE_MEMFD:-1}"
+export UF_DDR_MADVISE_HUGEPAGE="${UF_DDR_MADVISE_HUGEPAGE:-1}"
+export UF_DDR_PRETOUCH_ON_CREATE="${UF_DDR_PRETOUCH_ON_CREATE:-1}"
+export UF_ENABLE=1
+export UF_SOCKET="${sock}"
+export UF_TARGET_DEVICE="${device}"
+export UF_MANAGE_WEIGHTS=0
+export UF_MANAGE_KVCACHE=0
+export UF_FAIL_FAST=1
+export UF_A08_WEIGHT_TRANSFER_MODE="${UF_A08_WEIGHT_TRANSFER_MODE:-auto}"
+export UF_A08_COMPLETION_EXPORT="${UF_A08_COMPLETION_EXPORT:-auto}"
+export UF_A08_DECODE_KEEP_RESIDENT="${UF_A08_DECODE_KEEP_RESIDENT:-0}"
+export UF_A08_H2D_MAX_LANES="${UF_A08_H2D_MAX_LANES:-auto}"
+export UF_DAEMON_ACCEPT_POLL_US="${UF_DAEMON_ACCEPT_POLL_US:-1000}"
+export PYPTO_RUNTIME_ROOT="${PYPTO_RUNTIME_ROOT:-/home/sj/git/pypto/runtime}"
+export PTO2_RING_HEAP="${PTO2_RING_HEAP:-4294967296}"
+export PTO2_RING_TASK_WINDOW="${PTO2_RING_TASK_WINDOW:-1048576}"
+export PTO2_RING_DEP_POOL="${PTO2_RING_DEP_POOL:-1048576}"
+
+daemon_bin="${UF_DAEMON_BIN:-./target/debug/uf-daemon}"
+
+"${daemon_bin}" \
+  --device "${device}" \
+  --socket "${sock}" \
+  --startup-probe-bytes "${UF_HBM_STARTUP_PROBE_BYTES:-1048576}" \
+  > "${run_dir}/daemon.log" 2>&1 &
+daemon_pid=$!
+echo "${daemon_pid}" > "${run_dir}/daemon.pid"
+
+cleanup() {
+  python - <<PY >/dev/null 2>&1 || true
+import socket
+sock_path = "${sock}"
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(sock_path)
+    s.sendall(b"op=ShutdownDaemon\n")
+    s.close()
+except Exception:
+    pass
+PY
+  wait "${daemon_pid}" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+for _ in $(seq 1 50); do
+  test -S "${sock}" && break
+  sleep 0.2
+done
+test -S "${sock}"
+
+cd /home/sj/git/pypto-serving
+set +e
+UF_A08_COMPILE_PREFILL_LAYER=1 \
+UF_A08_PREFILL_LAYER_TASKS=1 \
+UF_A08_PREFILL_LAYER_DEBUG=1 \
+UF_A08_REAL_WEIGHT_EVENTS=1 \
+UF_A08_PREFILL_LAYER_LIMIT="${layer_limit}" \
+python examples/model/qwen3_14b/npu_generate.py \
+  --model-dir "${model_dir}" \
+  --prompt "${prompt}" \
+  --platform "${UF_PYPTO_PLATFORM:-a2a3}" \
+  --device-id "${device}" \
+  --max-seq-len "${max_seq_len}" \
+  --max-new-tokens "${max_new_tokens}" \
+  --save-kernels-dir "${run_dir}/kernels" \
+  > "${run_dir}/qwen.stdout" 2> "${run_dir}/qwen.stderr"
+code=$?
+set -e
+echo "${code}" > "${run_dir}/exit_code"
+
+python - <<PY > "${run_dir}/summary.txt"
+from pathlib import Path
+run_dir = Path("${run_dir}")
+stdout = (run_dir / "qwen.stdout").read_text(errors="replace")
+token_lines = [line for line in stdout.splitlines() if "token_ids:" in line or line.startswith("token_ids")]
+real_waits = [line for line in stdout.splitlines() if "prefill_layer_real_weight_wait" in line]
+decode_reloads = [line for line in stdout.splitlines() if "decode_real_weight_reload_submitted" in line]
+layer_done = [line for line in stdout.splitlines() if "prefill_layer_done" in line]
+submitted = [line for line in stdout.splitlines() if "prefill_real_weight_reload_submitted" in line]
+timeline = [line for line in stdout.splitlines() if "[uflow-a08] transfer_timeline" in line]
+direct = [line for line in timeline if "actual_engine=acl_direct_async_thp" in line]
+pinned = [line for line in timeline if "actual_engine=acl_pinned" in line]
+expected_layers = int("${layer_limit}")
+expected_token = "${expected_token_line}"
+token_line = token_lines[-1].strip() if token_lines else ""
+print(f"token_line={token_lines[-1] if token_lines else ''}")
+print(f"real_weight_wait_count={len(real_waits)}")
+print(f"decode_reload_count={len(decode_reloads)}")
+print(f"layer_done_count={len(layer_done)}")
+print(f"transfer_timeline_count={len(timeline)}")
+print(f"direct_transfer_count={len(direct)}")
+print(f"pinned_transfer_count={len(pinned)}")
+print(f"all_transfers_direct={str(bool(timeline) and len(direct) == len(timeline)).lower()}")
+print(f"reload_submitted_line={submitted[-1] if submitted else ''}")
+print(f"all_layers_waited={str(len(real_waits) == expected_layers and len(layer_done) == expected_layers).lower()}")
+print(f"match_token={str((not expected_token) or (bool(token_line) and token_line == expected_token)).lower()}")
+PY
+
+python /home/sj/git/data-service/examples/phasea08/uflow_a08_trace_report.py \
+  --run-dir "${run_dir}" \
+  --stdout qwen.stdout
+
+echo "${run_dir}"
+cat "${run_dir}/summary.txt"
+cat "${run_dir}/performance_summary.md" || true
+tail -n 160 "${run_dir}/qwen.stdout" || true
+tail -n 180 "${run_dir}/qwen.stderr" || true
+tail -n 180 "${run_dir}/daemon.log" || true
+
+if [[ "${code}" -ne 0 ]]; then
+  exit "${code}"
+fi
+grep -q "all_layers_waited=true" "${run_dir}/summary.txt"
+grep -q "match_token=true" "${run_dir}/summary.txt"
+grep -q "pinned_transfer_count=0" "${run_dir}/summary.txt"
+grep -q "all_transfers_direct=true" "${run_dir}/summary.txt"
+if [[ "${max_new_tokens}" -gt 1 ]]; then
+  if [[ "${UF_A08_DECODE_KEEP_RESIDENT}" == "1" || "${UF_A08_DECODE_KEEP_RESIDENT}" == "true" || "${UF_A08_DECODE_KEEP_RESIDENT}" == "yes" || "${UF_A08_DECODE_KEEP_RESIDENT}" == "on" ]]; then
+    expected_decode_reloads=1
+  else
+    expected_decode_reloads=$((max_new_tokens - 1))
+  fi
+  grep -q "decode_reload_count=${expected_decode_reloads}" "${run_dir}/summary.txt"
+fi

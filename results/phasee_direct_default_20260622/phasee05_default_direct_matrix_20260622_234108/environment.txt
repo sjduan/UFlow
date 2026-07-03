@@ -1,0 +1,9 @@
+UFLOW_E05_DEFAULT_DIRECT_MATRIX_BEGIN
+run_dir=/tmp/proj_output/phasee05_default_direct_matrix_20260622_234108
+device=7
+sizes=64MiB,256MiB,1GiB,2GiB
+directions=h2d,d2h
+lanes=1
+ddr_root=/dev/shm/phasee05_default_direct_matrix_20260622_234108_ddr
+ddr_madvise_hugepage=1
+ddr_pretouch_on_create=1

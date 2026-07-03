@@ -1,1 +1,5 @@
 .DS_Store
+
+# Local/internal phase planning docs
+plan/PhaseA-*
+plan/PhaseE-*
