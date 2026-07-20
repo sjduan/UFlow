@@ -2,7 +2,7 @@
 
 UFlow is a unified data service for model serving and heterogeneous-memory workloads.
 
-It provides a service-side control plane for data objects, memory placement, leases, and data transfer. The first working target is local-node HBM/DDR management on Ascend NPU systems. The longer-term target is a unified data layer for supernode-style systems, where HBM, DDR, SSD/SSU, and remote memory can be represented through the same object, placement, and transfer language.
+It provides a service-side control plane for data objects, memory placement, leases, and data transfer. The current working target is local-node HBM, DDR, and SSD management on Ascend NPU systems. The longer-term target is a unified data layer for supernode-style systems, where HBM, DDR, SSD/SSU, and remote memory can be represented through the same object, placement, and transfer language.
 
 ## Ecosystem
 
@@ -24,14 +24,21 @@ UFlow currently supports:
 - DataObject, Placement, Lease, TransferPlan, and TransferEvent primitives.
 - HBM object allocation and service-owned HBM runtime views.
 - DDR object allocation backed by memfd or mmap-backed files.
+- SSD objects backed by daemon-owned, preallocated local file extents.
 - Service-side HBM <-> DDR data movement.
 - Default direct DDR <-> HBM transfer path using daemon-owned runtime views.
 - Explicit pinned staging fallback path for comparison and compatibility.
 - HBM <-> HBM and DDR <-> DDR local exchange experiments.
+- Buffered SSD <-> DDR transfers with offset and range support.
+- SSD <-> HBM transfers through a DDR relay path.
+- Logical SSD <-> HBM direct transfers using a file-backed mmap host view and ACL copy to or from the daemon-owned HBM view.
+- Automatic SSD <-> HBM path selection: objects smaller than 256 MiB use the relay path, while objects of 256 MiB or larger use logical direct by default, with runtime fallback to relay.
 - Monitor API and lightweight static web monitor.
 - Trace and benchmark utilities for transfer-stage analysis.
 
 Performance artifacts and validation summaries are kept under `results/`.
+
+The current SSD direct path is logical direct at the UFlow object layer. It still traverses Linux file-backed host memory/page cache and is not physical NVMe/SSU-to-NPU DMA. `io_uring`, `O_DIRECT` pipelines, NVMe P2P, AICPU filesystem access, and SSU/LBA descriptor paths remain future work.
 
 ## Architecture
 
@@ -53,6 +60,8 @@ UFlow daemon
 Backends
   - HBM via ACL runtime
   - DDR via memfd / mmap
+  - SSD via daemon-owned file extents
+  - SSD logical direct via file mmap + ACL copy
   - pinned host memory fallback
 ```
 
@@ -73,7 +82,9 @@ sdk/python/
   uflow/          Python client SDK and object wrappers.
 
 examples/
-  phase*/         Smoke tests, benchmarks, and integration probes.
+  phasea*/        HBM/DDR and serving integration probes.
+  phaseb*/        SSD object, transfer, and policy validation.
+  phasee*/        Unified service and transfer-framework probes.
 
 experiments/
   acl_hbm_smoke/  Standalone ACL validation and bandwidth probes.
@@ -92,7 +103,7 @@ results/
   Selected benchmark summaries and trace artifacts.
 ```
 
-Internal PhaseA / PhaseE planning documents are intentionally ignored in `.gitignore` and are not published from this repository.
+Detailed planning notes and raw run artifacts are maintained locally. Source commits include only selected documentation and validation results intended for publication.
 
 ## Build
 
@@ -131,6 +142,15 @@ UF_SOCKET=/tmp/uflow.sock \
 python3 examples/phasee01/uflow_e01_unified_transfer_smoke.py
 ```
 
+Validate SSD object lifecycle without requiring an NPU transfer:
+
+```bash
+PYTHONPATH="$PWD/sdk/python" \
+UF_SOCKET=/tmp/uflow.sock \
+UF_SSD_ROOT=/data/uflow_ssd \
+python3 examples/phaseb01/uflow_b01_ssd_object_smoke.py
+```
+
 Remote monitor helpers are configured by environment variables rather than hardcoded host details:
 
 ```bash
@@ -144,5 +164,8 @@ export UFLOW_HOST2_KEY_ON_HOST1="<private-key-path-on-jump-host>"
 
 - `mode=auto` selects the current service-side default transfer strategy.
 - `mode=pinned_async` selects the pinned staging fallback path.
+- `mode=relay` forces SSD <-> HBM transfer through DDR staging.
+- `mode=ssd_hbm_direct` explicitly selects the configured logical-direct candidate and reports candidate failures instead of silently hiding them.
+- `UF_SSD_HBM_DIRECT_MIN_BYTES` controls the automatic logical-direct threshold; the default is `256MiB`.
 - Trace is disabled by default; enable it only when detailed event-level diagnosis is needed.
 - Generated run outputs should stay small and summary-oriented before being committed.
