@@ -107,3 +107,43 @@ class DdrObject:
 
 ManagedBuffer = HbmObject
 DdrBuffer = DdrObject
+
+
+@dataclass
+class SsdObject:
+    client: Any
+    object_id: int
+    placement_id: int
+    lease_id: int
+    name: str
+    role: str
+    shape: tuple[int, ...]
+    dtype: torch.dtype
+    requested_bytes: int
+    actual_bytes: int
+    path: str
+    offset_bytes: int = 0
+    visible_bytes: int | None = None
+    alignment_bytes: int = 4096
+    io_mode: str = "buffered"
+    owner: bool = True
+    released: bool = False
+
+    @property
+    def placement(self) -> str:
+        return "ssd"
+
+    @property
+    def nbytes(self) -> int:
+        if self.visible_bytes is not None:
+            return int(self.visible_bytes)
+        return int(self.requested_bytes) - int(self.offset_bytes)
+
+    def release(self, *, release_object: bool | None = None) -> None:
+        if self.released:
+            return
+        self.client._release_ssd_object(self, release_object=release_object)
+        self.released = True
+
+
+SsdBuffer = SsdObject

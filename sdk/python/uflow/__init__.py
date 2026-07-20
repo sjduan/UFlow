@@ -1,6 +1,7 @@
 from .client import (
     MANDATORY_DDR_HINT,
     MANDATORY_HBM_HINT,
+    MANDATORY_SSD_HINT,
     UFlowClient,
     env_flag,
     env_int,
@@ -14,7 +15,7 @@ from .idl import (
     TransferPlan,
     TransferRequest,
 )
-from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer
+from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SsdBuffer, SsdObject
 from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
 from .event_pipeline import (
     AsyncLayerWeightPipeline,
@@ -26,6 +27,7 @@ from .event_pipeline import (
 __all__ = [
     "MANDATORY_DDR_HINT",
     "MANDATORY_HBM_HINT",
+    "MANDATORY_SSD_HINT",
     "UFlowClient",
     "env_flag",
     "env_int",
@@ -38,8 +40,10 @@ __all__ = [
     "TransferRequest",
     "HbmObject",
     "DdrObject",
+    "SsdObject",
     "ManagedBuffer",
     "DdrBuffer",
+    "SsdBuffer",
     "AclEventHandle",
     "AclStreamHandle",
     "TransferCompletionEventHandle",

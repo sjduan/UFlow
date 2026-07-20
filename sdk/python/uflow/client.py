@@ -10,13 +10,26 @@ import torch
 
 from .acl import _AclClient
 from .idl import DataObject, DataPlacement, TransferCost, TransferEvent, TransferPlan, TransferRequest
-from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer
+from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SsdObject
 from .protocol import SocketClient
 from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
 
 MANDATORY_HBM_HINT = "mandatory:hbm"
 MANDATORY_DDR_HINT = "mandatory:ddr"
-TRANSFER_MODES = {"auto", "sync", "pinned_sync", "async", "pinned_async", "direct_async"}
+MANDATORY_SSD_HINT = "mandatory:ssd"
+TRANSFER_MODES = {
+    "auto",
+    "sync",
+    "pinned_sync",
+    "async",
+    "pinned_async",
+    "direct_async",
+    "buffered",
+    "relay",
+    "ssd_hbm_direct",
+    "ssd_mmap",
+    "ssd_odirect",
+}
 
 
 def env_flag(name: str, default: bool = False) -> bool:
@@ -58,6 +71,7 @@ class UFlowClient:
         self._client_id: int | None = None
         self._objects: dict[int, HbmObject] = {}
         self._ddr_objects: dict[int, DdrObject] = {}
+        self._ssd_objects: dict[int, SsdObject] = {}
         self._completion_event_threads: dict[int, threading.Thread] = {}
         self._completion_event_errors: dict[int, BaseException] = {}
         if self.enabled:
@@ -86,25 +100,32 @@ class UFlowClient:
 
     @property
     def active(self) -> bool:
-        return self.enabled and self._socket is not None and self._acl is not None and self._client_id is not None
+        return self.enabled and self._socket is not None and self._client_id is not None
 
     @property
     def client_id(self) -> int | None:
         return self._client_id
 
     def _connect(self) -> None:
-        if not Path(self.acl_lib_path).exists():
-            raise FileNotFoundError(f"UF_ACL_LIB does not exist: {self.acl_lib_path}")
         if not Path(self.socket_path).exists():
             raise FileNotFoundError(f"UF_SOCKET does not exist: {self.socket_path}")
-        self._acl = _AclClient(self.acl_lib_path, self.device_id)
+        require_acl = env_flag("UF_REQUIRE_ACL", False)
+        if Path(self.acl_lib_path).exists():
+            try:
+                self._acl = _AclClient(self.acl_lib_path, self.device_id)
+            except Exception:
+                if require_acl:
+                    raise
+                self._acl = None
+        elif require_acl:
+            raise FileNotFoundError(f"UF_ACL_LIB does not exist: {self.acl_lib_path}")
         self._socket = SocketClient(self.socket_path)
         reg = self._request(
             op="RegisterClient",
             role=self.client_role,
             device_id=self.device_id,
             os_pid=os.getpid(),
-            bare_tgid=self._acl.bare_tgid(),
+            bare_tgid=self._acl.bare_tgid() if self._acl is not None else 0,
         )
         self._client_id = int(reg["client_id"])
         if self.model_id:
@@ -141,6 +162,14 @@ class UFlowClient:
         if not target.startswith("host:"):
             raise ValueError("UFlow DDR target must use host:<numa_id>")
         int(target.split(":", 1)[1])
+        return target
+
+    @staticmethod
+    def _resolve_ssd_target(target: str | None) -> str:
+        if target is None or target == "":
+            target = os.environ.get("UF_SSD_TARGET", "ssd:local0")
+        if target != "ssd:local0":
+            raise ValueError("UFlow SSD target must use ssd:local0")
         return target
 
     @staticmethod
@@ -335,6 +364,8 @@ class UFlowClient:
     ) -> HbmObject:
         if not self.active:
             raise RuntimeError("UFlow client is disabled")
+        if self._acl is None:
+            raise RuntimeError("UFlow HBM allocation requires an initialized ACL bridge")
         if hint != MANDATORY_HBM_HINT:
             raise ValueError(f"UFlow HBM allocation requires hint={MANDATORY_HBM_HINT!r}")
         dtype = dtype or torch.uint8
@@ -460,6 +491,87 @@ class UFlowClient:
             self.mark_ready(obj)
         return obj
 
+    def _map_ssd_response(
+        self,
+        *,
+        resp: dict[str, str],
+        name: str,
+        role: str,
+        shape: tuple[int, ...],
+        dtype: torch.dtype,
+        owner: bool,
+        offset_bytes: int = 0,
+        visible_bytes: int | None = None,
+    ) -> SsdObject:
+        obj = SsdObject(
+            client=self,
+            object_id=int(resp["object_id"]),
+            placement_id=int(resp.get("placement_id", resp["object_id"])),
+            lease_id=int(resp["lease_id"]),
+            name=name,
+            role=role,
+            shape=tuple(int(dim) for dim in shape),
+            dtype=dtype,
+            requested_bytes=int(resp.get("requested_bytes", visible_bytes or resp["actual_bytes"])),
+            actual_bytes=int(resp["actual_bytes"]),
+            path=resp["ssd_path"],
+            offset_bytes=int(resp.get("allowed_offset_bytes", resp.get("ssd_offset_bytes", offset_bytes))),
+            visible_bytes=visible_bytes,
+            alignment_bytes=int(resp.get("alignment_bytes", "4096")),
+            io_mode=resp.get("ssd_io_mode", "buffered"),
+            owner=owner,
+        )
+        self._ssd_objects[obj.lease_id] = obj
+        return obj
+
+    def allocate_ssd(
+        self,
+        *,
+        name: str,
+        role: str = "user",
+        nbytes: int | None = None,
+        target: str | None = None,
+        shape: tuple[int, ...] | None = None,
+        dtype: torch.dtype | None = None,
+        immutable: bool = False,
+        mark_ready: bool = True,
+    ) -> SsdObject:
+        if not self.active:
+            raise RuntimeError("UFlow client is disabled")
+        dtype = dtype or torch.uint8
+        if shape is None:
+            if nbytes is None:
+                raise ValueError("UFlow allocate_ssd requires nbytes when shape is omitted")
+            shape = (int(nbytes),)
+            dtype = torch.uint8
+        shape = tuple(int(dim) for dim in shape)
+        if nbytes is None:
+            nbytes = self.tensor_nbytes(shape, dtype)
+        resp = self._request(
+            op="CreateDataObject",
+            client_id=self._client_id,
+            model_id=self.model_id,
+            name=name,
+            role=role,
+            hint=MANDATORY_SSD_HINT,
+            target=self._resolve_ssd_target(target),
+            shape=self._shape_text(shape),
+            dtype=str(dtype).replace("torch.", ""),
+            nbytes=int(nbytes),
+            immutable=1 if immutable else 0,
+        )
+        obj = self._map_ssd_response(
+            resp=resp,
+            name=name,
+            role=role,
+            shape=shape,
+            dtype=dtype,
+            owner=resp.get("existing", "0") != "1",
+        )
+        if mark_ready:
+            self.mark_ready(obj)
+        return obj
+
     def open(
         self,
         *,
@@ -474,6 +586,8 @@ class UFlowClient:
     ) -> HbmObject:
         if not self.active:
             raise RuntimeError("UFlow client is disabled")
+        if self._acl is None:
+            raise RuntimeError("UFlow HBM open requires an initialized ACL bridge")
         resp = self._request(
             op="OpenDataObject",
             client_id=self._client_id,
@@ -527,27 +641,67 @@ class UFlowClient:
             visible_bytes=visible_bytes,
         )
 
-    def copy_to_device(self, managed: HbmObject, host_tensor: torch.Tensor) -> None:
+    def open_ssd(
+        self,
+        *,
+        object_id: int,
+        name: str = "",
+        role: str = "user",
+        target: str | None = None,
+        shape: tuple[int, ...] | None = None,
+        dtype: torch.dtype | None = None,
+        allowed_offset_bytes: int = 0,
+        allowed_bytes: int = 0,
+    ) -> SsdObject:
+        if not self.active:
+            raise RuntimeError("UFlow client is disabled")
+        resp = self._request(
+            op="OpenDataObject",
+            client_id=self._client_id,
+            object_id=int(object_id),
+            target=self._resolve_ssd_target(target),
+            allowed_offset_bytes=int(allowed_offset_bytes),
+            allowed_bytes=int(allowed_bytes),
+        )
+        requested_bytes = int(resp.get("requested_bytes", allowed_bytes or resp["actual_bytes"]))
+        offset_bytes = int(resp.get("allowed_offset_bytes", allowed_offset_bytes))
+        visible_bytes = int(resp.get("allowed_bytes", allowed_bytes))
+        if visible_bytes <= 0:
+            visible_bytes = max(requested_bytes - offset_bytes, 0)
+        dtype = dtype or torch.uint8
+        shape = (visible_bytes,) if shape is None else tuple(int(dim) for dim in shape)
+        return self._map_ssd_response(
+            resp=resp,
+            name=name or f"ssd.{object_id}",
+            role=role,
+            shape=shape,
+            dtype=dtype,
+            owner=False,
+            offset_bytes=offset_bytes,
+            visible_bytes=visible_bytes,
+        )
+
+    def copy_to_device(self, managed: HbmObject, host_tensor: torch.Tensor, *, offset_bytes: int = 0) -> None:
         if host_tensor.device.type != "cpu":
             raise ValueError("copy_to_device source must be a CPU tensor")
         if not host_tensor.is_contiguous():
             raise ValueError("copy_to_device source must be contiguous")
-        if int(host_tensor.nbytes) > managed.requested_bytes:
+        if int(offset_bytes) < 0 or int(offset_bytes) + int(host_tensor.nbytes) > managed.requested_bytes:
             raise ValueError("source tensor is larger than HBM object")
         if self._acl is None:
             raise RuntimeError("UFlow client ACL bridge is not initialized")
-        self._acl.h2d(managed.device_ptr, host_tensor.data_ptr(), int(host_tensor.nbytes))
+        self._acl.h2d(managed.device_ptr + int(offset_bytes), host_tensor.data_ptr(), int(host_tensor.nbytes))
 
-    def copy_from_device(self, managed: HbmObject, host_tensor: torch.Tensor) -> None:
+    def copy_from_device(self, managed: HbmObject, host_tensor: torch.Tensor, *, offset_bytes: int = 0) -> None:
         if host_tensor.device.type != "cpu":
             raise ValueError("copy_from_device destination must be a CPU tensor")
         if not host_tensor.is_contiguous():
             raise ValueError("copy_from_device destination must be contiguous")
-        if int(host_tensor.nbytes) > managed.requested_bytes:
+        if int(offset_bytes) < 0 or int(offset_bytes) + int(host_tensor.nbytes) > managed.requested_bytes:
             raise ValueError("destination tensor is larger than HBM object")
         if self._acl is None:
             raise RuntimeError("UFlow client ACL bridge is not initialized")
-        self._acl.d2h(host_tensor.data_ptr(), managed.device_ptr, int(host_tensor.nbytes))
+        self._acl.d2h(host_tensor.data_ptr(), managed.device_ptr + int(offset_bytes), int(host_tensor.nbytes))
 
     def copy_device_to_device(self, src: HbmObject, dst: HbmObject, *, nbytes: int | None = None) -> None:
         if self._acl is None:
@@ -559,7 +713,16 @@ class UFlowClient:
         resp = self._request(op="DescribeObject", client_id=self._client_id, object_id=int(object_id))
         return DataObject.from_response(resp), DataPlacement.from_response(resp)
 
-    def estimate_cost(self, *, src: HbmObject | DdrObject, dst: HbmObject | DdrObject, nbytes: int | None = None, mode: str | None = None) -> TransferCost:
+    def estimate_cost(
+        self,
+        *,
+        src: HbmObject | DdrObject | SsdObject,
+        dst: HbmObject | DdrObject | SsdObject,
+        nbytes: int | None = None,
+        mode: str | None = None,
+        src_offset_bytes: int = 0,
+        dst_offset_bytes: int = 0,
+    ) -> TransferCost:
         actual_mode = self._normalize_transfer_mode(mode)
         resp = self._request(
             op="EstimateCost",
@@ -568,6 +731,8 @@ class UFlowClient:
             dst_object_id=dst.object_id,
             src_placement_id=src.placement_id,
             dst_placement_id=dst.placement_id,
+            src_offset_bytes=int(src_offset_bytes),
+            dst_offset_bytes=int(dst_offset_bytes),
             nbytes=int(min(src.requested_bytes, dst.requested_bytes) if nbytes is None else nbytes),
             mode=actual_mode,
         )
@@ -576,12 +741,14 @@ class UFlowClient:
     def plan_transfer(
         self,
         *,
-        src: HbmObject | DdrObject,
-        dst: HbmObject | DdrObject,
+        src: HbmObject | DdrObject | SsdObject,
+        dst: HbmObject | DdrObject | SsdObject,
         nbytes: int | None = None,
         operation: str = "copy",
         mode: str | None = None,
         wait_policy: str = "return_immediately",
+        src_offset_bytes: int = 0,
+        dst_offset_bytes: int = 0,
     ) -> TransferPlan:
         actual_mode = self._normalize_transfer_mode(mode)
         request = TransferRequest(
@@ -591,6 +758,8 @@ class UFlowClient:
             operation=operation,
             wait_policy=wait_policy,
             mode=actual_mode,
+            src_offset_bytes=int(src_offset_bytes),
+            dst_offset_bytes=int(dst_offset_bytes),
         )
         resp = self._request(
             op="PlanTransfer",
@@ -620,16 +789,16 @@ class UFlowClient:
         event_id = event.event_id if isinstance(event, TransferEvent) else int(event)
         return TransferEvent.from_response(self._request(op="CancelEvent", client_id=self._client_id, event_id=event_id))
 
-    def transfer_sync(self, *, src: HbmObject | DdrObject, dst: HbmObject | DdrObject, nbytes: int | None = None, mode: str | None = None) -> TransferEvent:
+    def transfer_sync(self, *, src: HbmObject | DdrObject | SsdObject, dst: HbmObject | DdrObject | SsdObject, nbytes: int | None = None, mode: str | None = None) -> TransferEvent:
         plan = self.plan_transfer(src=src, dst=dst, nbytes=nbytes, mode=mode, wait_policy="return_immediately")
         event = self.submit_transfer(plan)
         return self.wait_event(event)
 
-    def mark_ready(self, obj: HbmObject | DdrObject) -> None:
+    def mark_ready(self, obj: HbmObject | DdrObject | SsdObject) -> None:
         if self.active:
             self._request(op="MarkReady", client_id=self._client_id, object_id=obj.object_id, lease_id=obj.lease_id)
 
-    def mark_modified(self, obj: HbmObject | DdrObject, *, offset_bytes: int = 0, nbytes: int | None = None) -> None:
+    def mark_modified(self, obj: HbmObject | DdrObject | SsdObject, *, offset_bytes: int = 0, nbytes: int | None = None) -> None:
         if self.active:
             self._request(
                 op="MarkModified",
@@ -640,7 +809,7 @@ class UFlowClient:
                 modified_bytes=int(obj.requested_bytes if nbytes is None else nbytes),
             )
 
-    def mark_dirty(self, obj: HbmObject | DdrObject, *, offset_bytes: int = 0, nbytes: int | None = None) -> None:
+    def mark_dirty(self, obj: HbmObject | DdrObject | SsdObject, *, offset_bytes: int = 0, nbytes: int | None = None) -> None:
         if self.active:
             self._request(
                 op="MarkDirty",
@@ -683,6 +852,14 @@ class UFlowClient:
                 self._request(op="ReleaseDataObject", client_id=self._client_id, object_id=obj.object_id)
         self._ddr_objects.pop(obj.lease_id, None)
 
+    def _release_ssd_object(self, obj: SsdObject, *, release_object: bool | None = None) -> None:
+        if self.active and self._client_id is not None:
+            self._request(op="CloseLease", client_id=self._client_id, lease_id=obj.lease_id)
+            should_release_object = obj.owner if release_object is None else bool(release_object)
+            if should_release_object:
+                self._request(op="ReleaseDataObject", client_id=self._client_id, object_id=obj.object_id)
+        self._ssd_objects.pop(obj.lease_id, None)
+
     def close(self) -> None:
         for event_id, thread in list(self._completion_event_threads.items()):
             thread.join(timeout=1.0)
@@ -691,6 +868,8 @@ class UFlowClient:
         for obj in list(self._objects.values()):
             obj.release(release_object=False)
         for obj in list(self._ddr_objects.values()):
+            obj.release(release_object=False)
+        for obj in list(self._ssd_objects.values()):
             obj.release(release_object=False)
         self._socket = None
         self._acl = None

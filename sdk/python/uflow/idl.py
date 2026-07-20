@@ -99,6 +99,8 @@ class TransferRequest:
     wait_policy: str = "return_immediately"
     mode: str = "auto"
     request_id: int = 0
+    src_offset_bytes: int = 0
+    dst_offset_bytes: int = 0
 
     def as_kv(self) -> dict[str, Any]:
         return {
@@ -108,6 +110,8 @@ class TransferRequest:
             "operation": self.operation,
             "wait_policy": self.wait_policy,
             "mode": self.mode,
+            "src_offset_bytes": self.src_offset_bytes,
+            "dst_offset_bytes": self.dst_offset_bytes,
             "nbytes": self.nbytes,
         }
 
@@ -125,6 +129,8 @@ class TransferPlan:
     engine: str
     completion_kind: str
     wait_policy: str
+    src_offset_bytes: int
+    dst_offset_bytes: int
     nbytes: int
     cost: TransferCost
 
@@ -142,6 +148,8 @@ class TransferPlan:
             engine=resp.get("engine", ""),
             completion_kind=resp.get("completion_kind", ""),
             wait_policy=resp.get("wait_policy", "return_immediately"),
+            src_offset_bytes=int(resp.get("src_offset_bytes", "0")),
+            dst_offset_bytes=int(resp.get("dst_offset_bytes", "0")),
             nbytes=int(resp.get("nbytes", "0")),
             cost=TransferCost.from_response(resp),
         )
@@ -186,6 +194,28 @@ class TransferEvent:
     channel_event_record_count: int = 0
     channel_event_wait_count: int = 0
     channel_pipeline_overlap: bool = False
+    ssd_io_submit_us: float = 0.0
+    ssd_io_wait_us: float = 0.0
+    ssd_io_bytes: int = 0
+    ssd_io_bandwidth_gib_s: float = 0.0
+    ssd_read_bytes: int = 0
+    ssd_write_bytes: int = 0
+    relay_stage_count: int = 0
+    relay_ddr_hbm_us: float = 0.0
+    relay_total_us: float = 0.0
+    direct_candidate: str = ""
+    direct_kind: str = ""
+    direct_setup_us: float = 0.0
+    direct_register_us: float = 0.0
+    direct_fadvise_us: float = 0.0
+    direct_readahead_us: float = 0.0
+    direct_madvise_hugepage_us: float = 0.0
+    direct_madvise_willneed_us: float = 0.0
+    direct_madvise_populate_us: float = 0.0
+    direct_pretouch_us: float = 0.0
+    direct_mlock_us: float = 0.0
+    direct_acl_us: float = 0.0
+    direct_total_us: float = 0.0
 
     @classmethod
     def from_response(cls, resp: dict[str, str]) -> "TransferEvent":
@@ -227,6 +257,28 @@ class TransferEvent:
             channel_event_record_count=int(resp.get("channel_event_record_count", "0")),
             channel_event_wait_count=int(resp.get("channel_event_wait_count", "0")),
             channel_pipeline_overlap=_truthy(resp.get("channel_pipeline_overlap", "0")),
+            ssd_io_submit_us=float(resp.get("ssd_io_submit_us", "0")),
+            ssd_io_wait_us=float(resp.get("ssd_io_wait_us", "0")),
+            ssd_io_bytes=int(resp.get("ssd_io_bytes", "0")),
+            ssd_io_bandwidth_gib_s=float(resp.get("ssd_io_bandwidth_gib_s", "0")),
+            ssd_read_bytes=int(resp.get("ssd_read_bytes", "0")),
+            ssd_write_bytes=int(resp.get("ssd_write_bytes", "0")),
+            relay_stage_count=int(resp.get("relay_stage_count", "0")),
+            relay_ddr_hbm_us=float(resp.get("relay_ddr_hbm_us", "0")),
+            relay_total_us=float(resp.get("relay_total_us", "0")),
+            direct_candidate=resp.get("direct_candidate", ""),
+            direct_kind=resp.get("direct_kind", ""),
+            direct_setup_us=float(resp.get("direct_setup_us", "0")),
+            direct_register_us=float(resp.get("direct_register_us", "0")),
+            direct_fadvise_us=float(resp.get("direct_fadvise_us", "0")),
+            direct_readahead_us=float(resp.get("direct_readahead_us", "0")),
+            direct_madvise_hugepage_us=float(resp.get("direct_madvise_hugepage_us", "0")),
+            direct_madvise_willneed_us=float(resp.get("direct_madvise_willneed_us", "0")),
+            direct_madvise_populate_us=float(resp.get("direct_madvise_populate_us", "0")),
+            direct_pretouch_us=float(resp.get("direct_pretouch_us", "0")),
+            direct_mlock_us=float(resp.get("direct_mlock_us", "0")),
+            direct_acl_us=float(resp.get("direct_acl_us", "0")),
+            direct_total_us=float(resp.get("direct_total_us", "0")),
         )
 
 
