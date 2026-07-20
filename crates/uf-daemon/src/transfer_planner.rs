@@ -1,5 +1,8 @@
 use crate::catalog::{Object, SharedCatalog, TransferPlanRecord};
-use crate::common::{object_by_request, transfer_plan_payload, DDR_PLACEMENT, HBM_PLACEMENT};
+use crate::common::{
+    object_by_request, transfer_plan_payload, DDR_PLACEMENT, HBM_PLACEMENT, SSD_PLACEMENT,
+};
+use crate::ssd_direct;
 use crate::trace::{span, TraceCategory};
 use uf_core::{err, get, get_u64, ok, Kv};
 
@@ -194,6 +197,44 @@ fn classify_transfer(
                 .to_string(),
             }
         }
+        (SSD_PLACEMENT, DDR_PLACEMENT) => TransferClassification {
+            path: "ssd_to_ddr".to_string(),
+            engine: if mode == "auto" || mode == "buffered" {
+                "ssd_buffered_pread"
+            } else {
+                "ssd_unsupported_mode"
+            }
+            .to_string(),
+            completion_kind: "thread_event".to_string(),
+            effort: 1.4,
+            estimated_latency_us: 80.0 + mib * 64.0,
+            estimated_bandwidth_gib_s: 16.0,
+            setup_cost_us: 20.0,
+            hop_count: 1,
+            fallback_used: false,
+            fallback_reason: String::new(),
+            explanation: "SSD to DDR uses daemon-side buffered pread into DDR mmap".to_string(),
+        },
+        (DDR_PLACEMENT, SSD_PLACEMENT) => TransferClassification {
+            path: "ddr_to_ssd".to_string(),
+            engine: if mode == "auto" || mode == "buffered" {
+                "ssd_buffered_pwrite"
+            } else {
+                "ssd_unsupported_mode"
+            }
+            .to_string(),
+            completion_kind: "thread_event".to_string(),
+            effort: 1.5,
+            estimated_latency_us: 90.0 + mib * 72.0,
+            estimated_bandwidth_gib_s: 14.0,
+            setup_cost_us: 20.0,
+            hop_count: 1,
+            fallback_used: false,
+            fallback_reason: String::new(),
+            explanation: "DDR to SSD uses daemon-side buffered pwrite from DDR mmap".to_string(),
+        },
+        (SSD_PLACEMENT, HBM_PLACEMENT) => classify_ssd_hbm_transfer(mode, true, nbytes, mib),
+        (HBM_PLACEMENT, SSD_PLACEMENT) => classify_ssd_hbm_transfer(mode, false, nbytes, mib),
         _ => TransferClassification {
             path: "unsupported".to_string(),
             engine: "none".to_string(),
@@ -207,6 +248,118 @@ fn classify_transfer(
             fallback_reason: "unsupported_medium_pair".to_string(),
             explanation: "Unsupported PhaseE-01 local transfer medium pair".to_string(),
         },
+    }
+}
+
+fn classify_ssd_hbm_transfer(
+    mode: &str,
+    ssd_to_hbm: bool,
+    nbytes: u64,
+    mib: f64,
+) -> TransferClassification {
+    if mode == "ssd_hbm_direct" {
+        return match ssd_direct::configured_candidate() {
+            Ok(candidate) => {
+                let path = if ssd_to_hbm {
+                    "ssd_to_hbm_direct"
+                } else {
+                    "hbm_to_ssd_direct"
+                };
+                TransferClassification {
+                    path: path.to_string(),
+                    engine: format!("ssd_hbm_{}", candidate),
+                    completion_kind: "thread_event".to_string(),
+                    effort: 1.8,
+                    estimated_latency_us: 90.0 + mib * 80.0,
+                    estimated_bandwidth_gib_s: 12.0,
+                    setup_cost_us: 60.0,
+                    hop_count: 1,
+                    fallback_used: false,
+                    fallback_reason: String::new(),
+                    explanation: ssd_direct::candidate_explanation(&candidate),
+                }
+            }
+            Err(reason) => TransferClassification {
+                path: "unsupported".to_string(),
+                engine: "ssd_hbm_direct_unavailable".to_string(),
+                completion_kind: "immediate".to_string(),
+                effort: f64::INFINITY,
+                estimated_latency_us: 0.0,
+                estimated_bandwidth_gib_s: 0.0,
+                setup_cost_us: 0.0,
+                hop_count: 0,
+                fallback_used: false,
+                fallback_reason: reason.clone(),
+                explanation: reason,
+            },
+        };
+    }
+    if mode != "auto" && mode != "relay" {
+        return TransferClassification {
+            path: "unsupported".to_string(),
+            engine: "ssd_hbm_unsupported_mode".to_string(),
+            completion_kind: "immediate".to_string(),
+            effort: f64::INFINITY,
+            estimated_latency_us: 0.0,
+            estimated_bandwidth_gib_s: 0.0,
+            setup_cost_us: 0.0,
+            hop_count: 0,
+            fallback_used: false,
+            fallback_reason: format!("unsupported_ssd_hbm_mode:{}", mode),
+            explanation: format!("unsupported SSD-HBM transfer mode {}", mode),
+        };
+    }
+    if mode == "auto" && ssd_direct::direct_auto_enabled() {
+        if let Ok(Some(candidate)) = ssd_direct::auto_candidate(ssd_to_hbm, nbytes) {
+            let path = if ssd_to_hbm {
+                "ssd_to_hbm_direct"
+            } else {
+                "hbm_to_ssd_direct"
+            };
+            return TransferClassification {
+                path: path.to_string(),
+                engine: format!("ssd_hbm_auto_{}", candidate),
+                completion_kind: "thread_event".to_string(),
+                effort: 1.8,
+                estimated_latency_us: 90.0 + mib * 80.0,
+                estimated_bandwidth_gib_s: 12.0,
+                setup_cost_us: 60.0,
+                hop_count: 1,
+                fallback_used: false,
+                fallback_reason: String::new(),
+                explanation: format!(
+                    "SSD-HBM auto selected direct candidate {}; relay is runtime fallback on direct failure",
+                    candidate
+                ),
+            };
+        }
+    }
+    TransferClassification {
+        path: if ssd_to_hbm {
+            "ssd_to_hbm_via_ddr"
+        } else {
+            "hbm_to_ssd_via_ddr"
+        }
+        .to_string(),
+        engine: "ssd_hbm_relay_ddr".to_string(),
+        completion_kind: "thread_event".to_string(),
+        effort: if ssd_to_hbm { 2.2 } else { 2.4 },
+        estimated_latency_us: if ssd_to_hbm {
+            120.0 + mib * 96.0
+        } else {
+            140.0 + mib * 112.0
+        },
+        estimated_bandwidth_gib_s: if ssd_to_hbm { 10.0 } else { 9.0 },
+        setup_cost_us: 40.0,
+        hop_count: 2,
+        fallback_used: false,
+        fallback_reason: String::new(),
+        explanation: if ssd_to_hbm {
+            "SSD to HBM uses daemon-internal DDR staging relay"
+        } else {
+            "HBM to SSD uses daemon-internal DDR staging relay"
+        }
+        .to_string(),
     }
 }
 
@@ -225,7 +378,11 @@ pub(crate) fn estimate_cost(req: &Kv, shared: &SharedCatalog) -> Kv {
     if nbytes == 0 {
         nbytes = src.requested_bytes.min(dst.requested_bytes);
     }
-    if nbytes > src.requested_bytes || nbytes > dst.requested_bytes {
+    let src_offset = get_u64(req, "src_offset_bytes");
+    let dst_offset = get_u64(req, "dst_offset_bytes");
+    if src_offset.checked_add(nbytes).unwrap_or(u64::MAX) > src.requested_bytes
+        || dst_offset.checked_add(nbytes).unwrap_or(u64::MAX) > dst.requested_bytes
+    {
         return err("transfer size exceeds source or destination object");
     }
     let mode = get(req, "mode");
@@ -238,11 +395,16 @@ pub(crate) fn estimate_cost(req: &Kv, shared: &SharedCatalog) -> Kv {
     if class.path == "unsupported" {
         return err(class.explanation);
     }
+    if class.engine == "ssd_unsupported_mode" {
+        return err(format!("unsupported SSD transfer mode {}", mode));
+    }
     ok(&[
         ("src_object_id", src.object_id.to_string()),
         ("src_placement_id", src.placement_id.to_string()),
         ("dst_object_id", dst.object_id.to_string()),
         ("dst_placement_id", dst.placement_id.to_string()),
+        ("src_offset_bytes", src_offset.to_string()),
+        ("dst_offset_bytes", dst_offset.to_string()),
         ("path", class.path),
         ("engine", class.engine),
         ("completion_kind", class.completion_kind),
@@ -297,7 +459,11 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
     if nbytes == 0 {
         nbytes = src.requested_bytes.min(dst.requested_bytes);
     }
-    if nbytes > src.requested_bytes || nbytes > dst.requested_bytes {
+    let src_offset = get_u64(req, "src_offset_bytes");
+    let dst_offset = get_u64(req, "dst_offset_bytes");
+    if src_offset.checked_add(nbytes).unwrap_or(u64::MAX) > src.requested_bytes
+        || dst_offset.checked_add(nbytes).unwrap_or(u64::MAX) > dst.requested_bytes
+    {
         return err("transfer size exceeds source or destination object");
     }
     let request_id = {
@@ -330,6 +496,9 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
     if class.path == "unsupported" {
         return err(class.explanation);
     }
+    if class.engine == "ssd_unsupported_mode" {
+        return err(format!("unsupported SSD transfer mode {}", mode));
+    }
     let plan = TransferPlanRecord {
         plan_id,
         request_id,
@@ -343,6 +512,8 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         engine: class.engine,
         completion_kind: class.completion_kind,
         wait_policy,
+        src_offset_bytes: src_offset,
+        dst_offset_bytes: dst_offset,
         nbytes,
         effort: class.effort,
         estimated_latency_us: class.estimated_latency_us,

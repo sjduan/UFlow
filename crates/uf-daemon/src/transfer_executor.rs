@@ -6,6 +6,8 @@ use crate::catalog::{Catalog, Object, SharedCatalog, TransferEventRecord, Transf
 use crate::common::{env_bool, event_payload, now_ns, HBM_PLACEMENT};
 use crate::ddr_backend::with_ddr_mapping;
 use crate::direct_transfer::{direct_lane_manager, direct_transfer_executor};
+use crate::ssd_backend::{read_ssd_to_ptr, ssd_chunk_bytes, write_ptr_to_ssd, SsdIoStats};
+use crate::ssd_direct::{copy_hbm_to_ssd_direct, copy_ssd_to_hbm_direct, SsdHbmDirectStats};
 use crate::trace::{span, TraceCategory};
 use crate::transfer_channel::{
     transfer_channel_manager, TransferChannelRunStats, TransferDirection,
@@ -37,6 +39,35 @@ struct ActualTransfer {
     fallback_used: bool,
     fallback_reason: String,
     channel: Option<TransferChannelRunStats>,
+    ssd: SsdIoStats,
+    direct: SsdHbmDirectStats,
+    relay_stage_count: u64,
+    relay_ddr_hbm_us: f64,
+    relay_total_us: f64,
+}
+
+impl ActualTransfer {
+    fn new(
+        bytes_done: u64,
+        engine: String,
+        path: String,
+        fallback_used: bool,
+        fallback_reason: String,
+    ) -> Self {
+        Self {
+            bytes_done,
+            actual_engine: engine,
+            actual_path: path,
+            fallback_used,
+            fallback_reason,
+            channel: None,
+            ssd: SsdIoStats::default(),
+            direct: SsdHbmDirectStats::default(),
+            relay_stage_count: 0,
+            relay_ddr_hbm_us: 0.0,
+            relay_total_us: 0.0,
+        }
+    }
 }
 
 fn runtime_object(st: &Catalog, object: Object) -> Result<RuntimeObject, String> {
@@ -99,15 +130,49 @@ fn engine_requests_direct(engine: &str) -> bool {
     engine.contains("direct")
 }
 
+fn direct_candidate_from_engine(engine: &str) -> &str {
+    engine
+        .strip_prefix("ssd_hbm_auto_")
+        .or_else(|| engine.strip_prefix("ssd_hbm_"))
+        .unwrap_or("file_mmap_acl_direct")
+}
+
+fn engine_requests_auto_ssd_hbm(engine: &str) -> bool {
+    engine.starts_with("ssd_hbm_auto_")
+}
+
+fn auto_direct_fallback_reason(candidate: &str, reason: &str) -> String {
+    format!(
+        "auto SSD-HBM direct candidate {} failed, fell back to SSD-DDR-HBM relay: {}",
+        candidate, reason
+    )
+}
+
+fn ssd_to_hbm_relay_actual_path() -> String {
+    "ssd_to_hbm_via_ddr".to_string()
+}
+
+fn hbm_to_ssd_relay_actual_path() -> String {
+    "hbm_to_ssd_via_ddr".to_string()
+}
+
+fn ssd_hbm_relay_actual_engine() -> String {
+    "ssd_hbm_relay_ddr".to_string()
+}
+
 fn ensure_transfer_bounds(
     src: &RuntimeObject,
     dst: &RuntimeObject,
+    src_offset: u64,
+    dst_offset: u64,
     nbytes: u64,
 ) -> Result<(), String> {
     if nbytes == 0 {
         return Err("transfer nbytes must be positive".to_string());
     }
-    if nbytes > src.object.requested_bytes || nbytes > dst.object.requested_bytes {
+    if src_offset.checked_add(nbytes).unwrap_or(u64::MAX) > src.object.requested_bytes
+        || dst_offset.checked_add(nbytes).unwrap_or(u64::MAX) > dst.object.requested_bytes
+    {
         return Err("transfer size exceeds source or destination object".to_string());
     }
     if !matches!(src.object.state.as_str(), "Ready" | "Modified") {
@@ -809,6 +874,223 @@ fn copy_ddr_to_ddr(
     })
 }
 
+fn copy_ssd_to_ddr(
+    event_id: u64,
+    src: &RuntimeObject,
+    dst: &RuntimeObject,
+    src_offset: u64,
+    dst_offset: u64,
+    nbytes: u64,
+) -> Result<SsdIoStats, String> {
+    let _trace = span(
+        TraceCategory::Transfer,
+        "transfer.copy.ssd_to_ddr",
+        vec![
+            ("event_id", event_id.to_string()),
+            ("bytes", nbytes.to_string()),
+            ("src_object_id", src.object.object_id.to_string()),
+            ("dst_object_id", dst.object.object_id.to_string()),
+            ("src_offset", src_offset.to_string()),
+            ("dst_offset", dst_offset.to_string()),
+        ],
+    );
+    with_ddr_mapping(&dst.object, |dst_ptr, dst_len| {
+        if dst_offset.checked_add(nbytes).unwrap_or(u64::MAX) > dst_len as u64 {
+            return Err("transfer size exceeds mapped DDR destination".to_string());
+        }
+        let _io_trace = span(
+            TraceCategory::Transfer,
+            "ssd.read_wait",
+            vec![
+                ("event_id", event_id.to_string()),
+                ("bytes", nbytes.to_string()),
+                ("src_offset", src_offset.to_string()),
+            ],
+        );
+        read_ssd_to_ptr(
+            &src.object,
+            src_offset,
+            unsafe { dst_ptr.add(dst_offset as usize) },
+            nbytes,
+        )
+    })
+}
+
+fn copy_ddr_to_ssd(
+    event_id: u64,
+    src: &RuntimeObject,
+    dst: &RuntimeObject,
+    src_offset: u64,
+    dst_offset: u64,
+    nbytes: u64,
+) -> Result<SsdIoStats, String> {
+    let _trace = span(
+        TraceCategory::Transfer,
+        "transfer.copy.ddr_to_ssd",
+        vec![
+            ("event_id", event_id.to_string()),
+            ("bytes", nbytes.to_string()),
+            ("src_object_id", src.object.object_id.to_string()),
+            ("dst_object_id", dst.object.object_id.to_string()),
+            ("src_offset", src_offset.to_string()),
+            ("dst_offset", dst_offset.to_string()),
+        ],
+    );
+    with_ddr_mapping(&src.object, |src_ptr, src_len| {
+        if src_offset.checked_add(nbytes).unwrap_or(u64::MAX) > src_len as u64 {
+            return Err("transfer size exceeds mapped DDR source".to_string());
+        }
+        let _io_trace = span(
+            TraceCategory::Transfer,
+            "ssd.write_wait",
+            vec![
+                ("event_id", event_id.to_string()),
+                ("bytes", nbytes.to_string()),
+                ("dst_offset", dst_offset.to_string()),
+            ],
+        );
+        write_ptr_to_ssd(
+            &dst.object,
+            dst_offset,
+            unsafe { src_ptr.add(src_offset as usize) } as *const u8,
+            nbytes,
+        )
+    })
+}
+
+fn copy_ssd_to_hbm_via_ddr(
+    event_id: u64,
+    src: &RuntimeObject,
+    dst: &RuntimeObject,
+    src_offset: u64,
+    dst_offset: u64,
+    nbytes: u64,
+) -> Result<(SsdIoStats, f64, f64), String> {
+    let dst_hbm = dst
+        .hbm
+        .as_ref()
+        .ok_or_else(|| "destination is not HBM".to_string())?;
+    let relay_started = Instant::now();
+    let chunk_capacity = ssd_chunk_bytes().min(nbytes.max(1));
+    let mut staging = vec![0u8; chunk_capacity as usize];
+    let mut ssd = SsdIoStats::default();
+    let mut acl_us = 0.0;
+    let mut offset = 0u64;
+    while offset < nbytes {
+        let chunk = (nbytes - offset).min(chunk_capacity);
+        let read_stats = {
+            let _trace = span(
+                TraceCategory::Transfer,
+                "relay.ssd_to_ddr",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("offset", offset.to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
+            read_ssd_to_ptr(
+                &src.object,
+                src_offset + offset,
+                staging.as_mut_ptr(),
+                chunk,
+            )?
+        };
+        ssd.merge(&read_stats);
+        let acl_started = Instant::now();
+        {
+            let _trace = span(
+                TraceCategory::Acl,
+                "relay.ddr_to_hbm",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("device_id", dst_hbm.device_id.to_string()),
+                    ("offset", offset.to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
+            h2d_on_device(
+                dst_hbm.device_id,
+                dst_hbm.service_device_ptr,
+                dst_offset + offset,
+                staging.as_ptr() as *const _,
+                chunk,
+                true,
+            )?;
+        }
+        acl_us += acl_started.elapsed().as_secs_f64() * 1_000_000.0;
+        offset += chunk;
+    }
+    Ok((
+        ssd,
+        acl_us,
+        relay_started.elapsed().as_secs_f64() * 1_000_000.0,
+    ))
+}
+
+fn copy_hbm_to_ssd_via_ddr(
+    event_id: u64,
+    src: &RuntimeObject,
+    dst: &RuntimeObject,
+    src_offset: u64,
+    dst_offset: u64,
+    nbytes: u64,
+) -> Result<(SsdIoStats, f64, f64), String> {
+    let src_hbm = src
+        .hbm
+        .as_ref()
+        .ok_or_else(|| "source is not HBM".to_string())?;
+    let relay_started = Instant::now();
+    let chunk_capacity = ssd_chunk_bytes().min(nbytes.max(1));
+    let mut staging = vec![0u8; chunk_capacity as usize];
+    let mut ssd = SsdIoStats::default();
+    let mut acl_us = 0.0;
+    let mut offset = 0u64;
+    while offset < nbytes {
+        let chunk = (nbytes - offset).min(chunk_capacity);
+        let acl_started = Instant::now();
+        {
+            let _trace = span(
+                TraceCategory::Acl,
+                "relay.hbm_to_ddr",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("device_id", src_hbm.device_id.to_string()),
+                    ("offset", offset.to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
+            d2h_on_device(
+                src_hbm.device_id,
+                staging.as_mut_ptr() as *mut _,
+                src_hbm.service_device_ptr,
+                src_offset + offset,
+                chunk,
+                true,
+            )?;
+        }
+        acl_us += acl_started.elapsed().as_secs_f64() * 1_000_000.0;
+        let write_stats = {
+            let _trace = span(
+                TraceCategory::Transfer,
+                "relay.ddr_to_ssd",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("offset", offset.to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
+            write_ptr_to_ssd(&dst.object, dst_offset + offset, staging.as_ptr(), chunk)?
+        };
+        ssd.merge(&write_stats);
+        offset += chunk;
+    }
+    Ok((
+        ssd,
+        acl_us,
+        relay_started.elapsed().as_secs_f64() * 1_000_000.0,
+    ))
+}
+
 fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> {
     let _trace = span(
         TraceCategory::Transfer,
@@ -821,9 +1103,24 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
             ("bytes", work.plan.nbytes.to_string()),
         ],
     );
-    ensure_transfer_bounds(&work.src, &work.dst, work.plan.nbytes)?;
+    ensure_transfer_bounds(
+        &work.src,
+        &work.dst,
+        work.plan.src_offset_bytes,
+        work.plan.dst_offset_bytes,
+        work.plan.nbytes,
+    )?;
     let use_async = work.plan.engine.contains("async");
     let mut channel = None;
+    let mut ssd = SsdIoStats::default();
+    let mut direct = SsdHbmDirectStats::default();
+    let mut relay_stage_count = 0;
+    let mut relay_ddr_hbm_us = 0.0;
+    let mut relay_total_us = 0.0;
+    let mut fallback_used = work.plan.fallback_used;
+    let mut fallback_reason = work.plan.fallback_reason.clone();
+    let mut actual_engine_override: Option<String> = None;
+    let mut actual_path_override: Option<String> = None;
     match work.plan.path.as_str() {
         "direct_ref" => {}
         "hbm_to_ddr" => {
@@ -854,6 +1151,140 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
             use_async,
         )?,
         "ddr_to_ddr" => copy_ddr_to_ddr(work.event_id, &work.src, &work.dst, work.plan.nbytes)?,
+        "ssd_to_ddr" => {
+            ssd = copy_ssd_to_ddr(
+                work.event_id,
+                &work.src,
+                &work.dst,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+            )?;
+        }
+        "ddr_to_ssd" => {
+            ssd = copy_ddr_to_ssd(
+                work.event_id,
+                &work.src,
+                &work.dst,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+            )?;
+        }
+        "ssd_to_hbm_via_ddr" => {
+            let (stats, acl_us, total_us) = copy_ssd_to_hbm_via_ddr(
+                work.event_id,
+                &work.src,
+                &work.dst,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+            )?;
+            ssd = stats;
+            relay_stage_count = 2;
+            relay_ddr_hbm_us = acl_us;
+            relay_total_us = total_us;
+        }
+        "hbm_to_ssd_via_ddr" => {
+            let (stats, acl_us, total_us) = copy_hbm_to_ssd_via_ddr(
+                work.event_id,
+                &work.src,
+                &work.dst,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+            )?;
+            ssd = stats;
+            relay_stage_count = 2;
+            relay_ddr_hbm_us = acl_us;
+            relay_total_us = total_us;
+        }
+        "ssd_to_hbm_direct" => {
+            let dst_hbm = work
+                .dst
+                .hbm
+                .as_ref()
+                .ok_or_else(|| "destination is not HBM".to_string())?;
+            let candidate = direct_candidate_from_engine(&work.plan.engine);
+            match copy_ssd_to_hbm_direct(
+                work.event_id,
+                &work.src.object,
+                dst_hbm.device_id,
+                dst_hbm.service_device_ptr,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+                candidate,
+            ) {
+                Ok(stats) => {
+                    direct = stats;
+                    ssd.read_bytes = direct.read_bytes;
+                    ssd.bytes = direct.bytes;
+                }
+                Err(reason) if engine_requests_auto_ssd_hbm(&work.plan.engine) => {
+                    let (stats, acl_us, total_us) = copy_ssd_to_hbm_via_ddr(
+                        work.event_id,
+                        &work.src,
+                        &work.dst,
+                        work.plan.src_offset_bytes,
+                        work.plan.dst_offset_bytes,
+                        work.plan.nbytes,
+                    )?;
+                    ssd = stats;
+                    relay_stage_count = 2;
+                    relay_ddr_hbm_us = acl_us;
+                    relay_total_us = total_us;
+                    fallback_used = true;
+                    fallback_reason = auto_direct_fallback_reason(candidate, &reason);
+                    actual_engine_override = Some(ssd_hbm_relay_actual_engine());
+                    actual_path_override = Some(ssd_to_hbm_relay_actual_path());
+                }
+                Err(reason) => return Err(reason),
+            }
+        }
+        "hbm_to_ssd_direct" => {
+            let src_hbm = work
+                .src
+                .hbm
+                .as_ref()
+                .ok_or_else(|| "source is not HBM".to_string())?;
+            let candidate = direct_candidate_from_engine(&work.plan.engine);
+            match copy_hbm_to_ssd_direct(
+                work.event_id,
+                src_hbm.device_id,
+                src_hbm.service_device_ptr,
+                &work.dst.object,
+                work.plan.src_offset_bytes,
+                work.plan.dst_offset_bytes,
+                work.plan.nbytes,
+                candidate,
+            ) {
+                Ok(stats) => {
+                    direct = stats;
+                    ssd.write_bytes = direct.write_bytes;
+                    ssd.bytes = direct.bytes;
+                }
+                Err(reason) if engine_requests_auto_ssd_hbm(&work.plan.engine) => {
+                    let (stats, acl_us, total_us) = copy_hbm_to_ssd_via_ddr(
+                        work.event_id,
+                        &work.src,
+                        &work.dst,
+                        work.plan.src_offset_bytes,
+                        work.plan.dst_offset_bytes,
+                        work.plan.nbytes,
+                    )?;
+                    ssd = stats;
+                    relay_stage_count = 2;
+                    relay_ddr_hbm_us = acl_us;
+                    relay_total_us = total_us;
+                    fallback_used = true;
+                    fallback_reason = auto_direct_fallback_reason(candidate, &reason);
+                    actual_engine_override = Some(ssd_hbm_relay_actual_engine());
+                    actual_path_override = Some(hbm_to_ssd_relay_actual_path());
+                }
+                Err(reason) => return Err(reason),
+            }
+        }
         other => return Err(format!("unsupported transfer path {}", other)),
     }
     let direct_channel = channel
@@ -864,7 +1295,9 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
                 && channel.event_record_count > 0
         })
         .unwrap_or(false);
-    let actual_engine = if direct_channel {
+    let actual_engine = if let Some(engine) = actual_engine_override {
+        engine
+    } else if direct_channel {
         let ddr = if work.plan.path == "ddr_to_hbm" {
             &work.src
         } else {
@@ -880,7 +1313,9 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
     } else {
         work.plan.engine.clone()
     };
-    let actual_path = if direct_channel {
+    let actual_path = if let Some(path) = actual_path_override {
+        path
+    } else if direct_channel {
         let ddr = if work.plan.path == "ddr_to_hbm" {
             &work.src
         } else {
@@ -898,14 +1333,20 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
     } else {
         work.plan.path.clone()
     };
-    Ok(ActualTransfer {
-        bytes_done: work.plan.nbytes,
+    let mut actual = ActualTransfer::new(
+        work.plan.nbytes,
         actual_engine,
         actual_path,
-        fallback_used: work.plan.fallback_used,
-        fallback_reason: work.plan.fallback_reason.clone(),
-        channel,
-    })
+        fallback_used,
+        fallback_reason,
+    );
+    actual.channel = channel;
+    actual.ssd = ssd;
+    actual.direct = direct;
+    actual.relay_stage_count = relay_stage_count;
+    actual.relay_ddr_hbm_us = relay_ddr_hbm_us;
+    actual.relay_total_us = relay_total_us;
+    Ok(actual)
 }
 
 fn finish_transfer_event(
@@ -931,6 +1372,8 @@ fn finish_transfer_event(
         }
     };
     let mut mark_dst_ready = false;
+    let mut ssd_read_delta = 0u64;
+    let mut ssd_write_delta = 0u64;
     let payload = {
         let event = st.transfer_events.get_mut(&event_id).unwrap();
         event.completed_at_ns = now_ns();
@@ -942,6 +1385,30 @@ fn finish_transfer_event(
                 event.actual_path = actual.actual_path;
                 event.fallback_used = actual.fallback_used;
                 event.fallback_reason = actual.fallback_reason;
+                event.ssd_io_submit_us = actual.ssd.submit_us;
+                event.ssd_io_wait_us = actual.ssd.wait_us;
+                event.ssd_io_bytes = actual.ssd.bytes;
+                event.ssd_io_bandwidth_gib_s = actual.ssd.bandwidth_gib_s();
+                event.ssd_read_bytes = actual.ssd.read_bytes;
+                event.ssd_write_bytes = actual.ssd.write_bytes;
+                event.relay_stage_count = actual.relay_stage_count;
+                event.relay_ddr_hbm_us = actual.relay_ddr_hbm_us;
+                event.relay_total_us = actual.relay_total_us;
+                event.direct_candidate = actual.direct.candidate_name;
+                event.direct_kind = actual.direct.direct_kind;
+                event.direct_setup_us = actual.direct.setup_us;
+                event.direct_register_us = actual.direct.register_us;
+                event.direct_fadvise_us = actual.direct.fadvise_us;
+                event.direct_readahead_us = actual.direct.readahead_us;
+                event.direct_madvise_hugepage_us = actual.direct.madvise_hugepage_us;
+                event.direct_madvise_willneed_us = actual.direct.madvise_willneed_us;
+                event.direct_madvise_populate_us = actual.direct.madvise_populate_us;
+                event.direct_pretouch_us = actual.direct.pretouch_us;
+                event.direct_mlock_us = actual.direct.mlock_us;
+                event.direct_acl_us = actual.direct.acl_us;
+                event.direct_total_us = actual.direct.total_us;
+                ssd_read_delta = actual.ssd.read_bytes;
+                ssd_write_delta = actual.ssd.write_bytes;
                 if let Some(channel) = actual.channel {
                     event.channel_direction = channel.direction;
                     event.channel_lane_id = channel.lane_id;
@@ -1003,6 +1470,14 @@ fn finish_transfer_event(
         );
         event_payload(event)
     };
+    if ssd_read_delta > 0 {
+        st.ssd_read_bytes += ssd_read_delta;
+        st.ssd_read_ops += 1;
+    }
+    if ssd_write_delta > 0 {
+        st.ssd_write_bytes += ssd_write_delta;
+        st.ssd_write_ops += 1;
+    }
     if mark_dst_ready {
         if let Some(dst) = st.objects.get_mut(&plan.dst_object_id) {
             dst.state = "Ready".to_string();
@@ -1083,6 +1558,28 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         channel_event_record_count: 0,
         channel_event_wait_count: 0,
         channel_pipeline_overlap: false,
+        ssd_io_submit_us: 0.0,
+        ssd_io_wait_us: 0.0,
+        ssd_io_bytes: 0,
+        ssd_io_bandwidth_gib_s: 0.0,
+        ssd_read_bytes: 0,
+        ssd_write_bytes: 0,
+        relay_stage_count: 0,
+        relay_ddr_hbm_us: 0.0,
+        relay_total_us: 0.0,
+        direct_candidate: String::new(),
+        direct_kind: String::new(),
+        direct_setup_us: 0.0,
+        direct_register_us: 0.0,
+        direct_fadvise_us: 0.0,
+        direct_readahead_us: 0.0,
+        direct_madvise_hugepage_us: 0.0,
+        direct_madvise_willneed_us: 0.0,
+        direct_madvise_populate_us: 0.0,
+        direct_pretouch_us: 0.0,
+        direct_mlock_us: 0.0,
+        direct_acl_us: 0.0,
+        direct_total_us: 0.0,
     };
     st.transfer_events.insert(event_id, event.clone());
     eprintln!(

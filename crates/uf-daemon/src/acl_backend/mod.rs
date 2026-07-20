@@ -19,7 +19,9 @@ pub(crate) use self::device_copy::{
 pub(crate) use self::hbm_memory::{
     HbmAllocation, HbmBackend, HbmExport, HbmMemInfo, NpuHbmAclBackend,
 };
-pub(crate) use self::host_memory::{malloc_pinned_host, register_host, PinnedHostAllocation};
+pub(crate) use self::host_memory::{
+    malloc_pinned_host, register_host, PinnedHostAllocation, RegisteredHostAllocation,
+};
 pub(crate) use self::runtime::{
     create_event, create_stream, synchronize_event, AclEvent, AclStream,
 };

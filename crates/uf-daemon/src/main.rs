@@ -7,6 +7,8 @@ mod direct_transfer;
 mod object_service;
 mod protocol;
 mod router;
+mod ssd_backend;
+mod ssd_direct;
 mod stats_service;
 mod trace;
 mod trace_api;

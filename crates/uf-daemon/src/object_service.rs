@@ -1,14 +1,16 @@
 use crate::acl_backend::{HbmBackend, NpuHbmAclBackend};
 use crate::catalog::{Block, Client, Lease, Object, SharedCatalog};
 use crate::common::{
-    address_kind, create_lease_response, get_bool, is_ddr_request, object_by_request,
-    parse_ddr_target, requested_bytes, role_from_req, sanitize_kv_value,
-    validate_hbm_create_request, validate_target_matches_object, DDR_PLACEMENT, HBM_PLACEMENT,
+    address_kind, create_lease_response, get_bool, is_ddr_request, is_ssd_request,
+    object_by_request, parse_ddr_target, parse_ssd_target, requested_bytes, role_from_req,
+    sanitize_kv_value, validate_hbm_create_request, validate_target_matches_object, DDR_PLACEMENT,
+    HBM_PLACEMENT, SSD_PLACEMENT,
 };
 use crate::ddr_backend::{
     close_ddr_fd, create_memfd_file, ddr_info, ddr_path, ddr_root_for_node, ddr_use_memfd,
     prepare_ddr_file, proc_fd_path, unmap_ddr_service_mapping,
 };
+use crate::ssd_backend::{align_up, create_ssd_file, ensure_ssd_root, remove_ssd_file, ssd_info};
 use crate::trace::{record_duration_us, span, TraceCategory};
 use uf_core::{err, get, get_i64, get_u64, ok, Kv};
 
@@ -56,6 +58,39 @@ fn create_ddr_lease_response(object: &Object, lease: &Lease, existing: bool) -> 
         ),
         ("actual_bytes", object.actual_bytes.to_string()),
         ("requested_bytes", object.requested_bytes.to_string()),
+        (
+            "allowed_offset_bytes",
+            lease.allowed_offset_bytes.to_string(),
+        ),
+        ("allowed_bytes", lease.allowed_bytes.to_string()),
+        ("existing", if existing { "1" } else { "0" }.to_string()),
+    ])
+}
+
+fn create_ssd_lease_response(object: &Object, lease: &Lease, existing: bool) -> Kv {
+    ok(&[
+        ("object_id", object.object_id.to_string()),
+        ("placement_id", object.placement_id.to_string()),
+        ("lease_id", lease.lease_id.to_string()),
+        ("placement", SSD_PLACEMENT.to_string()),
+        ("medium", SSD_PLACEMENT.to_string()),
+        ("target", object.target.clone()),
+        ("address_kind", "file_path_offset".to_string()),
+        ("ssd_path", object.ssd_path.clone()),
+        ("ssd_offset_bytes", object.ssd_offset_bytes.to_string()),
+        ("requested_bytes", object.requested_bytes.to_string()),
+        ("actual_bytes", object.actual_bytes.to_string()),
+        ("alignment_bytes", object.ssd_alignment_bytes.to_string()),
+        ("ssd_io_mode", object.ssd_io_mode.clone()),
+        (
+            "ssd_preallocated",
+            if object.ssd_preallocated {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
         (
             "allowed_offset_bytes",
             lease.allowed_offset_bytes.to_string(),
@@ -265,6 +300,12 @@ fn create_ddr_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         ddr_madvise_us: prepare_info.madvise_us,
         ddr_pretouch_us: prepare_info.pretouch_us,
         ddr_fallback_reason: prepare_info.fallback_reason.clone(),
+        ssd_path: String::new(),
+        ssd_offset_bytes: 0,
+        ssd_alignment_bytes: 0,
+        ssd_io_mode: String::new(),
+        ssd_file_owned: false,
+        ssd_preallocated: false,
     };
     st.objects.insert(object_id, object.clone());
     let lease = st.make_lease(client_id, &object, 0, size_bytes);
@@ -283,9 +324,148 @@ fn create_ddr_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
     create_ddr_lease_response(&object, &lease, false)
 }
 
+fn create_ssd_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
+    let _trace = span(
+        TraceCategory::Object,
+        "object.create",
+        vec![
+            ("placement", SSD_PLACEMENT.to_string()),
+            ("target", get(req, "target").to_string()),
+            ("bytes", requested_bytes(req).to_string()),
+            ("name", get(req, "name").to_string()),
+            ("role", role_from_req(req)),
+        ],
+    );
+    let (lock, _) = &**shared;
+    let mut st = lock.lock().unwrap();
+    let client_id = get_u64(req, "client_id");
+    let size_bytes = requested_bytes(req);
+    if size_bytes == 0 {
+        return err("nbytes is required");
+    }
+    if get(req, "hint") != "mandatory:ssd" {
+        return err("hint must be mandatory:ssd");
+    }
+    let target = match parse_ssd_target(req) {
+        Ok(target) => target,
+        Err(e) => return err(e),
+    };
+    if !st.clients.contains_key(&client_id) {
+        return err("client not found");
+    }
+    let model_id = get(req, "model_id").to_string();
+    let name = get(req, "name").to_string();
+    let role = role_from_req(req);
+    let immutable = get_bool(req, "immutable");
+
+    if let Some(object) = st.find_reusable_object(
+        &model_id,
+        &name,
+        &role,
+        SSD_PLACEMENT,
+        &target,
+        size_bytes,
+        immutable,
+    ) {
+        record_duration_us(
+            TraceCategory::Object,
+            "object.reuse",
+            0.0,
+            vec![
+                ("object_id", object.object_id.to_string()),
+                ("placement", SSD_PLACEMENT.to_string()),
+                ("bytes", object.requested_bytes.to_string()),
+            ],
+        );
+        let lease = st.make_lease(client_id, &object, 0, object.requested_bytes);
+        eprintln!(
+            "{{\"event\":\"ssd_object_reused\",\"object_id\":{},\"lease_id\":{},\"client_id\":{},\"model_id\":\"{}\",\"name\":\"{}\",\"role\":\"{}\",\"path\":\"{}\"}}",
+            object.object_id, lease.lease_id, client_id, object.model_id, object.name, object.role, object.ssd_path
+        );
+        return create_ssd_lease_response(&object, &lease, true);
+    }
+
+    if let Err(e) = ensure_ssd_root() {
+        return err(e);
+    }
+    let info = ssd_info(&st);
+    let actual_bytes = align_up(size_bytes, info.alignment_bytes);
+    if actual_bytes > info.safe_allocatable {
+        return err(format!(
+            "SSD preflight failed: requested={} actual={} safe_allocatable={} root={}",
+            size_bytes,
+            actual_bytes,
+            info.safe_allocatable,
+            info.root.to_string_lossy()
+        ));
+    }
+
+    let object_id = st.take_next_object_id();
+    let placement_id = st.take_next_placement_id();
+    let create_info = match create_ssd_file(object_id, size_bytes) {
+        Ok(info) => info,
+        Err(e) => return err(e),
+    };
+    let object = Object {
+        object_id,
+        placement_id,
+        block_id: 0,
+        placement: SSD_PLACEMENT.to_string(),
+        target,
+        ddr_path: String::new(),
+        ddr_fd: -1,
+        ddr_service_ptr: 0,
+        ddr_service_len: 0,
+        requested_bytes: create_info.requested_bytes,
+        actual_bytes: create_info.actual_bytes,
+        state: "Created".to_string(),
+        creator_client_id: client_id,
+        modified_offset_bytes: 0,
+        modified_bytes: 0,
+        model_id,
+        name,
+        role,
+        shape: get(req, "shape").to_string(),
+        dtype: get(req, "dtype").to_string(),
+        immutable,
+        ddr_fast_profile: String::new(),
+        ddr_madvise_hugepage: false,
+        ddr_pretouched: false,
+        ddr_prepare_us: 0.0,
+        ddr_madvise_us: 0.0,
+        ddr_pretouch_us: 0.0,
+        ddr_fallback_reason: String::new(),
+        ssd_path: create_info.path.to_string_lossy().to_string(),
+        ssd_offset_bytes: 0,
+        ssd_alignment_bytes: create_info.alignment_bytes,
+        ssd_io_mode: create_info.io_mode,
+        ssd_file_owned: true,
+        ssd_preallocated: create_info.preallocated,
+    };
+    st.objects.insert(object_id, object.clone());
+    let lease = st.make_lease(client_id, &object, 0, size_bytes);
+    eprintln!(
+        "{{\"event\":\"ssd_object_created\",\"object_id\":{},\"lease_id\":{},\"client_id\":{},\"requested_bytes\":{},\"actual_bytes\":{},\"role\":\"{}\",\"name\":\"{}\",\"target\":\"{}\",\"path\":\"{}\",\"preallocated\":{}}}",
+        object_id,
+        lease.lease_id,
+        client_id,
+        object.requested_bytes,
+        object.actual_bytes,
+        object.role,
+        object.name,
+        object.target,
+        object.ssd_path,
+        if object.ssd_preallocated { "true" } else { "false" }
+    );
+    create_ssd_lease_response(&object, &lease, false)
+}
+
 fn create_data_object_impl(req: &Kv, shared: &SharedCatalog) -> Kv {
     if is_ddr_request(req) {
         return create_ddr_data_object(req, shared);
+    }
+    if is_ssd_request(req) {
+        return create_ssd_data_object(req, shared);
     }
     let _trace = span(
         TraceCategory::Object,
@@ -443,6 +623,12 @@ fn create_data_object_impl(req: &Kv, shared: &SharedCatalog) -> Kv {
         ddr_madvise_us: 0.0,
         ddr_pretouch_us: 0.0,
         ddr_fallback_reason: String::new(),
+        ssd_path: String::new(),
+        ssd_offset_bytes: 0,
+        ssd_alignment_bytes: 0,
+        ssd_io_mode: String::new(),
+        ssd_file_owned: false,
+        ssd_preallocated: false,
     };
     st.objects.insert(object_id, object.clone());
     let lease = Lease {
@@ -521,6 +707,27 @@ pub(crate) fn open_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         );
         return create_ddr_lease_response(&object, &lease, true);
     }
+    if object.placement == SSD_PLACEMENT {
+        if !get(req, "target").is_empty() || !get(req, "hint").is_empty() {
+            match parse_ssd_target(req) {
+                Ok(target) => {
+                    if object.target != target {
+                        return err(format!(
+                            "SSD target {} does not match object target {}",
+                            target, object.target
+                        ));
+                    }
+                }
+                Err(e) => return err(e),
+            }
+        }
+        let lease = st.make_lease(client_id, &object, offset, bytes);
+        eprintln!(
+            "{{\"event\":\"ssd_lease_granted\",\"object_id\":{},\"lease_id\":{},\"client_id\":{},\"offset\":{},\"bytes\":{},\"path\":\"{}\"}}",
+            object_id, lease.lease_id, client_id, offset, bytes, object.ssd_path
+        );
+        return create_ssd_lease_response(&object, &lease, true);
+    }
     if let Err(e) = validate_target_matches_object(req, &object) {
         return err(e);
     }
@@ -556,6 +763,7 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
     let mut ddr_path_to_remove = None;
     let mut ddr_mapping_to_unmap = None;
     let mut ddr_fd_to_close = -1;
+    let mut ssd_object_to_remove = None;
     {
         let (lock, cv) = &**shared;
         let mut st = lock.lock().unwrap();
@@ -591,6 +799,8 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             if !object.ddr_path.is_empty() {
                 ddr_path_to_remove = Some(object.ddr_path.clone());
             }
+        } else if object.placement == SSD_PLACEMENT {
+            ssd_object_to_remove = Some(object.clone());
         } else if let Some(pos) = st
             .blocks
             .iter()
@@ -638,6 +848,11 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             return err(format!("remove DDR object file failed: {}", e));
         }
     }
+    if let Some(object) = ssd_object_to_remove {
+        if let Err(e) = remove_ssd_file(&object) {
+            return err(e);
+        }
+    }
     ok(&[])
 }
 
@@ -664,6 +879,8 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             "domain",
             if object.placement == DDR_PLACEMENT {
                 "numa_node"
+            } else if object.placement == SSD_PLACEMENT {
+                "local_ssd"
             } else {
                 "local_node"
             }
@@ -700,6 +917,19 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         ),
         ("shape", object.shape.clone()),
         ("dtype", object.dtype.clone()),
+        ("ssd_path", object.ssd_path.clone()),
+        ("ssd_offset_bytes", object.ssd_offset_bytes.to_string()),
+        ("alignment_bytes", object.ssd_alignment_bytes.to_string()),
+        ("ssd_io_mode", object.ssd_io_mode.clone()),
+        (
+            "ssd_preallocated",
+            if object.ssd_preallocated {
+                "true"
+            } else {
+                "false"
+            }
+            .to_string(),
+        ),
         (
             "consistency",
             if object.immutable {
@@ -825,6 +1055,11 @@ pub(crate) fn get_model_objects(req: &Kv, shared: &SharedCatalog) -> Kv {
         .values()
         .filter(|object| object.model_id == model_id)
         .map(|object| {
+            let backing_path = if object.placement == SSD_PLACEMENT {
+                object.ssd_path.as_str()
+            } else {
+                object.ddr_path.as_str()
+            };
             format!(
                 "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
                 object.object_id,
@@ -837,7 +1072,7 @@ pub(crate) fn get_model_objects(req: &Kv, shared: &SharedCatalog) -> Kv {
                 object.dtype,
                 object.placement,
                 object.target,
-                object.ddr_path
+                backing_path
             )
         })
         .collect::<Vec<_>>()

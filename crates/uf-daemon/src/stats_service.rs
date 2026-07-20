@@ -1,8 +1,9 @@
 use crate::acl_backend::{HbmBackend, HbmMemInfo, NpuHbmAclBackend};
 use crate::catalog::SharedCatalog;
-use crate::common::{sanitize_kv_value, DDR_PLACEMENT, HBM_PLACEMENT};
+use crate::common::{sanitize_kv_value, DDR_PLACEMENT, HBM_PLACEMENT, SSD_PLACEMENT};
 use crate::ddr_backend::{ddr_committed_bytes, ddr_info_with_committed};
 use crate::direct_transfer::{direct_lane_manager, direct_transfer_executor};
+use crate::ssd_backend::{ssd_committed_bytes, ssd_info_with_committed};
 use crate::transfer_channel::transfer_channel_manager;
 use uf_core::{get, ok, Kv};
 
@@ -32,6 +33,7 @@ struct StatsSnapshot {
     actual_total: u64,
     hbm: BucketStats,
     ddr: BucketStats,
+    ssd: BucketStats,
     weight: BucketStats,
     kvcache: BucketStats,
     user: BucketStats,
@@ -42,6 +44,11 @@ struct StatsSnapshot {
     transfer_plans: usize,
     transfer_events: usize,
     ddr_committed: u64,
+    ssd_committed: u64,
+    ssd_read_bytes: u64,
+    ssd_write_bytes: u64,
+    ssd_read_ops: u64,
+    ssd_write_ops: u64,
     ddr_fast_thp_pretouched_count: usize,
     ddr_fast_fallback_count: usize,
     ddr_prepare_us_total: f64,
@@ -81,6 +88,11 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
             transfer_plans: st.transfer_plans.len(),
             transfer_events: st.transfer_events.len(),
             ddr_committed: ddr_committed_bytes(&st, Some(stats_node)),
+            ssd_committed: ssd_committed_bytes(&st),
+            ssd_read_bytes: st.ssd_read_bytes,
+            ssd_write_bytes: st.ssd_write_bytes,
+            ssd_read_ops: st.ssd_read_ops,
+            ssd_write_ops: st.ssd_write_ops,
             ..StatsSnapshot::default()
         };
         snapshot.leased_blocks = snapshot.block_count.saturating_sub(snapshot.free_blocks);
@@ -92,6 +104,8 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
                 Some(&mut snapshot.hbm)
             } else if object.placement == DDR_PLACEMENT {
                 Some(&mut snapshot.ddr)
+            } else if object.placement == SSD_PLACEMENT {
+                Some(&mut snapshot.ssd)
             } else {
                 None
             };
@@ -141,6 +155,7 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
     };
     let hbm_available = snapshot.hbm_available_flag && hbm_mem_info_error.is_empty();
     let ddr = ddr_info_with_committed(stats_node, snapshot.ddr_committed);
+    let ssd = ssd_info_with_committed(snapshot.ssd_committed);
     let ddr_backend_mode = if ddr.root.starts_with("/dev/shm") {
         "tmpfs_mmap"
     } else {
@@ -193,6 +208,24 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
         ("ddr_objects", snapshot.ddr.count.to_string()),
         ("ddr_requested_bytes", snapshot.ddr.requested.to_string()),
         ("ddr_actual_bytes", snapshot.ddr.actual.to_string()),
+        ("ssd_objects", snapshot.ssd.count.to_string()),
+        ("ssd_requested_bytes", snapshot.ssd.requested.to_string()),
+        ("ssd_actual_bytes", snapshot.ssd.actual.to_string()),
+        ("ssd_root", ssd.root.to_string_lossy().to_string()),
+        ("ssd_fs_total_bytes", ssd.fs_total.to_string()),
+        ("ssd_fs_free_bytes", ssd.fs_free.to_string()),
+        ("ssd_fs_available_bytes", ssd.fs_available.to_string()),
+        ("ssd_committed_bytes", ssd.committed.to_string()),
+        ("ssd_read_bytes", snapshot.ssd_read_bytes.to_string()),
+        ("ssd_write_bytes", snapshot.ssd_write_bytes.to_string()),
+        ("ssd_read_ops", snapshot.ssd_read_ops.to_string()),
+        ("ssd_write_ops", snapshot.ssd_write_ops.to_string()),
+        (
+            "ssd_safe_allocatable_bytes",
+            ssd.safe_allocatable.to_string(),
+        ),
+        ("ssd_alignment_bytes", ssd.alignment_bytes.to_string()),
+        ("ssd_io_mode", ssd.io_mode),
         ("ddr_root", ddr.root.to_string_lossy().to_string()),
         ("ddr_numa_node", ddr.node.to_string()),
         ("ddr_fs_total_bytes", ddr.fs_total.to_string()),

@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) const HBM_PLACEMENT: &str = "hbm";
 pub(crate) const DDR_PLACEMENT: &str = "ddr";
+pub(crate) const SSD_PLACEMENT: &str = "ssd";
 
 pub(crate) fn now_ns() -> u128 {
     SystemTime::now()
@@ -72,6 +73,10 @@ pub(crate) fn is_ddr_request(req: &Kv) -> bool {
     get(req, "hint") == "mandatory:ddr" || get(req, "target").starts_with("host:")
 }
 
+pub(crate) fn is_ssd_request(req: &Kv) -> bool {
+    get(req, "hint") == "mandatory:ssd" || get(req, "target").starts_with("ssd:")
+}
+
 pub(crate) fn parse_ddr_target(req: &Kv) -> Result<u32, String> {
     let hint = get(req, "hint");
     if !hint.is_empty() && hint != "mandatory:ddr" {
@@ -101,6 +106,22 @@ pub(crate) fn parse_hbm_target(req: &Kv, daemon_device: i32) -> Result<i32, Stri
         .and_then(|text| text.parse::<i32>().ok())
         .ok_or_else(|| "target must use npu:<device_id>".to_string())?;
     Ok(device)
+}
+
+pub(crate) fn parse_ssd_target(req: &Kv) -> Result<String, String> {
+    let hint = get(req, "hint");
+    if !hint.is_empty() && hint != "mandatory:ssd" {
+        return Err("hint must be mandatory:ssd".to_string());
+    }
+    let target = if get(req, "target").is_empty() {
+        "ssd:local0".to_string()
+    } else {
+        get(req, "target").to_string()
+    };
+    if target != "ssd:local0" {
+        return Err("SSD target must use ssd:local0".to_string());
+    }
+    Ok(target)
 }
 
 pub(crate) fn validate_target_matches_object(req: &Kv, object: &Object) -> Result<(), String> {
@@ -165,6 +186,8 @@ pub(crate) fn address_kind(object: &Object) -> &'static str {
         "shareable_handle"
     } else if object.placement == DDR_PLACEMENT {
         "mmap_path"
+    } else if object.placement == SSD_PLACEMENT {
+        "file_path_offset"
     } else {
         "virtual"
     }
@@ -184,6 +207,8 @@ pub(crate) fn transfer_plan_payload(plan: &TransferPlanRecord) -> Vec<(&'static 
         ("engine", plan.engine.clone()),
         ("completion_kind", plan.completion_kind.clone()),
         ("wait_policy", plan.wait_policy.clone()),
+        ("src_offset_bytes", plan.src_offset_bytes.to_string()),
+        ("dst_offset_bytes", plan.dst_offset_bytes.to_string()),
         ("nbytes", plan.nbytes.to_string()),
         ("effort", format!("{:.3}", plan.effort)),
         (
@@ -297,6 +322,52 @@ pub(crate) fn event_payload(event: &TransferEventRecord) -> Vec<(&'static str, S
             }
             .to_string(),
         ),
+        ("ssd_io_submit_us", format!("{:.3}", event.ssd_io_submit_us)),
+        ("ssd_io_wait_us", format!("{:.3}", event.ssd_io_wait_us)),
+        ("ssd_io_bytes", event.ssd_io_bytes.to_string()),
+        (
+            "ssd_io_bandwidth_gib_s",
+            format!("{:.3}", event.ssd_io_bandwidth_gib_s),
+        ),
+        ("ssd_read_bytes", event.ssd_read_bytes.to_string()),
+        ("ssd_write_bytes", event.ssd_write_bytes.to_string()),
+        ("relay_stage_count", event.relay_stage_count.to_string()),
+        ("relay_ddr_hbm_us", format!("{:.3}", event.relay_ddr_hbm_us)),
+        ("relay_total_us", format!("{:.3}", event.relay_total_us)),
+        ("direct_candidate", event.direct_candidate.clone()),
+        ("direct_kind", event.direct_kind.clone()),
+        ("direct_setup_us", format!("{:.3}", event.direct_setup_us)),
+        (
+            "direct_register_us",
+            format!("{:.3}", event.direct_register_us),
+        ),
+        (
+            "direct_fadvise_us",
+            format!("{:.3}", event.direct_fadvise_us),
+        ),
+        (
+            "direct_readahead_us",
+            format!("{:.3}", event.direct_readahead_us),
+        ),
+        (
+            "direct_madvise_hugepage_us",
+            format!("{:.3}", event.direct_madvise_hugepage_us),
+        ),
+        (
+            "direct_madvise_willneed_us",
+            format!("{:.3}", event.direct_madvise_willneed_us),
+        ),
+        (
+            "direct_madvise_populate_us",
+            format!("{:.3}", event.direct_madvise_populate_us),
+        ),
+        (
+            "direct_pretouch_us",
+            format!("{:.3}", event.direct_pretouch_us),
+        ),
+        ("direct_mlock_us", format!("{:.3}", event.direct_mlock_us)),
+        ("direct_acl_us", format!("{:.3}", event.direct_acl_us)),
+        ("direct_total_us", format!("{:.3}", event.direct_total_us)),
         (
             "fallback_used",
             if event.fallback_used { "true" } else { "false" }.to_string(),
