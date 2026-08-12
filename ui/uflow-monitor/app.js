@@ -618,4 +618,18 @@ function init() {
   poll();
 }
 
-init();
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    actualPathLabel,
+    formatBandwidth,
+    formatBytes,
+    formatMicros,
+    rawValue,
+    renderStats,
+    transferDecision,
+  };
+}
+
+if (typeof document !== "undefined") {
+  init();
+}
