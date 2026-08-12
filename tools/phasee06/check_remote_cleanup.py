@@ -57,9 +57,19 @@ def process_command_lines(
     return processes
 
 
+def command_is_ignored(command: str, ignored_substrings: list[str]) -> bool:
+    return any(marker and marker in command for marker in ignored_substrings)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify PhaseE-06 scoped remote cleanup")
     parser.add_argument("--run-id", action="append", required=True)
+    parser.add_argument(
+        "--ignore-command-substring",
+        action="append",
+        default=[],
+        help="Expected launcher substring to exclude from the process leak scan",
+    )
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
 
@@ -78,6 +88,7 @@ def main() -> int:
         {"pid": pid, "command": command}
         for pid, command in process_command_lines(ancestor_pids())
         if "check_remote_cleanup.py" not in command
+        and not command_is_ignored(command, args.ignore_command_substring)
         and any(run_id in command for run_id in run_ids)
     ]
     report = {

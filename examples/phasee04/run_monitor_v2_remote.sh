@@ -221,6 +221,7 @@ cleanup
 trap - EXIT INT TERM
 "${python_bin}" tools/phasee06/check_remote_cleanup.py \
   --run-id "${run_id}" \
+  --ignore-command-substring "examples/phasee04/run_monitor_v2_remote.sh" \
   --report "${run_dir}/cleanup_check.json" \
   > "${run_dir}/cleanup_check.stdout"
 echo "${run_dir}"

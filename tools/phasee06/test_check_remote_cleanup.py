@@ -5,7 +5,11 @@ import os
 import unittest
 from pathlib import Path
 
-from tools.phasee06.check_remote_cleanup import ancestor_pids, process_command_lines
+from tools.phasee06.check_remote_cleanup import (
+    ancestor_pids,
+    command_is_ignored,
+    process_command_lines,
+)
 
 
 class CheckRemoteCleanupTests(unittest.TestCase):
@@ -19,6 +23,12 @@ class CheckRemoteCleanupTests(unittest.TestCase):
         ancestors = ancestor_pids()
         scanned_pids = {pid for pid, _command in process_command_lines(ancestors)}
         self.assertTrue(ancestors.isdisjoint(scanned_pids))
+
+    def test_explicit_launcher_substring_is_ignored(self) -> None:
+        command = "docker exec c bash examples/phasee04/run_monitor_v2_remote.sh"
+        marker = "examples/phasee04/run_monitor_v2_remote.sh"
+        self.assertTrue(command_is_ignored(command, [marker]))
+        self.assertFalse(command_is_ignored(command, ["uf-daemon"]))
 
 
 if __name__ == "__main__":
