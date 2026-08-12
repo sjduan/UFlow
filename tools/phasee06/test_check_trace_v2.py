@@ -151,6 +151,9 @@ class TraceV2CheckerTest(unittest.TestCase):
             self.assertEqual(errors, [])
             self.assertEqual(report["status"], "PASS")
 
+    def test_numeric_stage_csv_formatting_is_equivalent(self) -> None:
+        self.assertTrue(check_trace_v2.equal_value("1.000", 1.0, "stage_ssd_io_us"))
+
     def test_missing_outcome_fails_explicitly(self) -> None:
         with tempfile.TemporaryDirectory(prefix="phasee06_checker_") as directory:
             root = Path(directory)

@@ -144,7 +144,7 @@ def event_id_from_args(args: dict[str, Any]) -> int | None:
 
 
 def equal_value(left: Any, right: Any, key: str) -> bool:
-    if key in NUMERIC_COMPARE_KEYS:
+    if key in NUMERIC_COMPARE_KEYS or (key.startswith("stage_") and key.endswith("_us")):
         try:
             left_number = float(left)
             right_number = float(right)
