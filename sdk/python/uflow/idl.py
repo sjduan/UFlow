@@ -125,6 +125,7 @@ class TransferPlan:
     dst_object_id: int
     dst_placement_id: int
     operation: str
+    requested_mode: str
     path: str
     engine: str
     completion_kind: str
@@ -144,6 +145,7 @@ class TransferPlan:
             dst_object_id=int(resp["dst_object_id"]),
             dst_placement_id=int(resp["dst_placement_id"]),
             operation=resp.get("operation", "copy"),
+            requested_mode=resp.get("requested_mode", "auto"),
             path=resp.get("path", ""),
             engine=resp.get("engine", ""),
             completion_kind=resp.get("completion_kind", ""),

@@ -3,12 +3,15 @@ use crate::acl_backend::{
     register_host, synchronize_event, HbmAllocation,
 };
 use crate::catalog::{Catalog, Object, SharedCatalog, TransferEventRecord, TransferPlanRecord};
-use crate::common::{env_bool, event_payload, now_ns, HBM_PLACEMENT};
+use crate::common::{env_bool, event_payload, now_ns, trace_outcome_payload, HBM_PLACEMENT};
 use crate::ddr_backend::with_ddr_mapping;
 use crate::direct_transfer::{direct_lane_manager, direct_transfer_executor};
 use crate::ssd_backend::{read_ssd_to_ptr, ssd_chunk_bytes, write_ptr_to_ssd, SsdIoStats};
 use crate::ssd_direct::{copy_hbm_to_ssd_direct, copy_ssd_to_hbm_direct, SsdHbmDirectStats};
-use crate::trace::{span, TraceCategory};
+use crate::trace::{
+    enter_transfer_context, is_enabled as trace_enabled, record_duration_us, record_instant,
+    register_event_context, span, transfer_direction, TraceCategory, TransferTraceContext,
+};
 use crate::transfer_channel::{
     transfer_channel_manager, TransferChannelRunStats, TransferDirection,
 };
@@ -30,6 +33,7 @@ struct TransferWork {
     plan: TransferPlanRecord,
     src: RuntimeObject,
     dst: RuntimeObject,
+    trace_context: TransferTraceContext,
 }
 
 struct ActualTransfer {
@@ -68,6 +72,47 @@ impl ActualTransfer {
             relay_total_us: 0.0,
         }
     }
+}
+
+fn transfer_trace_context(
+    plan: &TransferPlanRecord,
+    src: &Object,
+    dst: &Object,
+    event_id: u64,
+) -> TransferTraceContext {
+    TransferTraceContext {
+        plan_id: plan.plan_id,
+        event_id: Some(event_id),
+        src_object_id: plan.src_object_id,
+        dst_object_id: plan.dst_object_id,
+        src_medium: src.placement.clone(),
+        dst_medium: dst.placement.clone(),
+        direction: transfer_direction(&src.placement, &dst.placement),
+        operation: plan.operation.clone(),
+        requested_mode: plan.requested_mode.clone(),
+        bytes: plan.nbytes,
+        planned_path: plan.path.clone(),
+        planned_engine: plan.engine.clone(),
+    }
+}
+
+fn record_terminal_trace(context: &TransferTraceContext, event: &TransferEventRecord) {
+    if !trace_enabled() {
+        return;
+    }
+    let mut outcome_args = context.args();
+    outcome_args.push(("stage_role", "outcome".to_string()));
+    outcome_args.extend(trace_outcome_payload(event));
+    record_instant(TraceCategory::Transfer, "transfer.outcome", outcome_args);
+
+    let mut compatibility_args = context.args();
+    compatibility_args.push(("status", event.status.clone()));
+    record_duration_us(
+        TraceCategory::Transfer,
+        "transfer.complete",
+        0.0,
+        compatibility_args,
+    );
 }
 
 fn runtime_object(st: &Catalog, object: Object) -> Result<RuntimeObject, String> {
@@ -988,6 +1033,15 @@ fn copy_ssd_to_hbm_via_ddr(
                     ("bytes", chunk.to_string()),
                 ],
             );
+            let _io_trace = span(
+                TraceCategory::Transfer,
+                "ssd.read_wait",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("offset", (src_offset + offset).to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
             read_ssd_to_ptr(
                 &src.object,
                 src_offset + offset,
@@ -1076,6 +1130,15 @@ fn copy_hbm_to_ssd_via_ddr(
                 vec![
                     ("event_id", event_id.to_string()),
                     ("offset", offset.to_string()),
+                    ("bytes", chunk.to_string()),
+                ],
+            );
+            let _io_trace = span(
+                TraceCategory::Transfer,
+                "ssd.write_wait",
+                vec![
+                    ("event_id", event_id.to_string()),
+                    ("offset", (dst_offset + offset).to_string()),
                     ("bytes", chunk.to_string()),
                 ],
             );
@@ -1222,6 +1285,8 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
                     ssd.bytes = direct.bytes;
                 }
                 Err(reason) if engine_requests_auto_ssd_hbm(&work.plan.engine) => {
+                    direct.candidate_name = candidate.to_string();
+                    direct.direct_kind = "logical".to_string();
                     let (stats, acl_us, total_us) = copy_ssd_to_hbm_via_ddr(
                         work.event_id,
                         &work.src,
@@ -1265,6 +1330,8 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
                     ssd.bytes = direct.bytes;
                 }
                 Err(reason) if engine_requests_auto_ssd_hbm(&work.plan.engine) => {
+                    direct.candidate_name = candidate.to_string();
+                    direct.direct_kind = "logical".to_string();
                     let (stats, acl_us, total_us) = copy_hbm_to_ssd_via_ddr(
                         work.event_id,
                         &work.src,
@@ -1352,13 +1419,9 @@ fn execute_transfer_work(work: &TransferWork) -> Result<ActualTransfer, String> 
 fn finish_transfer_event(
     shared: &SharedCatalog,
     event_id: u64,
+    trace_context: &TransferTraceContext,
     result: Result<ActualTransfer, String>,
 ) -> Kv {
-    let _trace = span(
-        TraceCategory::Transfer,
-        "transfer.complete",
-        vec![("event_id", event_id.to_string())],
-    );
     let (lock, cv) = &**shared;
     let mut st = lock.lock().unwrap();
     let plan = {
@@ -1366,6 +1429,9 @@ fn finish_transfer_event(
             Some(event) => event,
             None => return err("transfer event not found"),
         };
+        if matches!(event.status.as_str(), "complete" | "failed" | "cancelled") {
+            return ok(&event_payload(event));
+        }
         match st.transfer_plans.get(&event.plan_id).cloned() {
             Some(plan) => plan,
             None => return err("transfer plan not found"),
@@ -1443,6 +1509,13 @@ fn finish_transfer_event(
                 event.actual_path = plan.path.clone();
                 event.fallback_used = plan.fallback_used;
                 event.fallback_reason = plan.fallback_reason.clone();
+                if matches!(
+                    plan.path.as_str(),
+                    "ssd_to_hbm_direct" | "hbm_to_ssd_direct"
+                ) {
+                    event.direct_candidate = direct_candidate_from_engine(&plan.engine).to_string();
+                    event.direct_kind = "logical".to_string();
+                }
                 event.error_code = "TransferExecutorError".to_string();
                 event.error_message = message.replace(';', ",").replace('=', ":");
             }
@@ -1458,17 +1531,7 @@ fn finish_transfer_event(
         } else {
             0.0
         };
-        eprintln!(
-            "{{\"event\":\"transfer_completed\",\"event_id\":{},\"plan_id\":{},\"status\":\"{}\",\"bytes_done\":{},\"latency_us\":{:.3},\"fallback_used\":{},\"actual_engine\":\"{}\"}}",
-            event.event_id,
-            event.plan_id,
-            event.status,
-            event.bytes_done,
-            event.actual_latency_us,
-            event.fallback_used,
-            event.actual_engine
-        );
-        event_payload(event)
+        (event_payload(event), event.clone())
     };
     if ssd_read_delta > 0 {
         st.ssd_read_bytes += ssd_read_delta;
@@ -1483,7 +1546,20 @@ fn finish_transfer_event(
             dst.state = "Ready".to_string();
         }
     }
+    drop(st);
     cv.notify_all();
+    let (payload, event_snapshot) = payload;
+    eprintln!(
+        "{{\"event\":\"transfer_completed\",\"event_id\":{},\"plan_id\":{},\"status\":\"{}\",\"bytes_done\":{},\"latency_us\":{:.3},\"fallback_used\":{},\"actual_engine\":\"{}\"}}",
+        event_snapshot.event_id,
+        event_snapshot.plan_id,
+        event_snapshot.status,
+        event_snapshot.bytes_done,
+        event_snapshot.actual_latency_us,
+        event_snapshot.fallback_used,
+        event_snapshot.actual_engine
+    );
+    record_terminal_trace(trace_context, &event_snapshot);
     ok(&payload)
 }
 
@@ -1495,28 +1571,29 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(plan) => plan,
         None => return err("transfer plan not found"),
     };
+    let src_object = match st.objects.get(&plan.src_object_id).cloned() {
+        Some(object) => object,
+        None => return err("source object not found"),
+    };
+    let dst_object = match st.objects.get(&plan.dst_object_id).cloned() {
+        Some(object) => object,
+        None => return err("destination object not found"),
+    };
     let work = if plan.completion_kind == "immediate" {
         None
     } else {
-        let src_object = match st.objects.get(&plan.src_object_id).cloned() {
-            Some(object) => object,
-            None => return err("source object not found"),
-        };
-        let dst_object = match st.objects.get(&plan.dst_object_id).cloned() {
-            Some(object) => object,
-            None => return err("destination object not found"),
-        };
-        let src = match runtime_object(&st, src_object) {
+        let src = match runtime_object(&st, src_object.clone()) {
             Ok(object) => object,
             Err(e) => return err(e),
         };
-        let dst = match runtime_object(&st, dst_object) {
+        let dst = match runtime_object(&st, dst_object.clone()) {
             Ok(object) => object,
             Err(e) => return err(e),
         };
         Some((src, dst))
     };
     let event_id = st.take_next_transfer_event_id();
+    let trace_context = transfer_trace_context(&plan, &src_object, &dst_object, event_id);
     let now = now_ns();
     let immediate = plan.completion_kind == "immediate";
     let event = TransferEventRecord {
@@ -1586,21 +1663,33 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         "{{\"event\":\"transfer_submitted\",\"event_id\":{},\"plan_id\":{},\"status\":\"{}\",\"completion_kind\":\"{}\"}}",
         event.event_id, event.plan_id, event.status, event.completion_kind
     );
-    cv.notify_all();
     let response_payload = event_payload(&event);
     drop(st);
+    cv.notify_all();
+    if trace_enabled() {
+        register_event_context(&trace_context);
+        let mut submit_args = trace_context.args();
+        submit_args.push(("stage_role", "submit".to_string()));
+        submit_args.push(("completion_kind", event.completion_kind.clone()));
+        record_instant(TraceCategory::Transfer, "transfer.submit", submit_args);
+    }
+    if immediate {
+        record_terminal_trace(&trace_context, &event);
+    }
     if let Some((src, dst)) = work {
         let work = TransferWork {
             event_id,
             plan: plan.clone(),
             src,
             dst,
+            trace_context: trace_context.clone(),
         };
         let shared_for_worker = Arc::clone(shared);
         let submit_result = direct_transfer_executor().submit(
             event_id,
             plan.plan_id,
             Box::new(move |queue_wait_us| {
+                let _trace_scope = enter_transfer_context(&work.trace_context);
                 let worker_started = Instant::now();
                 let result = execute_transfer_work(&work);
                 let worker_execute_us = worker_started.elapsed().as_secs_f64() * 1_000_000.0;
@@ -1611,11 +1700,16 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
                         channel.worker_execute_us = worker_execute_us;
                     }
                 }
-                let _ = finish_transfer_event(&shared_for_worker, work.event_id, result);
+                let _ = finish_transfer_event(
+                    &shared_for_worker,
+                    work.event_id,
+                    &work.trace_context,
+                    result,
+                );
             }),
         );
         if let Err(error) = submit_result {
-            let _ = finish_transfer_event(shared, event_id, Err(error));
+            let _ = finish_transfer_event(shared, event_id, &trace_context, Err(error));
         }
     }
     ok(&response_payload)
@@ -1660,18 +1754,43 @@ pub(crate) fn cancel_event(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (lock, cv) = &**shared;
     let mut st = lock.lock().unwrap();
     let event_id = get_u64(req, "event_id");
-    let event = match st.transfer_events.get_mut(&event_id) {
+    let current = match st.transfer_events.get(&event_id).cloned() {
         Some(event) => event,
         None => return err("transfer event not found"),
     };
-    if matches!(event.status.as_str(), "complete" | "failed" | "cancelled") {
-        return ok(&event_payload(event));
+    if matches!(current.status.as_str(), "complete" | "failed" | "cancelled") {
+        return ok(&event_payload(&current));
     }
+    let plan = match st.transfer_plans.get(&current.plan_id).cloned() {
+        Some(plan) => plan,
+        None => return err("transfer plan not found"),
+    };
+    let src = match st.objects.get(&plan.src_object_id).cloned() {
+        Some(object) => object,
+        None => return err("source object not found"),
+    };
+    let dst = match st.objects.get(&plan.dst_object_id).cloned() {
+        Some(object) => object,
+        None => return err("destination object not found"),
+    };
+    let trace_context = transfer_trace_context(&plan, &src, &dst, event_id);
+    let event = st.transfer_events.get_mut(&event_id).unwrap();
     event.status = "cancelled".to_string();
     event.completed_at_ns = now_ns();
+    event.actual_latency_us = if event.completed_at_ns > event.started_at_ns {
+        (event.completed_at_ns - event.started_at_ns) as f64 / 1000.0
+    } else {
+        0.0
+    };
+    event.actual_bandwidth_gib_s = 0.0;
+    event.bytes_done = 0;
     event.error_code = "cancelled".to_string();
     event.error_message = "cancelled by client".to_string();
     let payload = event_payload(event);
+    let event_snapshot = event.clone();
+    drop(st);
     cv.notify_all();
+    register_event_context(&trace_context);
+    record_terminal_trace(&trace_context, &event_snapshot);
     ok(&payload)
 }

@@ -203,6 +203,7 @@ pub(crate) fn transfer_plan_payload(plan: &TransferPlanRecord) -> Vec<(&'static 
         ("dst_object_id", plan.dst_object_id.to_string()),
         ("dst_placement_id", plan.dst_placement_id.to_string()),
         ("operation", plan.operation.clone()),
+        ("requested_mode", plan.requested_mode.clone()),
         ("path", plan.path.clone()),
         ("engine", plan.engine.clone()),
         ("completion_kind", plan.completion_kind.clone()),
@@ -376,4 +377,162 @@ pub(crate) fn event_payload(event: &TransferEventRecord) -> Vec<(&'static str, S
         ("error_code", event.error_code.clone()),
         ("error_message", event.error_message.clone()),
     ]
+}
+
+pub(crate) fn trace_outcome_payload(event: &TransferEventRecord) -> Vec<(&'static str, String)> {
+    let mut payload = vec![
+        ("status", event.status.clone()),
+        ("bytes_done", event.bytes_done.to_string()),
+        ("actual_path", event.actual_path.clone()),
+        ("actual_engine", event.actual_engine.clone()),
+        (
+            "actual_latency_us",
+            format!("{:.3}", event.actual_latency_us),
+        ),
+        (
+            "actual_bandwidth_gib_s",
+            format!("{:.6}", event.actual_bandwidth_gib_s),
+        ),
+        ("fallback_used", event.fallback_used.to_string()),
+        ("fallback_reason", event.fallback_reason.clone()),
+        ("error_code", event.error_code.clone()),
+        ("error_message", event.error_message.clone()),
+    ];
+
+    if !event.channel_direction.is_empty() {
+        payload.extend([
+            ("channel_direction", event.channel_direction.clone()),
+            ("channel_lane_id", event.channel_lane_id.to_string()),
+            ("channel_device_id", event.channel_device_id.to_string()),
+            ("channel_chunk_bytes", event.channel_chunk_bytes.to_string()),
+            ("channel_chunk_count", event.channel_chunk_count.to_string()),
+            (
+                "channel_pinned_footprint_bytes",
+                event.channel_pinned_footprint_bytes.to_string(),
+            ),
+            (
+                "channel_lane_wait_us",
+                format!("{:.3}", event.channel_lane_wait_us),
+            ),
+            (
+                "channel_chunks_transferred",
+                event.channel_chunks_transferred.to_string(),
+            ),
+            (
+                "channel_cpu_copy_us",
+                format!("{:.3}", event.channel_cpu_copy_us),
+            ),
+            (
+                "channel_acl_copy_us",
+                format!("{:.3}", event.channel_acl_copy_us),
+            ),
+            (
+                "channel_acl_submit_us",
+                format!("{:.3}", event.channel_acl_submit_us),
+            ),
+            (
+                "channel_acl_wait_us",
+                format!("{:.3}", event.channel_acl_wait_us),
+            ),
+            ("channel_wall_us", format!("{:.3}", event.channel_wall_us)),
+            (
+                "channel_queue_wait_us",
+                format!("{:.3}", event.channel_queue_wait_us),
+            ),
+            (
+                "channel_worker_execute_us",
+                format!("{:.3}", event.channel_worker_execute_us),
+            ),
+            (
+                "channel_overlap_ratio",
+                format!("{:.6}", event.channel_overlap_ratio),
+            ),
+            (
+                "channel_stream_create_count",
+                event.channel_stream_create_count.to_string(),
+            ),
+            (
+                "channel_event_reuse_count",
+                event.channel_event_reuse_count.to_string(),
+            ),
+            (
+                "channel_event_record_count",
+                event.channel_event_record_count.to_string(),
+            ),
+            (
+                "channel_event_wait_count",
+                event.channel_event_wait_count.to_string(),
+            ),
+            (
+                "channel_pipeline_overlap",
+                event.channel_pipeline_overlap.to_string(),
+            ),
+        ]);
+    }
+
+    if event.ssd_io_bytes > 0 || event.ssd_read_bytes > 0 || event.ssd_write_bytes > 0 {
+        payload.extend([
+            ("ssd_io_submit_us", format!("{:.3}", event.ssd_io_submit_us)),
+            ("ssd_io_wait_us", format!("{:.3}", event.ssd_io_wait_us)),
+            ("ssd_io_bytes", event.ssd_io_bytes.to_string()),
+            (
+                "ssd_io_bandwidth_gib_s",
+                format!("{:.6}", event.ssd_io_bandwidth_gib_s),
+            ),
+            ("ssd_read_bytes", event.ssd_read_bytes.to_string()),
+            ("ssd_write_bytes", event.ssd_write_bytes.to_string()),
+        ]);
+    }
+
+    if event.relay_stage_count > 0 {
+        payload.extend([
+            ("relay_stage_count", event.relay_stage_count.to_string()),
+            ("relay_ddr_hbm_us", format!("{:.3}", event.relay_ddr_hbm_us)),
+            ("relay_total_us", format!("{:.3}", event.relay_total_us)),
+        ]);
+    }
+
+    if !event.direct_candidate.is_empty() || !event.direct_kind.is_empty() {
+        payload.extend([
+            ("direct_candidate", event.direct_candidate.clone()),
+            ("direct_kind", event.direct_kind.clone()),
+        ]);
+    }
+    if event.direct_total_us > 0.0 || event.direct_setup_us > 0.0 || event.direct_acl_us > 0.0 {
+        payload.extend([
+            ("direct_setup_us", format!("{:.3}", event.direct_setup_us)),
+            (
+                "direct_register_us",
+                format!("{:.3}", event.direct_register_us),
+            ),
+            (
+                "direct_fadvise_us",
+                format!("{:.3}", event.direct_fadvise_us),
+            ),
+            (
+                "direct_readahead_us",
+                format!("{:.3}", event.direct_readahead_us),
+            ),
+            (
+                "direct_madvise_hugepage_us",
+                format!("{:.3}", event.direct_madvise_hugepage_us),
+            ),
+            (
+                "direct_madvise_willneed_us",
+                format!("{:.3}", event.direct_madvise_willneed_us),
+            ),
+            (
+                "direct_madvise_populate_us",
+                format!("{:.3}", event.direct_madvise_populate_us),
+            ),
+            (
+                "direct_pretouch_us",
+                format!("{:.3}", event.direct_pretouch_us),
+            ),
+            ("direct_mlock_us", format!("{:.3}", event.direct_mlock_us)),
+            ("direct_acl_us", format!("{:.3}", event.direct_acl_us)),
+            ("direct_total_us", format!("{:.3}", event.direct_total_us)),
+        ]);
+    }
+    payload
 }

@@ -3,7 +3,10 @@ use crate::common::{
     object_by_request, transfer_plan_payload, DDR_PLACEMENT, HBM_PLACEMENT, SSD_PLACEMENT,
 };
 use crate::ssd_direct;
-use crate::trace::{span, TraceCategory};
+use crate::trace::{
+    is_enabled as trace_enabled, record_instant, register_plan_context, span, transfer_direction,
+    TraceCategory, TransferTraceContext,
+};
 use uf_core::{err, get, get_u64, ok, Kv};
 
 struct TransferClassification {
@@ -508,6 +511,7 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         dst_object_id: dst.object_id,
         dst_placement_id: dst.placement_id,
         operation,
+        requested_mode: mode.to_string(),
         path: class.path,
         engine: class.engine,
         completion_kind: class.completion_kind,
@@ -529,5 +533,31 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         "{{\"event\":\"transfer_planned\",\"plan_id\":{},\"client_id\":{},\"path\":\"{}\",\"engine\":\"{}\",\"nbytes\":{},\"fallback_used\":{}}}",
         plan.plan_id, plan.client_id, plan.path, plan.engine, plan.nbytes, plan.fallback_used
     );
-    ok(&transfer_plan_payload(&plan))
+    let payload = transfer_plan_payload(&plan);
+    let trace_context = if trace_enabled() {
+        Some(TransferTraceContext {
+            plan_id: plan.plan_id,
+            event_id: None,
+            src_object_id: plan.src_object_id,
+            dst_object_id: plan.dst_object_id,
+            src_medium: src.placement.clone(),
+            dst_medium: dst.placement.clone(),
+            direction: transfer_direction(&src.placement, &dst.placement),
+            operation: plan.operation.clone(),
+            requested_mode: plan.requested_mode.clone(),
+            bytes: plan.nbytes,
+            planned_path: plan.path.clone(),
+            planned_engine: plan.engine.clone(),
+        })
+    } else {
+        None
+    };
+    drop(st);
+    if let Some(context) = trace_context {
+        register_plan_context(&context);
+        let mut trace_args = context.args();
+        trace_args.push(("stage_role", "plan_outcome".to_string()));
+        record_instant(TraceCategory::Transfer, "transfer.plan_outcome", trace_args);
+    }
+    ok(&payload)
 }

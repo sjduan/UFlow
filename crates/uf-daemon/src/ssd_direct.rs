@@ -1,6 +1,6 @@
 use crate::acl_backend::{d2h_on_device, h2d_on_device, register_host, RegisteredHostAllocation};
 use crate::catalog::Object;
-use crate::trace::{span, TraceCategory};
+use crate::trace::{record_instant, span, TraceCategory};
 
 use std::env;
 use std::fs::OpenOptions;
@@ -174,9 +174,22 @@ pub(crate) fn copy_ssd_to_hbm_direct(
 ) -> Result<SsdHbmDirectStats, String> {
     let candidate = parse_candidate(candidate_name)?;
     let total_started = Instant::now();
-    let (mapping, _registered, mut stats) = map_and_prepare(
-        event_id, src, device_id, src_offset, nbytes, false, &candidate,
-    )?;
+    let (mapping, _registered, mut stats) = {
+        let _trace = span(
+            TraceCategory::Backend,
+            "ssd_hbm.direct_setup",
+            vec![
+                ("event_id", event_id.to_string()),
+                ("candidate", candidate.name.clone()),
+                ("device_id", device_id.to_string()),
+                ("bytes", nbytes.to_string()),
+            ],
+        );
+        map_and_prepare(
+            event_id, src, device_id, src_offset, nbytes, false, &candidate,
+        )?
+    };
+    maybe_fail_before_acl(event_id, &candidate.name, nbytes)?;
     let acl_started = Instant::now();
     {
         let _trace = span(
@@ -221,15 +234,28 @@ pub(crate) fn copy_hbm_to_ssd_direct(
 ) -> Result<SsdHbmDirectStats, String> {
     let candidate = parse_candidate(candidate_name)?;
     let total_started = Instant::now();
-    let (mapping, _registered, mut stats) = map_and_prepare(
-        event_id,
-        dst,
-        src_device_id,
-        dst_offset,
-        nbytes,
-        true,
-        &candidate,
-    )?;
+    let (mapping, _registered, mut stats) = {
+        let _trace = span(
+            TraceCategory::Backend,
+            "ssd_hbm.direct_setup",
+            vec![
+                ("event_id", event_id.to_string()),
+                ("candidate", candidate.name.clone()),
+                ("device_id", src_device_id.to_string()),
+                ("bytes", nbytes.to_string()),
+            ],
+        );
+        map_and_prepare(
+            event_id,
+            dst,
+            src_device_id,
+            dst_offset,
+            nbytes,
+            true,
+            &candidate,
+        )?
+    };
+    maybe_fail_before_acl(event_id, &candidate.name, nbytes)?;
     let acl_started = Instant::now();
     {
         let _trace = span(
@@ -567,6 +593,30 @@ fn env_bool(key: &str, default: bool) -> bool {
     }
 }
 
+fn maybe_fail_before_acl(event_id: u64, candidate: &str, bytes: u64) -> Result<(), String> {
+    let failpoints_enabled = env_bool("UF_ENABLE_TEST_FAILPOINTS", false);
+    let stage = env::var("UF_TEST_SSD_DIRECT_FAIL_STAGE").unwrap_or_default();
+    if !test_failpoint_enabled(failpoints_enabled, &stage) {
+        return Ok(());
+    }
+    record_instant(
+        TraceCategory::Transfer,
+        "ssd_hbm.direct_failpoint",
+        vec![
+            ("event_id", event_id.to_string()),
+            ("candidate", candidate.to_string()),
+            ("bytes", bytes.to_string()),
+            ("stage_role", "direct_setup".to_string()),
+            ("fail_stage", "before_acl".to_string()),
+        ],
+    );
+    Err("validation_failpoint:ssd_direct_before_acl".to_string())
+}
+
+fn test_failpoint_enabled(enabled: bool, stage: &str) -> bool {
+    enabled && stage == "before_acl"
+}
+
 fn direct_min_bytes() -> u64 {
     env::var("UF_SSD_HBM_DIRECT_MIN_BYTES")
         .ok()
@@ -593,4 +643,17 @@ fn parse_size_bytes(value: &str) -> Option<u64> {
         }
     }
     lower.parse::<u64>().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_failpoint_enabled;
+
+    #[test]
+    fn validation_failpoint_requires_both_switches() {
+        assert!(!test_failpoint_enabled(false, "before_acl"));
+        assert!(!test_failpoint_enabled(true, ""));
+        assert!(!test_failpoint_enabled(true, "after_acl"));
+        assert!(test_failpoint_enabled(true, "before_acl"));
+    }
 }

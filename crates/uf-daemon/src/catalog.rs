@@ -102,6 +102,7 @@ pub struct TransferPlanRecord {
     pub dst_object_id: u64,
     pub dst_placement_id: u64,
     pub operation: String,
+    pub requested_mode: String,
     pub path: String,
     pub engine: String,
     pub completion_kind: String,

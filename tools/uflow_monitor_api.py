@@ -49,6 +49,7 @@ TRACE_ARTIFACT_FILES = {
     "trace_events.json": "application/json",
     "trace_summary.json": "application/json",
     "trace_summary.csv": "text/csv",
+    "transfer_summary.csv": "text/csv",
     "summary.md": "text/markdown",
 }
 
