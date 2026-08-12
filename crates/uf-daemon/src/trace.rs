@@ -1953,6 +1953,26 @@ mod tests {
     }
 
     #[test]
+    fn atomic_write_failure_does_not_publish_or_leave_temp_file() {
+        let root = env::temp_dir().join(format!(
+            "phasee06_atomic_failure_{}_{}",
+            std::process::id(),
+            now_us()
+        ));
+        fs::create_dir_all(root.join("artifact.json")).unwrap();
+        let result = atomic_write(&root.join("artifact.json"), "not published");
+        assert!(result.is_err());
+        assert!(root.join("artifact.json").is_dir());
+        let leftovers = fs::read_dir(&root)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|entry| entry.file_name().to_string_lossy().ends_with(".tmp"))
+            .count();
+        assert_eq!(leftovers, 0);
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
     fn transfer_csv_has_stable_columns_and_nullable_fields() {
         let csv = transfer_summary_csv(&synthetic_events(401));
         let lines = csv.lines().collect::<Vec<_>>();
