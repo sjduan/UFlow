@@ -619,10 +619,16 @@ impl TraceCollector {
     }
 
     fn record_event(&self, mut event: TraceEvent) {
+        if !self.category_enabled(event.category) {
+            return;
+        }
         let Ok(mut state) = self.state.lock() else {
             self.dropped_events.fetch_add(1, Ordering::Relaxed);
             return;
         };
+        if !self.category_enabled(event.category) {
+            return;
+        }
         let Some(config) = &state.config else {
             self.dropped_events.fetch_add(1, Ordering::Relaxed);
             return;
@@ -1970,6 +1976,26 @@ mod tests {
             .count();
         assert_eq!(leftovers, 0);
         fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn event_finishing_after_trace_is_disabled_is_not_buffered() {
+        let collector = TraceCollector::new();
+        let root = env::temp_dir().join(format!(
+            "phasee06_stop_boundary_{}_{}",
+            std::process::id(),
+            now_us()
+        ));
+        collector.start(config(root.clone(), true)).unwrap();
+        collector.enabled.store(false, Ordering::Release);
+        collector.record_event(event(
+            "command.handle",
+            TracePhase::Complete,
+            1.0,
+            Vec::new(),
+        ));
+        assert!(collector.state.lock().unwrap().events.is_empty());
+        assert_eq!(collector.dropped_events.load(Ordering::Relaxed), 0);
     }
 
     #[test]
