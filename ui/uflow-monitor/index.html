@@ -3,230 +3,243 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>UFlow Monitor</title>
+    <meta name="color-scheme" content="light" />
+    <title>UFlow Monitor v2</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">PhaseE-04</p>
-          <h1>UFlow Monitor</h1>
+          <p class="eyebrow">Memory Service · PhaseE-04</p>
+          <h1>UFlow Monitor <span>v2</span></h1>
+          <p class="subtitle">Capacity, execution paths, fallback decisions, and trace artifacts in one view.</p>
         </div>
-        <div class="status-pill" id="status-pill">connecting</div>
+        <div class="connection-summary">
+          <div class="status-pill" id="status-pill">connecting</div>
+          <span id="last-updated">No successful refresh yet</span>
+        </div>
       </header>
 
-      <section class="config-row" aria-label="connection config">
-        <label>
-          API base
-          <input id="api-base" type="text" spellcheck="false" />
-        </label>
-        <label>
-          Model namespace
-          <input id="model-id" type="text" spellcheck="false" value="phasee04-monitor" />
-        </label>
+      <section class="connection-strip" aria-label="Connection configuration">
+        <div class="connection-field grow">
+          <span>API base</span>
+          <input id="api-base" type="text" spellcheck="false" aria-label="API base" />
+        </div>
+        <div class="connection-field">
+          <span>Model namespace</span>
+          <input id="model-id" type="text" spellcheck="false" value="phasee04-monitor" aria-label="Model namespace" />
+        </div>
         <button id="apply-config" type="button">Apply</button>
+        <div class="route">
+          <span>Route</span>
+          <strong id="tunnel-path">local → ssh serving-b → openeuler-2403-DS</strong>
+        </div>
       </section>
 
-      <section class="layout-grid">
-        <section class="panel architecture" aria-label="architecture">
+      <section class="alert hidden" id="error-banner" role="status"></section>
+
+      <section class="capacity-grid" aria-label="Medium capacity">
+        <article class="capacity-card hbm-card">
+          <div class="capacity-heading">
+            <div><span class="medium-dot"></span><h2>HBM</h2></div>
+            <span class="medium-state" id="hbm-state">N/A</span>
+          </div>
+          <strong class="capacity-value" id="hbm-used">N/A</strong>
+          <span class="capacity-caption">allocated · <span id="hbm-objects">N/A</span> objects</span>
+          <dl class="mini-stats">
+            <div><dt>Free</dt><dd id="hbm-free">N/A</dd></div>
+            <div><dt>Total</dt><dd id="hbm-total">N/A</dd></div>
+            <div><dt>Device</dt><dd id="device-id">N/A</dd></div>
+          </dl>
+        </article>
+
+        <article class="capacity-card ddr-card">
+          <div class="capacity-heading">
+            <div><span class="medium-dot"></span><h2>DDR</h2></div>
+            <span class="medium-state" id="ddr-mode">N/A</span>
+          </div>
+          <strong class="capacity-value" id="ddr-committed">N/A</strong>
+          <span class="capacity-caption">committed · <span id="ddr-objects">N/A</span> objects</span>
+          <dl class="mini-stats">
+            <div><dt>Requested</dt><dd id="ddr-requested">N/A</dd></div>
+            <div><dt>Safe</dt><dd id="ddr-safe">N/A</dd></div>
+            <div><dt>Cgroup</dt><dd id="cgroup-current">N/A</dd></div>
+          </dl>
+          <p class="path-hint" id="ddr-root">N/A</p>
+        </article>
+
+        <article class="capacity-card ssd-card">
+          <div class="capacity-heading">
+            <div><span class="medium-dot"></span><h2>SSD</h2></div>
+            <span class="medium-state" id="ssd-mode">N/A</span>
+          </div>
+          <strong class="capacity-value" id="ssd-committed">N/A</strong>
+          <span class="capacity-caption">committed · <span id="ssd-objects">N/A</span> objects</span>
+          <dl class="mini-stats">
+            <div><dt>FS free</dt><dd id="ssd-free">N/A</dd></div>
+            <div><dt>Read</dt><dd id="ssd-read">N/A</dd></div>
+            <div><dt>Write</dt><dd id="ssd-write">N/A</dd></div>
+          </dl>
+          <p class="path-hint" id="ssd-root">N/A</p>
+        </article>
+      </section>
+
+      <section class="telemetry-grid" aria-label="Executor and lane telemetry">
+        <article class="panel compact-panel">
           <div class="panel-title">
-            <span>Architecture</span>
-            <small id="tunnel-path">local -> host1 -> host2 container</small>
+            <div><p class="section-kicker">Execution</p><h2>Executor</h2></div>
+            <span id="event-plan-count">N/A</span>
           </div>
-          <svg viewBox="0 0 980 420" role="img" aria-label="UFlow monitor architecture">
-            <defs>
-              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L8,3 L0,6 Z" fill="#2f5b87"></path>
-              </marker>
-            </defs>
+          <div class="stat-grid four">
+            <div><span>Workers</span><strong id="executor-workers">N/A</strong></div>
+            <div><span>Queue</span><strong id="executor-queue">N/A</strong></div>
+            <div><span>Completed</span><strong id="executor-completed">N/A</strong></div>
+            <div><span>Queue wait</span><strong id="executor-wait">N/A</strong></div>
+          </div>
+        </article>
 
-            <rect class="box client" x="80" y="24" width="820" height="86" rx="8"></rect>
-            <text class="label large" x="116" y="74">PyPTO serving / other app</text>
-            <text class="label muted" x="610" y="74">client allocator / CLI / monitor fetch</text>
-
-            <line class="flow" x1="490" y1="112" x2="490" y2="164"></line>
-            <text class="label edge" x="515" y="146">API</text>
-
-            <rect class="box uflow" x="80" y="166" width="820" height="88" rx="8"></rect>
-            <text class="label large" x="116" y="218">UFlow</text>
-            <text class="label muted" x="260" y="203">catalog</text>
-            <text class="label muted" x="360" y="203">lease</text>
-            <text class="label muted" x="452" y="203">stats</text>
-            <text class="label muted" x="548" y="203">transfer</text>
-            <text class="label muted" x="666" y="203">monitor API</text>
-            <text class="label subtle" x="260" y="230">hot path: object create/open/release</text>
-            <text class="label subtle" x="548" y="230">cold path: link/config/health</text>
-
-            <rect class="box medium hbm" x="72" y="318" width="180" height="72" rx="8"></rect>
-            <text class="label medium-title" x="112" y="360">HBM</text>
-            <text class="label subtle" x="101" y="380">lazy on demand</text>
-
-            <rect class="box medium ddr" x="292" y="294" width="240" height="100" rx="8"></rect>
-            <text class="label medium-title" x="378" y="334">DDR</text>
-            <rect class="chip" x="326" y="350" width="70" height="26" rx="6"></rect>
-            <text class="label chip-text" x="343" y="368">fd</text>
-            <rect class="chip" x="416" y="350" width="86" height="26" rx="6"></rect>
-            <text class="label chip-text" x="434" y="368">pinned</text>
-
-            <rect class="box medium h2hot" x="590" y="318" width="150" height="72" rx="8"></rect>
-            <text class="label medium-title" x="630" y="360">H2H hot</text>
-            <text class="label subtle" x="622" y="380">reuse copy pool</text>
-
-            <rect class="box medium h2cold" x="780" y="318" width="150" height="72" rx="8"></rect>
-            <text class="label medium-title" x="815" y="360">H2H cold</text>
-            <text class="label subtle" x="813" y="380">mmap object</text>
-
-            <line class="flow" x1="180" y1="256" x2="165" y2="316"></line>
-            <line class="flow" x1="420" y1="256" x2="410" y2="292"></line>
-            <line class="flow" x1="655" y1="256" x2="665" y2="316"></line>
-            <line class="flow dashed" x1="840" y1="256" x2="855" y2="316"></line>
-            <line class="flow dashed" x1="532" y1="350" x2="588" y2="350"></line>
-            <text class="label edge" x="548" y="340">fast DDR-HBM</text>
-          </svg>
-        </section>
-
-        <section class="panel health" aria-label="health">
+        <article class="panel compact-panel">
           <div class="panel-title">
-            <span>Health</span>
-            <small id="last-updated">never</small>
+            <div><p class="section-kicker">Channels</p><h2>Transfer lanes</h2></div>
+            <span id="pinned-pool">N/A</span>
           </div>
-          <div class="kv-grid">
-            <div><span>Monitor</span><strong id="monitor-state">unknown</strong></div>
-            <div><span>Daemon</span><strong id="daemon-state">unknown</strong></div>
-            <div><span>HBM</span><strong id="hbm-state">unknown</strong></div>
-            <div><span>Socket</span><strong id="daemon-socket">-</strong></div>
+          <div class="lane-grid">
+            <div class="lane">
+              <span>H2D</span><strong id="h2d-lanes">N/A</strong><small id="h2d-busy">N/A busy</small>
+            </div>
+            <div class="lane">
+              <span>D2H</span><strong id="d2h-lanes">N/A</strong><small id="d2h-busy">N/A busy</small>
+            </div>
+            <div class="lane">
+              <span>Waits</span><strong id="lane-waits">N/A</strong><small id="lane-wait-us">N/A</small>
+            </div>
+            <div class="lane">
+              <span>Event reuse</span><strong id="event-reuse">N/A</strong><small id="stream-create">N/A streams</small>
+            </div>
           </div>
-          <pre id="health-detail"></pre>
-        </section>
-      </section>
-
-      <section class="metric-grid" aria-label="stats">
-        <article class="metric">
-          <span>DDR objects</span>
-          <strong id="ddr-objects">0</strong>
-        </article>
-        <article class="metric">
-          <span>DDR requested</span>
-          <strong id="ddr-requested">0 B</strong>
-        </article>
-        <article class="metric">
-          <span>DDR committed</span>
-          <strong id="ddr-committed">0 B</strong>
-        </article>
-        <article class="metric">
-          <span>Safe allocatable</span>
-          <strong id="ddr-safe">0 B</strong>
-        </article>
-        <article class="metric">
-          <span>Cgroup current</span>
-          <strong id="cgroup-current">0 B</strong>
-        </article>
-        <article class="metric">
-          <span>HBM free</span>
-          <strong id="hbm-free">unknown</strong>
-        </article>
-        <article class="metric">
-          <span>Trace</span>
-          <strong id="trace-state">disabled</strong>
-        </article>
-        <article class="metric">
-          <span>Trace events</span>
-          <strong id="trace-events">0</strong>
         </article>
       </section>
 
-      <section class="panel command-panel" aria-label="command console">
+      <section class="panel summary-panel" aria-label="Transfer summary">
         <div class="panel-title">
-          <span>Command Console</span>
-          <small>JSON command -> monitor API -> daemon</small>
+          <div><p class="section-kicker">Bounded window</p><h2>Transfer summary</h2></div>
+          <span id="summary-meta">N/A</span>
+        </div>
+        <div class="summary-layout">
+          <div class="stat-grid summary-totals">
+            <div><span>Sample</span><strong id="summary-sample">N/A</strong></div>
+            <div><span>Fallback</span><strong id="summary-fallback">N/A</strong></div>
+            <div><span>SSD read</span><strong id="summary-ssd-read">N/A</strong></div>
+            <div><span>SSD write</span><strong id="summary-ssd-write">N/A</strong></div>
+          </div>
+          <div class="table-wrap summary-table-wrap">
+            <table class="summary-table">
+              <thead><tr><th>Actual path</th><th>Engine</th><th>Direction</th><th>Status</th><th>Count</th><th>p50 / p95 latency</th><th>p50 / p95 BW</th></tr></thead>
+              <tbody id="summary-body"><tr><td colspan="7" class="empty">No transfer data</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel transfers-panel" aria-label="Recent transfers">
+        <div class="panel-title transfers-title">
+          <div><p class="section-kicker">Newest first · max 200</p><h2>Recent transfers</h2></div>
+          <div class="transfer-actions">
+            <span id="transfer-meta">N/A</span>
+            <button class="secondary-button" id="refresh-transfers" type="button">Refresh</button>
+          </div>
         </div>
 
-        <details class="help-menu" id="command-help">
-          <summary>Command Help</summary>
-          <div class="help-content">
-            <div>
-              <h2>Object commands</h2>
-              <pre>{
-  "op": "CreateDataObject",
-  "model_id": "phasee04-monitor",
-  "name": "ui.demo.ddr.1m",
-  "role": "user",
-  "hint": "mandatory:ddr",
-  "target": "host:0",
-  "nbytes": 1048576,
-  "shape": "1048576",
-  "dtype": "uint8"
-}</pre>
-              <pre>{
-  "op": "ReleaseDataObject",
-  "object_id": 100
-}</pre>
-            </div>
-            <div>
-              <h2>Query / lifecycle</h2>
-              <pre>{ "op": "GetStats" }</pre>
-              <pre>{
-  "op": "StartTrace",
-  "run_id": "ui-hot-demo",
-  "mode": "hot"
-}</pre>
-              <pre>{ "op": "StopTrace", "flush": 1 }</pre>
-              <pre>{ "op": "FlushTrace" }</pre>
-              <pre>{
-  "op": "GetModelObjects",
-  "model_id": "phasee04-monitor"
-}</pre>
-              <pre>{ "op": "ShutdownDaemon" }</pre>
-            </div>
-          </div>
-        </details>
+        <div class="filter-grid">
+          <label>Status<select id="filter-status"><option value="">All</option><option>complete</option><option>running</option><option>failed</option><option>cancelled</option></select></label>
+          <label>Actual path<input id="filter-path" type="text" spellcheck="false" placeholder="ssd_to_hbm_via_ddr" /></label>
+          <label>Actual engine<input id="filter-engine" type="text" spellcheck="false" placeholder="ssd_hbm_relay_ddr" /></label>
+          <label>Direction<select id="filter-direction"><option value="">All</option><option>h2d</option><option>d2h</option><option>ddr_to_ssd</option><option>ssd_to_ddr</option></select></label>
+          <label>Page size<select id="filter-limit"><option>20</option><option selected>50</option><option>100</option><option>200</option></select></label>
+          <button id="apply-filters" type="button">Apply filters</button>
+        </div>
 
+        <div class="table-wrap">
+          <table class="transfers-table">
+            <thead>
+              <tr><th>Event</th><th>Status</th><th>Direction</th><th>Media</th><th>Mode</th><th>Planned → actual path</th><th>Actual engine</th><th>Bytes</th><th>Latency</th><th>Decision</th></tr>
+            </thead>
+            <tbody id="transfers-body"><tr><td colspan="10" class="empty">No transfer data</td></tr></tbody>
+          </table>
+        </div>
+        <div class="pagination-row">
+          <span>Click a row for stage-level details.</span>
+          <button class="secondary-button" id="load-older" type="button" disabled>Load older</button>
+        </div>
+
+        <aside class="transfer-detail hidden" id="transfer-detail" aria-live="polite">
+          <div class="detail-heading"><div><p class="section-kicker">Selected event</p><h3 id="detail-title">Transfer</h3></div><button class="icon-button" id="close-detail" type="button" aria-label="Close details">×</button></div>
+          <div id="detail-content"></div>
+        </aside>
+      </section>
+
+      <section class="two-column-grid">
+        <section class="panel trace-panel" aria-label="Trace controls and artifacts">
+          <div class="panel-title">
+            <div><p class="section-kicker">PhaseE-06 contract</p><h2>Trace</h2></div>
+            <span class="trace-badge" id="trace-state">disabled</span>
+          </div>
+          <div class="stat-grid four">
+            <div><span>Run</span><strong id="trace-run">N/A</strong></div>
+            <div><span>Buffered</span><strong id="trace-buffered">N/A</strong></div>
+            <div><span>Dropped</span><strong id="trace-dropped">N/A</strong></div>
+            <div><span>Flushes</span><strong id="trace-flushes">N/A</strong></div>
+          </div>
+          <div class="trace-actions">
+            <button class="secondary-button" id="trace-start" type="button">Start</button>
+            <button class="secondary-button" id="trace-flush" type="button">Flush</button>
+            <button class="secondary-button" id="trace-stop" type="button">Stop + flush</button>
+          </div>
+          <p class="trace-message" id="trace-message">No trace artifact has been flushed.</p>
+          <div class="artifact-links" id="artifact-links" aria-label="Trace artifact downloads"></div>
+        </section>
+
+        <section class="panel health-panel" aria-label="Health and connection details">
+          <div class="panel-title">
+            <div><p class="section-kicker">Live endpoint</p><h2>Health</h2></div>
+            <span id="failure-count">0 failures</span>
+          </div>
+          <dl class="health-list">
+            <div><dt>Monitor API</dt><dd id="monitor-state">N/A</dd></div>
+            <div><dt>Daemon</dt><dd id="daemon-state">N/A</dd></div>
+            <div><dt>Socket</dt><dd id="daemon-socket">N/A</dd></div>
+          </dl>
+          <details><summary>Raw health response</summary><pre id="health-detail">N/A</pre></details>
+        </section>
+      </section>
+
+      <section class="panel table-panel" aria-label="Data objects">
+        <div class="panel-title"><div><p class="section-kicker">Model namespace</p><h2>Data objects</h2></div><span id="object-count">N/A</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Medium</th><th>Target</th><th>Requested</th><th>State</th><th>Backing path</th></tr></thead>
+            <tbody id="objects-body"><tr><td colspan="8" class="empty">No objects</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <details class="panel command-panel" aria-label="Command console">
+        <summary><span><strong>Command console</strong><small>Explicit JSON commands only</small></span></summary>
         <div class="command-grid">
-          <label class="command-input-wrap">
-            Command JSON
-            <textarea id="command-input" spellcheck="false"></textarea>
-          </label>
+          <label>Command JSON<textarea id="command-input" spellcheck="false"></textarea></label>
           <div class="command-actions">
-            <button id="send-command" type="button">Send Command</button>
+            <button id="send-command" type="button">Send command</button>
             <div class="template-row">
               <button class="secondary-button" data-template="create-ddr" type="button">Create DDR</button>
               <button class="secondary-button" data-template="release-object" type="button">Release</button>
               <button class="secondary-button" data-template="get-stats" type="button">Stats</button>
-              <button class="secondary-button" data-template="start-trace" type="button">Start Trace</button>
-              <button class="secondary-button" data-template="stop-trace" type="button">Stop Trace</button>
               <button class="danger-button" data-template="shutdown" type="button">Shutdown</button>
             </div>
-            <pre id="command-result"></pre>
+            <pre id="command-result">Select a template or send a command.</pre>
           </div>
         </div>
-      </section>
-
-      <section class="panel table-panel" aria-label="objects">
-        <div class="panel-title">
-          <span>Data objects</span>
-          <small id="object-count">0 objects</small>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Placement</th>
-                <th>Target</th>
-                <th>Requested</th>
-                <th>State</th>
-                <th>Path</th>
-              </tr>
-            </thead>
-            <tbody id="objects-body">
-              <tr><td colspan="8" class="empty">No data yet</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      </details>
     </main>
     <script src="./app.js"></script>
   </body>

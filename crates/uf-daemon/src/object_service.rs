@@ -29,6 +29,7 @@ fn create_ddr_lease_response(object: &Object, lease: &Lease, existing: bool) -> 
         ("placement", DDR_PLACEMENT.to_string()),
         ("target", object.target.clone()),
         ("address_kind", "mmap_path".to_string()),
+        ("backing_path", object.ddr_path.clone()),
         ("ddr_path", object.ddr_path.clone()),
         ("ddr_fast_profile", object.ddr_fast_profile.clone()),
         (
@@ -76,6 +77,7 @@ fn create_ssd_lease_response(object: &Object, lease: &Lease, existing: bool) -> 
         ("medium", SSD_PLACEMENT.to_string()),
         ("target", object.target.clone()),
         ("address_kind", "file_path_offset".to_string()),
+        ("backing_path", object.ssd_path.clone()),
         ("ssd_path", object.ssd_path.clone()),
         ("ssd_offset_bytes", object.ssd_offset_bytes.to_string()),
         ("requested_bytes", object.requested_bytes.to_string()),
@@ -863,6 +865,11 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(object) => object,
         None => return err("object not found"),
     };
+    let backing_path = if object.placement == SSD_PLACEMENT {
+        object.ssd_path.clone()
+    } else {
+        object.ddr_path.clone()
+    };
     ok(&[
         ("object_id", object.object_id.to_string()),
         ("placement_id", object.placement_id.to_string()),
@@ -888,6 +895,7 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         ),
         ("offset_bytes", "0".to_string()),
         ("nbytes", object.requested_bytes.to_string()),
+        ("backing_path", backing_path),
         ("ddr_path", object.ddr_path.clone()),
         ("ddr_fast_profile", object.ddr_fast_profile.clone()),
         (

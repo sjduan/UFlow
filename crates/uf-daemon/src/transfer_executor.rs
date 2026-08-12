@@ -15,7 +15,7 @@ use crate::trace::{
 use crate::transfer_channel::{
     transfer_channel_manager, TransferChannelRunStats, TransferDirection,
 };
-use uf_core::{err, get_u64, ok, Kv};
+use uf_core::{err, get, get_u64, ok, Kv};
 
 use std::ptr;
 use std::sync::Arc;
@@ -94,6 +94,127 @@ fn transfer_trace_context(
         planned_path: plan.path.clone(),
         planned_engine: plan.engine.clone(),
     }
+}
+
+const DEFAULT_TRANSFER_EVENT_LIMIT: usize = 50;
+const MAX_TRANSFER_EVENT_LIMIT: usize = 200;
+
+#[derive(Debug, Default)]
+struct TransferEventListQuery {
+    limit: usize,
+    before_event_id: Option<u64>,
+    status: String,
+    client_id: Option<u64>,
+    actual_path: String,
+    actual_engine: String,
+}
+
+fn parse_optional_positive_u64(req: &Kv, key: &str) -> Result<Option<u64>, String> {
+    let raw = get(req, key);
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    let value = raw
+        .parse::<u64>()
+        .map_err(|_| format!("{} must be a positive integer", key))?;
+    if value == 0 {
+        return Err(format!("{} must be a positive integer", key));
+    }
+    Ok(Some(value))
+}
+
+fn parse_transfer_event_list_query(req: &Kv) -> Result<TransferEventListQuery, String> {
+    let limit = if get(req, "limit").is_empty() {
+        DEFAULT_TRANSFER_EVENT_LIMIT
+    } else {
+        get(req, "limit")
+            .parse::<usize>()
+            .map_err(|_| "limit must be a positive integer".to_string())?
+    };
+    if !(1..=MAX_TRANSFER_EVENT_LIMIT).contains(&limit) {
+        return Err(format!(
+            "limit must be between 1 and {}",
+            MAX_TRANSFER_EVENT_LIMIT
+        ));
+    }
+    let status = get(req, "status").to_string();
+    if !status.is_empty()
+        && !matches!(
+            status.as_str(),
+            "pending" | "running" | "complete" | "failed" | "cancelled"
+        )
+    {
+        return Err(format!("unsupported transfer status {}", status));
+    }
+    let actual_path = if get(req, "actual_path").is_empty() {
+        get(req, "path")
+    } else {
+        get(req, "actual_path")
+    }
+    .to_string();
+    let actual_engine = if get(req, "actual_engine").is_empty() {
+        get(req, "engine")
+    } else {
+        get(req, "actual_engine")
+    }
+    .to_string();
+    Ok(TransferEventListQuery {
+        limit,
+        before_event_id: parse_optional_positive_u64(req, "before_event_id")?,
+        status,
+        client_id: parse_optional_positive_u64(req, "client_id")?,
+        actual_path,
+        actual_engine,
+    })
+}
+
+fn selected_transfer_event_ids(
+    events: &std::collections::HashMap<u64, TransferEventRecord>,
+    query: &TransferEventListQuery,
+) -> (Vec<u64>, bool) {
+    let mut ids = events
+        .values()
+        .filter(|event| {
+            query
+                .before_event_id
+                .map(|before| event.event_id < before)
+                .unwrap_or(true)
+                && (query.status.is_empty() || event.status == query.status)
+                && query
+                    .client_id
+                    .map(|client_id| event.client_id == client_id)
+                    .unwrap_or(true)
+                && (query.actual_path.is_empty() || event.actual_path == query.actual_path)
+                && (query.actual_engine.is_empty() || event.actual_engine == query.actual_engine)
+        })
+        .map(|event| event.event_id)
+        .collect::<Vec<_>>();
+    ids.sort_unstable_by(|left, right| right.cmp(left));
+    let has_more = ids.len() > query.limit;
+    ids.truncate(query.limit);
+    (ids, has_more)
+}
+
+fn monitor_event_payload(st: &Catalog, event: &TransferEventRecord) -> Vec<(&'static str, String)> {
+    let mut payload = event_payload(event);
+    if let Some(plan) = st.transfer_plans.get(&event.plan_id) {
+        payload.extend([
+            ("src_object_id", plan.src_object_id.to_string()),
+            ("dst_object_id", plan.dst_object_id.to_string()),
+            ("src_medium", plan.src_medium.clone()),
+            ("dst_medium", plan.dst_medium.clone()),
+            (
+                "direction",
+                transfer_direction(&plan.src_medium, &plan.dst_medium),
+            ),
+            ("operation", plan.operation.clone()),
+            ("requested_mode", plan.requested_mode.clone()),
+            ("nbytes", plan.nbytes.to_string()),
+            ("planned_path", plan.path.clone()),
+            ("planned_engine", plan.engine.clone()),
+        ]);
+    }
+    payload
 }
 
 fn record_terminal_trace(context: &TransferTraceContext, event: &TransferEventRecord) {
@@ -1715,6 +1836,38 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
     ok(&response_payload)
 }
 
+pub(crate) fn list_transfer_events(req: &Kv, shared: &SharedCatalog) -> Kv {
+    let query = match parse_transfer_event_list_query(req) {
+        Ok(query) => query,
+        Err(error) => return err(error),
+    };
+    let (lock, _) = &**shared;
+    let st = lock.lock().unwrap();
+    let (event_ids, has_more) = selected_transfer_event_ids(&st.transfer_events, &query);
+    let next_before_event_id = if has_more {
+        event_ids
+            .last()
+            .map(|event_id| event_id.to_string())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+    ok(&[
+        (
+            "event_ids",
+            event_ids
+                .iter()
+                .map(u64::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        ),
+        ("returned", event_ids.len().to_string()),
+        ("has_more", has_more.to_string()),
+        ("next_before_event_id", next_before_event_id),
+        ("limit", query.limit.to_string()),
+    ])
+}
+
 pub(crate) fn poll_event(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (lock, _) = &**shared;
     let st = lock.lock().unwrap();
@@ -1723,7 +1876,7 @@ pub(crate) fn poll_event(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(event) => event,
         None => return err("transfer event not found"),
     };
-    ok(&event_payload(event))
+    ok(&monitor_event_payload(&st, event))
 }
 
 pub(crate) fn wait_event(req: &Kv, shared: &SharedCatalog) -> Kv {
@@ -1793,4 +1946,151 @@ pub(crate) fn cancel_event(req: &Kv, shared: &SharedCatalog) -> Kv {
     register_event_context(&trace_context);
     record_terminal_trace(&trace_context, &event_snapshot);
     ok(&payload)
+}
+
+#[cfg(test)]
+mod monitor_tests {
+    use super::*;
+    use crate::catalog::Catalog;
+    use std::sync::{Arc, Condvar, Mutex};
+    use uf_core::kv;
+
+    fn shared_catalog() -> SharedCatalog {
+        Arc::new((Mutex::new(Catalog::new(0, Vec::new())), Condvar::new()))
+    }
+
+    fn event(
+        event_id: u64,
+        plan_id: u64,
+        client_id: u64,
+        status: &str,
+        path: &str,
+        engine: &str,
+    ) -> TransferEventRecord {
+        TransferEventRecord {
+            event_id,
+            plan_id,
+            client_id,
+            status: status.to_string(),
+            actual_path: path.to_string(),
+            actual_engine: engine.to_string(),
+            ..TransferEventRecord::default()
+        }
+    }
+
+    #[test]
+    fn list_transfer_events_is_stable_bounded_and_filterable() {
+        let shared = shared_catalog();
+        {
+            let (lock, _) = &*shared;
+            let mut st = lock.lock().unwrap();
+            st.transfer_events.insert(
+                30_000,
+                event(30_000, 20_000, 1, "complete", "ddr_to_hbm", "acl"),
+            );
+            st.transfer_events.insert(
+                30_002,
+                event(30_002, 20_002, 2, "failed", "ssd_to_hbm_via_ddr", "relay"),
+            );
+            st.transfer_events.insert(
+                30_001,
+                event(30_001, 20_001, 1, "complete", "ssd_to_hbm_via_ddr", "relay"),
+            );
+        }
+
+        let first = list_transfer_events(
+            &kv(&[
+                ("op", "ListTransferEvents".to_string()),
+                ("limit", "2".to_string()),
+            ]),
+            &shared,
+        );
+        assert_eq!(get(&first, "status"), "ok");
+        assert_eq!(get(&first, "event_ids"), "30002,30001");
+        assert_eq!(get(&first, "has_more"), "true");
+        assert_eq!(get(&first, "next_before_event_id"), "30001");
+
+        let second = list_transfer_events(
+            &kv(&[
+                ("op", "ListTransferEvents".to_string()),
+                ("limit", "2".to_string()),
+                ("before_event_id", "30001".to_string()),
+            ]),
+            &shared,
+        );
+        assert_eq!(get(&second, "event_ids"), "30000");
+        assert_eq!(get(&second, "has_more"), "false");
+
+        let filtered = list_transfer_events(
+            &kv(&[
+                ("op", "ListTransferEvents".to_string()),
+                ("status", "complete".to_string()),
+                ("client_id", "1".to_string()),
+                ("path", "ssd_to_hbm_via_ddr".to_string()),
+                ("engine", "relay".to_string()),
+            ]),
+            &shared,
+        );
+        assert_eq!(get(&filtered, "event_ids"), "30001");
+
+        let invalid = list_transfer_events(
+            &kv(&[
+                ("op", "ListTransferEvents".to_string()),
+                ("limit", "201".to_string()),
+            ]),
+            &shared,
+        );
+        assert_eq!(get(&invalid, "status"), "error");
+    }
+
+    #[test]
+    fn poll_event_includes_persisted_plan_context_without_live_objects() {
+        let shared = shared_catalog();
+        {
+            let (lock, _) = &*shared;
+            let mut st = lock.lock().unwrap();
+            st.transfer_plans.insert(
+                20_000,
+                TransferPlanRecord {
+                    plan_id: 20_000,
+                    client_id: 7,
+                    src_object_id: 100,
+                    src_medium: "ssd".to_string(),
+                    dst_object_id: 101,
+                    dst_medium: "hbm".to_string(),
+                    operation: "copy".to_string(),
+                    requested_mode: "auto".to_string(),
+                    nbytes: 64 * 1024 * 1024,
+                    path: "ssd_to_hbm_direct".to_string(),
+                    engine: "ssd_hbm_auto_file_mmap_acl_direct".to_string(),
+                    ..TransferPlanRecord::default()
+                },
+            );
+            st.transfer_events.insert(
+                30_000,
+                event(
+                    30_000,
+                    20_000,
+                    7,
+                    "complete",
+                    "ssd_to_hbm_via_ddr",
+                    "ssd_hbm_relay_ddr",
+                ),
+            );
+        }
+        let response = poll_event(
+            &kv(&[
+                ("op", "PollEvent".to_string()),
+                ("event_id", "30000".to_string()),
+            ]),
+            &shared,
+        );
+        assert_eq!(get(&response, "status"), "ok");
+        assert_eq!(get(&response, "src_medium"), "ssd");
+        assert_eq!(get(&response, "dst_medium"), "hbm");
+        assert_eq!(get(&response, "direction"), "h2d");
+        assert_eq!(get(&response, "requested_mode"), "auto");
+        assert_eq!(get(&response, "planned_path"), "ssd_to_hbm_direct");
+        assert_eq!(get(&response, "actual_path"), "ssd_to_hbm_via_ddr");
+    }
 }

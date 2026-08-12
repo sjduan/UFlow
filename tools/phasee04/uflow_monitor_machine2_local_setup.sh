@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+printf '%s\n' 'WARNING: this machine2 two-hop wrapper is historical compatibility only.' >&2
+printf '%s\n' 'Use tools/phasee04/uflow_monitor_serving_b_local_setup.sh for current work.' >&2
+
 # Local one-shot setup for PhaseE-04 monitor against machine2.
 #
 # Assumption:

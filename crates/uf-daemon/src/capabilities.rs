@@ -15,6 +15,7 @@ const SOLID_OPS: &[&str] = &[
     "EstimateCost",
     "PlanTransfer",
     "SubmitTransfer",
+    "ListTransferEvents",
     "PollEvent",
     "WaitEvent",
     "CancelEvent",

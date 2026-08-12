@@ -40,6 +40,7 @@ pub fn handle_request(req: Kv, shared: &SharedCatalog) -> Kv {
         "EstimateCost" => transfer_planner::estimate_cost(&req, shared),
         "PlanTransfer" => transfer_planner::plan_transfer(&req, shared),
         "SubmitTransfer" => transfer_executor::submit_transfer(&req, shared),
+        "ListTransferEvents" => transfer_executor::list_transfer_events(&req, shared),
         "PollEvent" => transfer_executor::poll_event(&req, shared),
         "WaitEvent" => transfer_executor::wait_event(&req, shared),
         "CancelEvent" => transfer_executor::cancel_event(&req, shared),

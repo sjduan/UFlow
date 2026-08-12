@@ -17,6 +17,31 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8082
 DEFAULT_MODEL_ID = "phasee04-monitor"
 MAX_COMMAND_BODY_BYTES = 64 * 1024
+DEFAULT_TRANSFER_LIMIT = 50
+MAX_TRANSFER_LIMIT = 200
+TRANSFER_STATUSES = {"pending", "running", "complete", "failed", "cancelled"}
+TRANSFER_FIELDS = (
+    "event_id",
+    "plan_id",
+    "status",
+    "src_object_id",
+    "dst_object_id",
+    "src_medium",
+    "dst_medium",
+    "direction",
+    "operation",
+    "requested_mode",
+    "nbytes",
+    "planned_path",
+    "planned_engine",
+    "actual_path",
+    "actual_engine",
+    "actual_latency_us",
+    "actual_bandwidth_gib_s",
+    "fallback_used",
+    "fallback_reason",
+    "error",
+)
 CONTROL_OPS = {
     "RegisterClient",
     "RegisterModel",
@@ -33,6 +58,7 @@ CONTROL_OPS = {
     "EstimateCost",
     "PlanTransfer",
     "SubmitTransfer",
+    "ListTransferEvents",
     "PollEvent",
     "WaitEvent",
     "CancelEvent",
@@ -45,6 +71,10 @@ CONTROL_OPS = {
     "GetCapabilities",
     "ShutdownDaemon",
 }
+
+
+class DaemonUnavailable(RuntimeError):
+    """The daemon socket is unavailable or cannot serve the requested read op."""
 TRACE_ARTIFACT_FILES = {
     "trace_events.json": "application/json",
     "trace_summary.json": "application/json",
@@ -155,12 +185,12 @@ def parse_model_objects(kv: dict[str, str]) -> list[dict[str, Any]]:
             address_tail,
         ) = parts
         tail_parts = address_tail.split(":", 2)
-        if len(tail_parts) >= 2 and tail_parts[0] in {"host", "npu"}:
+        if len(tail_parts) >= 2 and tail_parts[0] in {"host", "npu", "ssd"}:
             target = f"{tail_parts[0]}:{tail_parts[1]}"
-            ddr_path = tail_parts[2] if len(tail_parts) == 3 else ""
+            backing_path = tail_parts[2] if len(tail_parts) == 3 else ""
         else:
             target = address_tail
-            ddr_path = ""
+            backing_path = ""
         objects.append(
             {
                 "object_id": int(object_id) if object_id.isdigit() else object_id,
@@ -173,10 +203,271 @@ def parse_model_objects(kv: dict[str, str]) -> list[dict[str, Any]]:
                 "dtype": dtype,
                 "placement": placement,
                 "target": target,
-                "ddr_path": ddr_path,
+                "backing_path": backing_path,
+                "ddr_path": backing_path if placement == "ddr" else "",
             }
         )
     return objects
+
+
+def _single_query_value(query: dict[str, list[str]], key: str) -> str:
+    values = query.get(key, [])
+    if len(values) > 1:
+        raise ValueError(f"{key} must be specified at most once")
+    return values[0] if values else ""
+
+
+def _positive_query_int(
+    query: dict[str, list[str]],
+    key: str,
+    *,
+    default: int | None = None,
+    maximum: int | None = None,
+) -> int | None:
+    raw = _single_query_value(query, key)
+    if not raw:
+        return default
+    if not raw.isdigit() or int(raw) <= 0:
+        raise ValueError(f"{key} must be a positive integer")
+    value = int(raw)
+    if maximum is not None and value > maximum:
+        raise ValueError(f"{key} must be at most {maximum}")
+    return value
+
+
+def parse_transfer_query(
+    query: dict[str, list[str]], *, summary: bool = False
+) -> dict[str, Any]:
+    allowed = {"limit"} if summary else {
+        "limit",
+        "before_event_id",
+        "status",
+        "path",
+        "engine",
+        "client_id",
+    }
+    unknown = sorted(set(query) - allowed)
+    if unknown:
+        raise ValueError(f"unsupported transfer filter {unknown[0]}")
+    limit = _positive_query_int(
+        query,
+        "limit",
+        default=MAX_TRANSFER_LIMIT if summary else DEFAULT_TRANSFER_LIMIT,
+        maximum=MAX_TRANSFER_LIMIT,
+    )
+    parsed: dict[str, Any] = {"limit": limit}
+    if summary:
+        return parsed
+
+    before_event_id = _positive_query_int(query, "before_event_id")
+    client_id = _positive_query_int(query, "client_id")
+    status = _single_query_value(query, "status")
+    if status and status not in TRANSFER_STATUSES:
+        raise ValueError(f"unsupported transfer status {status}")
+    for key in ("path", "engine"):
+        value = _single_query_value(query, key)
+        if len(value) > 256 or ";" in value or "=" in value:
+            raise ValueError(f"invalid {key} filter")
+        parsed[key] = value
+    parsed.update(
+        {
+            "before_event_id": before_event_id,
+            "status": status,
+            "client_id": client_id,
+        }
+    )
+    return parsed
+
+
+def normalize_transfer_event(raw: dict[str, str]) -> dict[str, Any]:
+    record = coerce_dict(raw)
+    record["status"] = record.get("event_status") or None
+    error_message = str(record.get("error_message") or "")
+    error_code = str(record.get("error_code") or "")
+    record["error"] = error_message or error_code or None
+    for field in TRANSFER_FIELDS:
+        record.setdefault(field, None)
+    return record
+
+
+def fetch_transfer_window(
+    daemon_request: Any, filters: dict[str, Any]
+) -> dict[str, Any]:
+    list_request: dict[str, Any] = {
+        "op": "ListTransferEvents",
+        "limit": filters["limit"],
+    }
+    mapping = {
+        "before_event_id": "before_event_id",
+        "status": "status",
+        "path": "actual_path",
+        "engine": "actual_engine",
+        "client_id": "client_id",
+    }
+    for source, target in mapping.items():
+        value = filters.get(source)
+        if value not in (None, ""):
+            list_request[target] = value
+
+    listed = daemon_request(list_request)
+    if listed.get("status") != "ok":
+        raise DaemonUnavailable(listed.get("detail", "ListTransferEvents failed"))
+    raw_ids = listed.get("event_ids", "")
+    event_ids: list[int] = []
+    for raw_id in raw_ids.split(","):
+        if not raw_id:
+            continue
+        if not raw_id.isdigit():
+            raise RuntimeError(f"invalid event id from daemon: {raw_id!r}")
+        event_ids.append(int(raw_id))
+
+    transfers: list[dict[str, Any]] = []
+    skipped_event_ids: list[int] = []
+    for event_id in event_ids:
+        event = daemon_request({"op": "PollEvent", "event_id": event_id})
+        if event.get("status") != "ok":
+            if "not found" in event.get("detail", "").lower():
+                skipped_event_ids.append(event_id)
+                continue
+            raise DaemonUnavailable(event.get("detail", f"PollEvent {event_id} failed"))
+        transfers.append(normalize_transfer_event(event))
+
+    next_before_raw = listed.get("next_before_event_id", "")
+    next_before_event_id = int(next_before_raw) if next_before_raw.isdigit() else None
+    return {
+        "transfers": transfers,
+        "returned": len(transfers),
+        "listed": len(event_ids),
+        "has_more": listed.get("has_more") == "true",
+        "next_before_event_id": next_before_event_id,
+        "skipped_event_ids": skipped_event_ids,
+        "window_limit": int(filters["limit"]),
+        "filters": {key: value for key, value in filters.items() if value not in (None, "")},
+    }
+
+
+def percentile(values: list[float], fraction: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * fraction
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    weight = position - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
+
+
+def _number(value: Any) -> float | None:
+    if value in (None, "") or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number
+
+
+def summarize_transfers(window: dict[str, Any], generated_at: int | None = None) -> dict[str, Any]:
+    groups: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    fallback_count = 0
+    ssd_read_bytes = 0
+    ssd_write_bytes = 0
+    ssd_read_ops = 0
+    ssd_write_ops = 0
+    ssd_io_submit_us = 0.0
+    ssd_io_wait_us = 0.0
+
+    for transfer in window["transfers"]:
+        key = tuple(
+            str(transfer.get(name) or "unknown")
+            for name in ("actual_path", "actual_engine", "direction", "status")
+        )
+        group = groups.setdefault(
+            key,
+            {
+                "actual_path": key[0],
+                "actual_engine": key[1],
+                "direction": key[2],
+                "status": key[3],
+                "count": 0,
+                "bytes": 0,
+                "latencies": [],
+                "bandwidths": [],
+            },
+        )
+        group["count"] += 1
+        group["bytes"] += int(_number(transfer.get("nbytes")) or _number(transfer.get("bytes_done")) or 0)
+        latency = _number(transfer.get("actual_latency_us"))
+        bandwidth = _number(transfer.get("actual_bandwidth_gib_s"))
+        if latency is not None:
+            group["latencies"].append(latency)
+        if bandwidth is not None:
+            group["bandwidths"].append(bandwidth)
+        if transfer.get("fallback_used") is True:
+            fallback_count += 1
+
+        read_bytes = int(_number(transfer.get("ssd_read_bytes")) or 0)
+        write_bytes = int(_number(transfer.get("ssd_write_bytes")) or 0)
+        ssd_read_bytes += read_bytes
+        ssd_write_bytes += write_bytes
+        ssd_read_ops += int(read_bytes > 0)
+        ssd_write_ops += int(write_bytes > 0)
+        ssd_io_submit_us += _number(transfer.get("ssd_io_submit_us")) or 0.0
+        ssd_io_wait_us += _number(transfer.get("ssd_io_wait_us")) or 0.0
+
+    group_rows: list[dict[str, Any]] = []
+    for key in sorted(groups):
+        group = groups[key]
+        latencies = group.pop("latencies")
+        bandwidths = group.pop("bandwidths")
+        group.update(
+            {
+                "p50_latency_us": percentile(latencies, 0.50),
+                "p95_latency_us": percentile(latencies, 0.95),
+                "p50_bandwidth_gib_s": percentile(bandwidths, 0.50),
+                "p95_bandwidth_gib_s": percentile(bandwidths, 0.95),
+            }
+        )
+        group_rows.append(group)
+
+    sample_size = len(window["transfers"])
+    return {
+        "sample_size": sample_size,
+        "window_limit": window["window_limit"],
+        "generated_at": int(time.time()) if generated_at is None else generated_at,
+        "groups": group_rows,
+        "fallback_count": fallback_count,
+        "fallback_rate": fallback_count / sample_size if sample_size else 0.0,
+        "ssd_io": {
+            "read_bytes": ssd_read_bytes,
+            "write_bytes": ssd_write_bytes,
+            "read_ops": ssd_read_ops,
+            "write_ops": ssd_write_ops,
+            "submit_us": ssd_io_submit_us,
+            "wait_us": ssd_io_wait_us,
+            "total_us": ssd_io_submit_us + ssd_io_wait_us,
+        },
+        "has_more": window["has_more"],
+        "skipped_event_ids": window["skipped_event_ids"],
+    }
+
+
+def observability_transfer_summary(
+    daemon_request: Any, capabilities_raw: dict[str, str]
+) -> dict[str, Any]:
+    capability_ops = capabilities_raw.get("ops", "").split(",")
+    if "ListTransferEvents" not in capability_ops:
+        return {
+            "available": False,
+            "reason": "ListTransferEvents is not advertised by this daemon",
+        }
+    try:
+        window = fetch_transfer_window(daemon_request, {"limit": DEFAULT_TRANSFER_LIMIT})
+        return {"available": True, **summarize_transfers(window)}
+    except Exception as exc:  # noqa: BLE001 - this section is optional for v1 daemons.
+        return {"available": False, "reason": str(exc)}
 
 
 class MonitorApiHandler(BaseHTTPRequestHandler):
@@ -241,11 +532,36 @@ class MonitorApiHandler(BaseHTTPRequestHandler):
                 filename = query.get("file", ["trace_events.json"])[0]
                 self.handle_trace_artifact(run_id, filename)
             elif parsed.path == "/v1/objects":
-                query = parse_qs(parsed.query)
+                query = parse_qs(parsed.query, keep_blank_values=True)
                 model_id = query.get("model_id", [DEFAULT_MODEL_ID])[0]
                 self.handle_objects(model_id)
+            elif parsed.path == "/v1/transfers":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                self.handle_transfers(query)
+            elif parsed.path == "/v1/transfers/summary":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                self.handle_transfer_summary(query)
             else:
                 self.send_json(404, {"ok": False, "error": "not found", "path": parsed.path})
+        except ValueError as exc:
+            self.send_json(
+                400,
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "ts": int(time.time()),
+                },
+            )
+        except DaemonUnavailable as exc:
+            self.send_json(
+                503,
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "daemon_reachable": False,
+                    "ts": int(time.time()),
+                },
+            )
         except Exception as exc:  # noqa: BLE001 - this is the HTTP boundary.
             self.send_json(
                 500,
@@ -289,7 +605,12 @@ class MonitorApiHandler(BaseHTTPRequestHandler):
             )
 
     def daemon_request(self, req: dict[str, Any]) -> dict[str, str]:
-        return request_daemon(str(self.config["daemon_socket"]), req, float(self.config["timeout_s"]))
+        try:
+            return request_daemon(
+                str(self.config["daemon_socket"]), req, float(self.config["timeout_s"])
+            )
+        except (OSError, TimeoutError, RuntimeError) as exc:
+            raise DaemonUnavailable(str(exc)) from exc
 
     def read_json_body(self) -> Any:
         raw_len = self.headers.get("Content-Length", "0")
@@ -398,6 +719,9 @@ class MonitorApiHandler(BaseHTTPRequestHandler):
             and trace_raw.get("status") == "ok"
             and capabilities_raw.get("status") == "ok"
         )
+        transfer_summary = observability_transfer_summary(
+            self.daemon_request, capabilities_raw
+        )
         self.send_json(
             200 if status_ok else 503,
             {
@@ -409,6 +733,7 @@ class MonitorApiHandler(BaseHTTPRequestHandler):
                 "stats": coerce_dict(stats_raw),
                 "trace": coerce_dict(trace_raw),
                 "capabilities": coerce_dict(capabilities_raw),
+                "transfer_summary": transfer_summary,
                 "trace_root": self.config["trace_root"],
                 "ts": int(time.time()),
             },
@@ -530,6 +855,30 @@ class MonitorApiHandler(BaseHTTPRequestHandler):
             },
         )
 
+    def handle_transfers(self, query: dict[str, list[str]]) -> None:
+        filters = parse_transfer_query(query)
+        window = fetch_transfer_window(self.daemon_request, filters)
+        self.send_json(
+            200,
+            {
+                "ok": True,
+                **window,
+                "ts": int(time.time()),
+            },
+        )
+
+    def handle_transfer_summary(self, query: dict[str, list[str]]) -> None:
+        filters = parse_transfer_query(query, summary=True)
+        window = fetch_transfer_window(self.daemon_request, filters)
+        self.send_json(
+            200,
+            {
+                "ok": True,
+                "summary": summarize_transfers(window),
+                "ts": int(time.time()),
+            },
+        )
+
     def handle_command(self) -> None:
         command = normalize_command(self.read_json_body())
         extra = self.maybe_add_monitor_client(command)
@@ -557,7 +906,9 @@ def build_config(args: argparse.Namespace) -> dict[str, Any]:
         "monitor_port": args.port,
         "api_base": api_base,
         "ui_url": ui_url,
-        "tunnel_path": os.environ.get("UFLOW_TUNNEL_PATH", "local -> host1 -> host2 container"),
+        "tunnel_path": os.environ.get(
+            "UFLOW_TUNNEL_PATH", "local -> ssh serving-b -> openeuler-2403-DS"
+        ),
         "default_model_id": os.environ.get("UFLOW_MONITOR_MODEL_ID", DEFAULT_MODEL_ID),
         "trace_root": os.environ.get("UF_TRACE_OUTPUT_DIR", os.environ.get("UF_TRACE_ROOT", "/tmp/uflow_traces")),
         "timeout_s": args.timeout,

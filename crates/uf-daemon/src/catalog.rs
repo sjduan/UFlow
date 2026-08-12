@@ -92,15 +92,17 @@ pub struct Lease {
     pub allowed_bytes: u64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TransferPlanRecord {
     pub plan_id: u64,
     pub request_id: u64,
     pub client_id: u64,
     pub src_object_id: u64,
     pub src_placement_id: u64,
+    pub src_medium: String,
     pub dst_object_id: u64,
     pub dst_placement_id: u64,
+    pub dst_medium: String,
     pub operation: String,
     pub requested_mode: String,
     pub path: String,
@@ -120,7 +122,7 @@ pub struct TransferPlanRecord {
     pub explanation: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TransferEventRecord {
     pub event_id: u64,
     pub plan_id: u64,
