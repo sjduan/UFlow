@@ -8,6 +8,15 @@ cd "${repo_root}"
 
 device="${UF_E06_DEVICE:?UF_E06_DEVICE must be selected from the current npu-smi snapshot}"
 profile="${UF_E06_PROFILE:-regular}"
+trace_control_backend="${UF_E06_TRACE_CONTROL:-sdk}"
+if [[ "${trace_control_backend}" != "sdk" && "${trace_control_backend}" != "http" ]]; then
+  echo "UF_E06_TRACE_CONTROL must be sdk or http" >&2
+  exit 2
+fi
+if [[ "${trace_control_backend}" == "http" && ( "${profile}" == "incomplete" || "${profile}" == "drop" ) ]]; then
+  echo "HTTP trace control is not supported for negative profile ${profile}" >&2
+  exit 2
+fi
 run_id="${UF_E06_RUN_ID:-phasee06_trace_v2_${profile}_$(date +%Y%m%d_%H%M%S)}"
 if [[ ! "${run_id}" =~ ^[A-Za-z0-9._-]+$ ]]; then
   echo "UF_E06_RUN_ID must be a single safe path component" >&2
@@ -54,6 +63,7 @@ fi
 {
   echo "run_id=${run_id}"
   echo "profile=${profile}"
+  echo "trace_control_backend=${trace_control_backend}"
   echo "repo_root=${repo_root}"
   echo "hostname=$(cat /etc/hostname 2>/dev/null || echo unknown)"
   echo "kernel=$(uname -r)"
@@ -133,6 +143,33 @@ if [[ "${profile}" == "drop" && "${max_events}" == "200000" ]]; then
   max_events=8
 fi
 
+matrix_trace_enabled=1
+if [[ "${trace_control_backend}" == "http" ]]; then
+  matrix_trace_enabled=0
+  "${python_bin}" - "${api_port}" "${run_id}" "${max_events}" <<'PY' \
+    > "${run_dir}/http_trace_start.json"
+import json
+import sys
+import urllib.request
+
+port, run_id, max_events = sys.argv[1:]
+base = f"http://127.0.0.1:{port}"
+body = json.dumps(
+    {"run_id": run_id, "mode": "full", "max_events": int(max_events), "include_args": 1}
+).encode()
+request = urllib.request.Request(
+    base + "/v1/trace/start", data=body, headers={"Content-Type": "application/json"}
+)
+with urllib.request.urlopen(request, timeout=10) as response:
+    start = json.loads(response.read())
+with urllib.request.urlopen(base + "/v1/trace/status", timeout=10) as response:
+    status = json.loads(response.read())
+assert start["ok"] is True, start
+assert status["trace"]["trace_enabled"] is True, status
+print(json.dumps({"start": start, "active_status": status}, indent=2, sort_keys=True))
+PY
+fi
+
 "${python_bin}" -u examples/phasee06/uflow_e06_trace_matrix.py \
   --socket "${socket_path}" \
   --device "${device}" \
@@ -145,7 +182,36 @@ fi
   --trace-root "${trace_root}" \
   --output-dir "${run_dir}" \
   --max-events "${max_events}" \
+  --trace-enabled "${matrix_trace_enabled}" \
   > "${run_dir}/matrix.stdout" 2> "${run_dir}/matrix.stderr"
+
+if [[ "${trace_control_backend}" == "http" ]]; then
+  "${python_bin}" - "${api_port}" <<'PY' > "${run_dir}/http_trace_finish.json"
+import json
+import sys
+import urllib.request
+
+base = f"http://127.0.0.1:{sys.argv[1]}"
+
+def post(endpoint):
+    request = urllib.request.Request(
+        base + endpoint,
+        data=b"{}",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read())
+
+flush = post("/v1/trace/flush")
+stop = post("/v1/trace/stop")
+with urllib.request.urlopen(base + "/v1/trace/status", timeout=10) as response:
+    status = json.loads(response.read())
+assert flush["ok"] is True, flush
+assert stop["ok"] is True, stop
+assert status["trace"]["trace_enabled"] is False, status
+print(json.dumps({"flush": flush, "stop": stop, "stopped_status": status}, indent=2, sort_keys=True))
+PY
+fi
 
 artifact_dir="${trace_root}/${run_id}"
 set +e
