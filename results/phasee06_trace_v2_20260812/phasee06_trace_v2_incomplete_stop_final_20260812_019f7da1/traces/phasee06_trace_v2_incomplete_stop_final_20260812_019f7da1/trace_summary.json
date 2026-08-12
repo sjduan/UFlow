@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "run_id": "phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1",
+  "mode": "full",
+  "categories": "control,object,transfer,channel,chunk,acl,backend,counter",
+  "event_count": 14,
+  "dropped_events": 0,
+  "complete": false,
+  "raw_args_exported": true,
+  "incomplete_event_ids": [30000],
+  "duplicate_outcome_event_ids": [],
+  "context_mismatch_event_ids": [],
+  "total_duration_us": 3522.224,
+  "stages": [
+    {"category":"control","name":"command.handle","count":5,"total_us":1389.346,"avg_us":277.869,"max_us":879.266,"bytes":0},
+    {"category":"object","name":"object.create","count":2,"total_us":1229.110,"avg_us":614.555,"max_us":876.695,"bytes":536870912},
+    {"category":"backend","name":"backend.hbm_alloc","count":1,"total_us":830.894,"avg_us":830.894,"max_us":830.894,"bytes":268435456},
+    {"category":"transfer","name":"transfer.plan","count":1,"total_us":57.232,"avg_us":57.232,"max_us":57.232,"bytes":268435456},
+    {"category":"transfer","name":"transfer.queue_wait","count":1,"total_us":9.371,"avg_us":9.371,"max_us":9.371,"bytes":268435456},
+    {"category":"transfer","name":"transfer.enqueue","count":1,"total_us":6.271,"avg_us":6.271,"max_us":6.271,"bytes":268435456},
+    {"category":"object","name":"object.mark_ready","count":1,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":0},
+    {"category":"transfer","name":"transfer.plan_outcome","count":1,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":268435456},
+    {"category":"transfer","name":"transfer.submit","count":1,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":268435456}
+  ],
+  "transfers": [
+    {"event_id":30000,"schema_version":2,"plan_id":20001,"src_object_id":100,"dst_object_id":101,"bytes":268435456,"bytes_done":null,"channel_lane_id":null,"channel_device_id":null,"channel_chunk_bytes":null,"channel_chunk_count":null,"channel_pinned_footprint_bytes":null,"channel_chunks_transferred":null,"channel_stream_create_count":null,"channel_event_reuse_count":null,"channel_event_record_count":null,"channel_event_wait_count":null,"ssd_io_bytes":null,"ssd_read_bytes":null,"ssd_write_bytes":null,"relay_stage_count":null,"actual_latency_us":null,"actual_bandwidth_gib_s":null,"channel_lane_wait_us":null,"channel_cpu_copy_us":null,"channel_acl_copy_us":null,"channel_acl_submit_us":null,"channel_acl_wait_us":null,"channel_wall_us":null,"channel_queue_wait_us":null,"channel_worker_execute_us":null,"channel_overlap_ratio":null,"ssd_io_submit_us":null,"ssd_io_wait_us":null,"ssd_io_bandwidth_gib_s":null,"relay_ddr_hbm_us":null,"relay_total_us":null,"direct_setup_us":null,"direct_register_us":null,"direct_fadvise_us":null,"direct_readahead_us":null,"direct_madvise_hugepage_us":null,"direct_madvise_willneed_us":null,"direct_madvise_populate_us":null,"direct_pretouch_us":null,"direct_mlock_us":null,"direct_acl_us":null,"direct_total_us":null,"fallback_used":null,"channel_pipeline_overlap":null,"src_medium":"ssd","dst_medium":"hbm","direction":"h2d","operation":"copy","requested_mode":"relay","planned_path":"ssd_to_hbm_via_ddr","planned_engine":"ssd_hbm_relay_ddr","status":null,"actual_path":null,"actual_engine":null,"fallback_reason":null,"error_code":null,"error_message":null,"channel_direction":null,"direct_candidate":null,"direct_kind":null,"sum_of_span_durations_us":15.642,"span_minus_actual_latency_us":null,"outcome_count":0,"context_consistent":true,"stage_durations_us":{"queue_wait":9.371,"submit":6.271}}
+  ],
+  "path_summary": [
+
+  ]
+}

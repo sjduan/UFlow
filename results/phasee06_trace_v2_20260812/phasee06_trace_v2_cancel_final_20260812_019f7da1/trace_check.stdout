@@ -1,0 +1,66 @@
+{
+  "artifacts": {
+    "summary.md": "/tmp/proj_output/phasee06_trace_v2_cancel_final_20260812_019f7da1/traces/phasee06_trace_v2_cancel_final_20260812_019f7da1/summary.md",
+    "trace_events.json": "/tmp/proj_output/phasee06_trace_v2_cancel_final_20260812_019f7da1/traces/phasee06_trace_v2_cancel_final_20260812_019f7da1/trace_events.json",
+    "trace_summary.csv": "/tmp/proj_output/phasee06_trace_v2_cancel_final_20260812_019f7da1/traces/phasee06_trace_v2_cancel_final_20260812_019f7da1/trace_summary.csv",
+    "trace_summary.json": "/tmp/proj_output/phasee06_trace_v2_cancel_final_20260812_019f7da1/traces/phasee06_trace_v2_cancel_final_20260812_019f7da1/trace_summary.json",
+    "transfer_summary.csv": "/tmp/proj_output/phasee06_trace_v2_cancel_final_20260812_019f7da1/traces/phasee06_trace_v2_cancel_final_20260812_019f7da1/transfer_summary.csv"
+  },
+  "case": "cancel",
+  "dropped_events": 0,
+  "event_count": 81,
+  "event_vs_trace_mismatches": [],
+  "events": [
+    {
+      "actual_path": "ssd_to_hbm_via_ddr",
+      "event_id": 30000,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_hbm_via_ddr",
+      "required_stages": [
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ssd_to_hbm_via_ddr",
+      "event_id": 30001,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_hbm_via_ddr",
+      "required_stages": [
+        "outcome"
+      ],
+      "status": "cancelled"
+    }
+  ],
+  "incomplete_count": 0,
+  "reason": "",
+  "schema_version": 2,
+  "status": "PASS",
+  "transfer_count": 2
+}

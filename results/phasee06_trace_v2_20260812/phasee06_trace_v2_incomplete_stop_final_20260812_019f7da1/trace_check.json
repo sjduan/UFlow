@@ -1,0 +1,35 @@
+{
+  "artifacts": {
+    "summary.md": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/summary.md",
+    "trace_events.json": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/trace_events.json",
+    "trace_summary.csv": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/trace_summary.csv",
+    "trace_summary.json": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/trace_summary.json",
+    "transfer_summary.csv": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/transfer_summary.csv"
+  },
+  "case": "incomplete",
+  "dropped_events": 0,
+  "event_count": 14,
+  "event_vs_trace_mismatches": [
+    "event 30000 has 0 terminal outcomes"
+  ],
+  "events": [
+    {
+      "actual_path": null,
+      "event_id": 30000,
+      "missing_stages": [],
+      "observed_stages": [
+        "queue_wait",
+        "submit"
+      ],
+      "outcome_count": 0,
+      "planned_path": null,
+      "required_stages": [],
+      "status": null
+    }
+  ],
+  "incomplete_count": 1,
+  "reason": "1 validation error(s)",
+  "schema_version": 2,
+  "status": "FAIL",
+  "transfer_count": 1
+}

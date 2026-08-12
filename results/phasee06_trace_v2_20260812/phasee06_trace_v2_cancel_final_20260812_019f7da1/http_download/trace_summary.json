@@ -1,0 +1,42 @@
+{
+  "schema_version": 2,
+  "run_id": "phasee06_trace_v2_cancel_final_20260812_019f7da1",
+  "mode": "full",
+  "categories": "control,object,transfer,channel,chunk,acl,backend,counter",
+  "event_count": 81,
+  "dropped_events": 0,
+  "complete": true,
+  "raw_args_exported": true,
+  "incomplete_event_ids": [],
+  "duplicate_outcome_event_ids": [],
+  "context_mismatch_event_ids": [],
+  "total_duration_us": 1039950.945,
+  "stages": [
+    {"category":"control","name":"command.handle","count":25,"total_us":192449.566,"avg_us":7697.983,"max_us":73351.379,"bytes":0},
+    {"category":"transfer","name":"transfer.worker_execute","count":2,"total_us":151609.828,"avg_us":75804.914,"max_us":76641.843,"bytes":536870912},
+    {"category":"transfer","name":"transfer.execute","count":2,"total_us":151485.514,"avg_us":75742.757,"max_us":76547.640,"bytes":536870912},
+    {"category":"transfer","name":"relay.ssd_to_ddr","count":8,"total_us":129720.996,"avg_us":16215.124,"max_us":17597.917,"bytes":536870912},
+    {"category":"transfer","name":"ssd.read_wait","count":8,"total_us":129653.144,"avg_us":16206.643,"max_us":17588.376,"bytes":536870912},
+    {"category":"object","name":"object.release","count":4,"total_us":114493.465,"avg_us":28623.366,"max_us":36341.621,"bytes":0},
+    {"category":"transfer","name":"transfer.queue_wait","count":2,"total_us":75557.589,"avg_us":37778.795,"max_us":75547.819,"bytes":536870912},
+    {"category":"backend","name":"backend.hbm_free","count":2,"total_us":71651.020,"avg_us":35825.510,"max_us":36316.410,"bytes":536870912},
+    {"category":"acl","name":"relay.ddr_to_hbm","count":8,"total_us":20883.712,"avg_us":2610.464,"max_us":3475.401,"bytes":536870912},
+    {"category":"object","name":"object.create","count":4,"total_us":1500.302,"avg_us":375.076,"max_us":508.391,"bytes":1073741824},
+    {"category":"backend","name":"backend.hbm_alloc","count":2,"total_us":843.945,"avg_us":421.972,"max_us":461.689,"bytes":536870912},
+    {"category":"transfer","name":"transfer.plan","count":2,"total_us":94.894,"avg_us":47.447,"max_us":54.332,"bytes":536870912},
+    {"category":"transfer","name":"transfer.enqueue","count":2,"total_us":6.970,"avg_us":3.485,"max_us":5.930,"bytes":536870912},
+    {"category":"object","name":"object.mark_ready","count":2,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":0},
+    {"category":"transfer","name":"transfer.complete","count":2,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":536870912},
+    {"category":"transfer","name":"transfer.outcome","count":2,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":536870912},
+    {"category":"transfer","name":"transfer.plan_outcome","count":2,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":536870912},
+    {"category":"transfer","name":"transfer.submit","count":2,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":536870912}
+  ],
+  "transfers": [
+    {"event_id":30000,"schema_version":2,"plan_id":20001,"src_object_id":100,"dst_object_id":101,"bytes":268435456,"bytes_done":268435456,"channel_lane_id":null,"channel_device_id":null,"channel_chunk_bytes":null,"channel_chunk_count":null,"channel_pinned_footprint_bytes":null,"channel_chunks_transferred":null,"channel_stream_create_count":null,"channel_event_reuse_count":null,"channel_event_record_count":null,"channel_event_wait_count":null,"ssd_io_bytes":268435456,"ssd_read_bytes":268435456,"ssd_write_bytes":0,"relay_stage_count":2,"actual_latency_us":76615.312,"actual_bandwidth_gib_s":3.263055,"channel_lane_wait_us":null,"channel_cpu_copy_us":null,"channel_acl_copy_us":null,"channel_acl_submit_us":null,"channel_acl_wait_us":null,"channel_wall_us":null,"channel_queue_wait_us":null,"channel_worker_execute_us":null,"channel_overlap_ratio":null,"ssd_io_submit_us":35.771,"ssd_io_wait_us":64951.238,"ssd_io_bandwidth_gib_s":3.849041,"relay_ddr_hbm_us":11087.782,"relay_total_us":76152.933,"direct_setup_us":null,"direct_register_us":null,"direct_fadvise_us":null,"direct_readahead_us":null,"direct_madvise_hugepage_us":null,"direct_madvise_willneed_us":null,"direct_madvise_populate_us":null,"direct_pretouch_us":null,"direct_mlock_us":null,"direct_acl_us":null,"direct_total_us":null,"fallback_used":false,"channel_pipeline_overlap":null,"src_medium":"ssd","dst_medium":"hbm","direction":"h2d","operation":"copy","requested_mode":"relay","planned_path":"ssd_to_hbm_via_ddr","planned_engine":"ssd_hbm_relay_ddr","status":"complete","actual_path":"ssd_to_hbm_via_ddr","actual_engine":"ssd_hbm_relay_ddr","fallback_reason":"","error_code":"","error_message":"","channel_direction":null,"direct_candidate":null,"direct_kind":null,"sum_of_span_durations_us":294316.153,"span_minus_actual_latency_us":217700.841,"outcome_count":1,"context_consistent":true,"stage_durations_us":{"complete":0.000,"execute":76547.640,"queue_wait":9.770,"relay_stage":76102.131,"ssd_io":65008.839,"submit":5.930,"worker_execute":76641.843}},
+    {"event_id":30001,"schema_version":2,"plan_id":20003,"src_object_id":102,"dst_object_id":103,"bytes":268435456,"bytes_done":0,"channel_lane_id":null,"channel_device_id":null,"channel_chunk_bytes":null,"channel_chunk_count":null,"channel_pinned_footprint_bytes":null,"channel_chunks_transferred":null,"channel_stream_create_count":null,"channel_event_reuse_count":null,"channel_event_record_count":null,"channel_event_wait_count":null,"ssd_io_bytes":null,"ssd_read_bytes":null,"ssd_write_bytes":null,"relay_stage_count":null,"actual_latency_us":1071.784,"actual_bandwidth_gib_s":0.000000,"channel_lane_wait_us":null,"channel_cpu_copy_us":null,"channel_acl_copy_us":null,"channel_acl_submit_us":null,"channel_acl_wait_us":null,"channel_wall_us":null,"channel_queue_wait_us":null,"channel_worker_execute_us":null,"channel_overlap_ratio":null,"ssd_io_submit_us":null,"ssd_io_wait_us":null,"ssd_io_bandwidth_gib_s":null,"relay_ddr_hbm_us":null,"relay_total_us":null,"direct_setup_us":null,"direct_register_us":null,"direct_fadvise_us":null,"direct_readahead_us":null,"direct_madvise_hugepage_us":null,"direct_madvise_willneed_us":null,"direct_madvise_populate_us":null,"direct_pretouch_us":null,"direct_mlock_us":null,"direct_acl_us":null,"direct_total_us":null,"fallback_used":false,"channel_pipeline_overlap":null,"src_medium":"ssd","dst_medium":"hbm","direction":"h2d","operation":"copy","requested_mode":"relay","planned_path":"ssd_to_hbm_via_ddr","planned_engine":"ssd_hbm_relay_ddr","status":"cancelled","actual_path":"ssd_to_hbm_via_ddr","actual_engine":"ssd_hbm_relay_ddr","fallback_reason":"","error_code":"cancelled","error_message":"cancelled by client","channel_direction":null,"direct_candidate":null,"direct_kind":null,"sum_of_span_durations_us":364601.600,"span_minus_actual_latency_us":363529.816,"outcome_count":1,"context_consistent":true,"stage_durations_us":{"complete":0.000,"execute":74937.874,"queue_wait":75547.819,"relay_stage":74502.577,"ssd_io":64644.305,"submit":1.040,"worker_execute":74967.985}}
+  ],
+  "path_summary": [
+    {"direction":"h2d","actual_path":"ssd_to_hbm_via_ddr","actual_engine":"ssd_hbm_relay_ddr","status":"cancelled","count":1,"bytes":0,"fallback_count":0,"latency_us_p50":1071.784000,"latency_us_p95":1071.784000,"bandwidth_gib_s_p50":0.000000,"bandwidth_gib_s_p95":0.000000},
+    {"direction":"h2d","actual_path":"ssd_to_hbm_via_ddr","actual_engine":"ssd_hbm_relay_ddr","status":"complete","count":1,"bytes":268435456,"fallback_count":0,"latency_us_p50":76615.312000,"latency_us_p95":76615.312000,"bandwidth_gib_s_p50":3.263055,"bandwidth_gib_s_p95":3.263055}
+  ]
+}

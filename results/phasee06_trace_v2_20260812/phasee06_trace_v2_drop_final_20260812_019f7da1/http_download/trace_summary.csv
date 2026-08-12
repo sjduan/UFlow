@@ -1,0 +1,8 @@
+category,name,count,total_us,avg_us,max_us,bytes
+control,command.handle,2,2024.912,1012.456,2011.952,0
+object,object.create,1,2007.572,2007.572,2007.572,67108864
+backend,backend.ddr_prepare_fast_profile,1,1808.034,1808.034,1808.034,67108864
+backend,backend.ddr_pretouch,1,1800.043,1800.043,1800.043,67108864
+backend,backend.hbm_alloc,1,335.843,335.843,335.843,67108864
+backend,backend.ddr_madvise_hugepage,1,1.070,1.070,1.070,67108864
+object,object.mark_ready,1,0.000,0.000,0.000,0

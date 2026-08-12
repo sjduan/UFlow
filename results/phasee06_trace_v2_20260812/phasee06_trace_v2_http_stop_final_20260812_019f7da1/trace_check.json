@@ -1,0 +1,402 @@
+{
+  "artifacts": {
+    "summary.md": "/tmp/proj_output/phasee06_trace_v2_http_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_http_stop_final_20260812_019f7da1/summary.md",
+    "trace_events.json": "/tmp/proj_output/phasee06_trace_v2_http_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_http_stop_final_20260812_019f7da1/trace_events.json",
+    "trace_summary.csv": "/tmp/proj_output/phasee06_trace_v2_http_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_http_stop_final_20260812_019f7da1/trace_summary.csv",
+    "trace_summary.json": "/tmp/proj_output/phasee06_trace_v2_http_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_http_stop_final_20260812_019f7da1/trace_summary.json",
+    "transfer_summary.csv": "/tmp/proj_output/phasee06_trace_v2_http_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_http_stop_final_20260812_019f7da1/transfer_summary.csv"
+  },
+  "case": "regular",
+  "dropped_events": 0,
+  "event_count": 440,
+  "event_vs_trace_mismatches": [],
+  "events": [
+    {
+      "actual_path": "ddr_hbm_direct_thp",
+      "event_id": 30000,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ddr_to_hbm",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "hbm_ddr_direct_thp",
+      "event_id": 30001,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ddr",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ddr_hbm_direct_thp",
+      "event_id": 30002,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ddr_to_hbm",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "hbm_ddr_direct_thp",
+      "event_id": 30003,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ddr",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "memfd_pinned_hbm_channel",
+      "event_id": 30004,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "cpu_copy",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_create",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ddr_to_hbm",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "cpu_copy",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "memfd_pinned_hbm_channel",
+      "event_id": 30005,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_submit",
+        "acl_wait",
+        "complete",
+        "cpu_copy",
+        "execute",
+        "lane_acquire",
+        "lane_busy",
+        "lane_create",
+        "lane_release",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ddr",
+      "required_stages": [
+        "acl_submit",
+        "acl_wait",
+        "cpu_copy",
+        "lane_acquire",
+        "lane_busy",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ssd_to_ddr",
+      "event_id": 30006,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_ddr",
+      "required_stages": [
+        "outcome",
+        "queue_wait",
+        "ssd_io",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ddr_to_ssd",
+      "event_id": 30007,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ddr_to_ssd",
+      "required_stages": [
+        "outcome",
+        "queue_wait",
+        "ssd_io",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ssd_to_hbm_via_ddr",
+      "event_id": 30008,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_hbm_via_ddr",
+      "required_stages": [
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "hbm_to_ssd_via_ddr",
+      "event_id": 30009,
+      "missing_stages": [],
+      "observed_stages": [
+        "complete",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ssd_via_ddr",
+      "required_stages": [
+        "outcome",
+        "queue_wait",
+        "relay_stage",
+        "ssd_io",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ssd_to_hbm_direct",
+      "event_id": 30010,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_wait",
+        "complete",
+        "direct_setup",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_hbm_direct",
+      "required_stages": [
+        "acl_wait",
+        "direct_setup",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "hbm_to_ssd_direct",
+      "event_id": 30011,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_wait",
+        "complete",
+        "direct_setup",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ssd_direct",
+      "required_stages": [
+        "acl_wait",
+        "direct_setup",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "ssd_to_hbm_direct",
+      "event_id": 30012,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_wait",
+        "complete",
+        "direct_setup",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "ssd_to_hbm_direct",
+      "required_stages": [
+        "acl_wait",
+        "direct_setup",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    },
+    {
+      "actual_path": "hbm_to_ssd_direct",
+      "event_id": 30013,
+      "missing_stages": [],
+      "observed_stages": [
+        "acl_wait",
+        "complete",
+        "direct_setup",
+        "execute",
+        "outcome",
+        "queue_wait",
+        "submit",
+        "worker_execute"
+      ],
+      "outcome_count": 1,
+      "planned_path": "hbm_to_ssd_direct",
+      "required_stages": [
+        "acl_wait",
+        "direct_setup",
+        "outcome",
+        "queue_wait",
+        "worker_execute"
+      ],
+      "status": "complete"
+    }
+  ],
+  "incomplete_count": 0,
+  "reason": "",
+  "schema_version": 2,
+  "status": "PASS",
+  "transfer_count": 14
+}

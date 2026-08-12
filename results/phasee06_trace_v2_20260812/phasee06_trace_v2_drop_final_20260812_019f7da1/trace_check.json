@@ -1,0 +1,21 @@
+{
+  "artifacts": {
+    "summary.md": "/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1/summary.md",
+    "trace_events.json": "/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1/trace_events.json",
+    "trace_summary.csv": "/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1/trace_summary.csv",
+    "trace_summary.json": "/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1/trace_summary.json",
+    "transfer_summary.csv": "/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1/transfer_summary.csv"
+  },
+  "case": "drop",
+  "dropped_events": 37,
+  "event_count": 8,
+  "event_vs_trace_mismatches": [
+    "trace reports 37 dropped event(s)"
+  ],
+  "events": [],
+  "incomplete_count": 0,
+  "reason": "1 validation error(s)",
+  "schema_version": 2,
+  "status": "FAIL",
+  "transfer_count": 0
+}

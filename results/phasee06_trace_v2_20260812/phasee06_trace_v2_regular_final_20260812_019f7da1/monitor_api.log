@@ -1,0 +1,10 @@
+{"event":"monitor_api_started","host":"127.0.0.1","port":18082,"daemon_socket":"/tmp/phasee06_trace_v2_regular_final_20260812_019f7da1.sock"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /healthz HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /healthz HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/observability HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/status HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/artifact?run_id=phasee06_trace_v2_regular_final_20260812_019f7da1&file=trace_events.json HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/artifact?run_id=phasee06_trace_v2_regular_final_20260812_019f7da1&file=trace_summary.json HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/artifact?run_id=phasee06_trace_v2_regular_final_20260812_019f7da1&file=trace_summary.csv HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/artifact?run_id=phasee06_trace_v2_regular_final_20260812_019f7da1&file=transfer_summary.csv HTTP/1.1\" 200 -"}
+{"event":"monitor_api_access","client":"127.0.0.1","message":"\"GET /v1/trace/artifact?run_id=phasee06_trace_v2_regular_final_20260812_019f7da1&file=summary.md HTTP/1.1\" 200 -"}

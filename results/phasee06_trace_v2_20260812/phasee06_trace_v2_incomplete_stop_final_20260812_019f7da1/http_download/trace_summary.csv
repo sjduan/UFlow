@@ -1,0 +1,10 @@
+category,name,count,total_us,avg_us,max_us,bytes
+control,command.handle,5,1389.346,277.869,879.266,0
+object,object.create,2,1229.110,614.555,876.695,536870912
+backend,backend.hbm_alloc,1,830.894,830.894,830.894,268435456
+transfer,transfer.plan,1,57.232,57.232,57.232,268435456
+transfer,transfer.queue_wait,1,9.371,9.371,9.371,268435456
+transfer,transfer.enqueue,1,6.271,6.271,6.271,268435456
+object,object.mark_ready,1,0.000,0.000,0.000,0
+transfer,transfer.plan_outcome,1,0.000,0.000,0.000,268435456
+transfer,transfer.submit,1,0.000,0.000,0.000,268435456

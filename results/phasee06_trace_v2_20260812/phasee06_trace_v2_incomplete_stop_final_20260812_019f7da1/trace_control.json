@@ -1,0 +1,42 @@
+{
+  "start": {
+    "status": "ok",
+    "trace_buffered_events": "0",
+    "trace_categories": "control,object,transfer,channel,chunk,acl,backend,counter",
+    "trace_dropped_events": "0",
+    "trace_enabled": "true",
+    "trace_error": "",
+    "trace_event_count": "0",
+    "trace_flush_count": "0",
+    "trace_flushed": "false",
+    "trace_include_args": "true",
+    "trace_last_flush_dir": "",
+    "trace_last_flush_error": "",
+    "trace_max_events": "200000",
+    "trace_mode": "full",
+    "trace_output_dir": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces",
+    "trace_run_id": "phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1",
+    "trace_started_at_us": "1786531390792272",
+    "trace_stopped_at_us": "0"
+  },
+  "stop": {
+    "status": "ok",
+    "trace_buffered_events": "14",
+    "trace_categories": "control,object,transfer,channel,chunk,acl,backend,counter",
+    "trace_dropped_events": "0",
+    "trace_enabled": "false",
+    "trace_error": "",
+    "trace_event_count": "14",
+    "trace_flush_count": "1",
+    "trace_flushed": "true",
+    "trace_include_args": "true",
+    "trace_last_flush_dir": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1",
+    "trace_last_flush_error": "",
+    "trace_max_events": "200000",
+    "trace_mode": "full",
+    "trace_output_dir": "/tmp/proj_output/phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1/traces",
+    "trace_run_id": "phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1",
+    "trace_started_at_us": "1786531390792272",
+    "trace_stopped_at_us": "1786531390799929"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "/healthz": {
+    "bytes": 257,
+    "status": 200
+  },
+  "/v1/observability": {
+    "bytes": 6891,
+    "status": 200
+  },
+  "/v1/trace/status": {
+    "bytes": 909,
+    "status": 200
+  },
+  "summary.md": {
+    "bytes": 2257,
+    "status": 200
+  },
+  "trace_events.json": {
+    "bytes": 29297,
+    "status": 200
+  },
+  "trace_summary.csv": {
+    "bytes": 1152,
+    "status": 200
+  },
+  "trace_summary.json": {
+    "bytes": 7529,
+    "status": 200
+  },
+  "transfer_summary.csv": {
+    "bytes": 2154,
+    "status": 200
+  }
+}

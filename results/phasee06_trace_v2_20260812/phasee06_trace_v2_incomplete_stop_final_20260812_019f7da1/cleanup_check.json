@@ -1,0 +1,17 @@
+{
+  "checked_run_ids": [
+    "phasee06_v2_disabled_baseline2_20260812_019f7da1",
+    "phasee06_v2_disabled_candidate2_20260812_019f7da1",
+    "phasee06_trace_v2_regular_final_20260812_019f7da1",
+    "phasee06_trace_v2_fallback_final_20260812_019f7da1",
+    "phasee06_trace_v2_cancel_final_20260812_019f7da1",
+    "phasee06_trace_v2_incomplete_final_20260812_019f7da1",
+    "phasee06_trace_v2_drop_final_20260812_019f7da1",
+    "phasee06_trace_v2_http_final_20260812_019f7da1",
+    "phasee06_trace_v2_http_stop_final_20260812_019f7da1",
+    "phasee06_trace_v2_incomplete_stop_final_20260812_019f7da1"
+  ],
+  "live_test_processes": [],
+  "remaining_paths": [],
+  "status": "PASS"
+}

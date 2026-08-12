@@ -1,0 +1,2 @@
+UFLOW_E06_CASE case=bounded_drop_h2d_67108864 event_id=30000 size=67108864 mode=pinned_async status=complete planned_path=ddr_to_hbm actual_path=memfd_pinned_hbm_channel actual_engine=acl_pinned_async_channel fallback=False
+UFLOW_E06_PROFILE_PASS profile=drop transfers=1 artifact_dir=/tmp/proj_output/phasee06_trace_v2_drop_final_20260812_019f7da1/traces/phasee06_trace_v2_drop_final_20260812_019f7da1
