@@ -1,0 +1,16 @@
+{
+  "config": {
+    "api_base": "http://127.0.0.1:8082",
+    "daemon_socket": "/tmp/phasee04_monitor_v2_regular_20260812_019f7da1.sock",
+    "default_model_id": "phasee04-monitor",
+    "monitor_host": "127.0.0.1",
+    "monitor_port": 8082,
+    "poll_interval_ms": 2000,
+    "timeout_s": 2.0,
+    "trace_root": "/tmp/proj_output/phasee04_monitor_v2_regular_20260812_019f7da1/traces",
+    "tunnel_path": "local -> ssh serving-b -> openeuler-2403-DS",
+    "ui_url": "http://127.0.0.1:3000"
+  },
+  "ok": true,
+  "ts": 1786535397
+}

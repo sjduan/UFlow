@@ -1,0 +1,4 @@
+daemon_pid=2569751
+monitor_api_pid=2569790
+daemon_socket=ready
+monitor_health={  "ok": true,  "monitor_api": "ok",  "daemon_reachable": true,  "daemon_socket": "/tmp/phasee04_monitor_v2_regular_20260812_019f7da1.sock",  "latency_ms": 1.117,  "hbm_available": true,  "hbm_probe_error": "",  "detail": "",  "ts": 1786535397}

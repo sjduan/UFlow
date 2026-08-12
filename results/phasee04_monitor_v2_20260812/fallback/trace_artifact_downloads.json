@@ -1,0 +1,22 @@
+{
+  "summary.md": {
+    "bytes": 2928,
+    "status": 200
+  },
+  "trace_events.json": {
+    "bytes": 50711,
+    "status": 200
+  },
+  "trace_summary.csv": {
+    "bytes": 1484,
+    "status": 200
+  },
+  "trace_summary.json": {
+    "bytes": 13334,
+    "status": 200
+  },
+  "transfer_summary.csv": {
+    "bytes": 3314,
+    "status": 200
+  }
+}

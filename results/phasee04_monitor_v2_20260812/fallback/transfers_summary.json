@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "summary": {
+    "fallback_count": 2,
+    "fallback_rate": 0.5,
+    "generated_at": 1786535376,
+    "groups": [
+      {
+        "actual_engine": "ssd_hbm_file_mmap_acl_direct",
+        "actual_path": "hbm_to_ssd_direct",
+        "bytes": 268435456,
+        "count": 1,
+        "direction": "d2h",
+        "p50_bandwidth_gib_s": 0.0,
+        "p50_latency_us": 92.183,
+        "p95_bandwidth_gib_s": 0.0,
+        "p95_latency_us": 92.183,
+        "status": "failed"
+      },
+      {
+        "actual_engine": "ssd_hbm_relay_ddr",
+        "actual_path": "hbm_to_ssd_via_ddr",
+        "bytes": 268435456,
+        "count": 1,
+        "direction": "d2h",
+        "p50_bandwidth_gib_s": 1.465,
+        "p50_latency_us": 170693.887,
+        "p95_bandwidth_gib_s": 1.465,
+        "p95_latency_us": 170693.887,
+        "status": "complete"
+      },
+      {
+        "actual_engine": "ssd_hbm_file_mmap_acl_direct",
+        "actual_path": "ssd_to_hbm_direct",
+        "bytes": 268435456,
+        "count": 1,
+        "direction": "h2d",
+        "p50_bandwidth_gib_s": 0.0,
+        "p50_latency_us": 103.904,
+        "p95_bandwidth_gib_s": 0.0,
+        "p95_latency_us": 103.904,
+        "status": "failed"
+      },
+      {
+        "actual_engine": "ssd_hbm_relay_ddr",
+        "actual_path": "ssd_to_hbm_via_ddr",
+        "bytes": 268435456,
+        "count": 1,
+        "direction": "h2d",
+        "p50_bandwidth_gib_s": 3.289,
+        "p50_latency_us": 76017.859,
+        "p95_bandwidth_gib_s": 3.289,
+        "p95_latency_us": 76017.859,
+        "status": "complete"
+      }
+    ],
+    "has_more": false,
+    "sample_size": 4,
+    "skipped_event_ids": [],
+    "ssd_io": {
+      "read_bytes": 268435456,
+      "read_ops": 1,
+      "submit_us": 72.143,
+      "total_us": 219913.534,
+      "wait_us": 219841.391,
+      "write_bytes": 268435456,
+      "write_ops": 1
+    },
+    "window_limit": 200
+  },
+  "ts": 1786535376
+}

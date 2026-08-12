@@ -1,0 +1,77 @@
+{
+  "create": {
+    "auto_client_id": 2,
+    "command": {
+      "client_id": "2",
+      "dtype": "uint8",
+      "hint": "mandatory:ssd",
+      "model_id": "phasee04-monitor",
+      "name": "monitor.check.ssd.1m",
+      "nbytes": "1048576",
+      "op": "CreateDataObject",
+      "role": "user",
+      "shape": "1048576",
+      "target": "ssd:local0"
+    },
+    "ok": true,
+    "response": {
+      "actual_bytes": 1048576,
+      "address_kind": "file_path_offset",
+      "alignment_bytes": 4096,
+      "allowed_bytes": 1048576,
+      "allowed_offset_bytes": 0,
+      "backing_path": "/data/phasee04_monitor_v2_fallback_20260812_019f7da1_ssd/uflow_ssd_object_108",
+      "existing": 0,
+      "lease_id": 1008,
+      "medium": "ssd",
+      "object_id": 108,
+      "placement": "ssd",
+      "placement_id": 10008,
+      "requested_bytes": 1048576,
+      "ssd_io_mode": "buffered",
+      "ssd_offset_bytes": 0,
+      "ssd_path": "/data/phasee04_monitor_v2_fallback_20260812_019f7da1_ssd/uflow_ssd_object_108",
+      "ssd_preallocated": true,
+      "status": "ok",
+      "target": "ssd:local0"
+    },
+    "ts": 1786535376
+  },
+  "objects_while_live": {
+    "detail": "",
+    "model_id": "phasee04-monitor",
+    "object_count": 1,
+    "objects": [
+      {
+        "actual_bytes": 1048576,
+        "backing_path": "/data/phasee04_monitor_v2_fallback_20260812_019f7da1_ssd/uflow_ssd_object_108",
+        "ddr_path": "",
+        "dtype": "uint8",
+        "name": "monitor.check.ssd.1m",
+        "object_id": 108,
+        "placement": "ssd",
+        "requested_bytes": 1048576,
+        "role": "user",
+        "shape": "1048576",
+        "state": "Created",
+        "target": "ssd:local0"
+      }
+    ],
+    "ok": true,
+    "ts": 1786535376
+  },
+  "validated_object": {
+    "actual_bytes": 1048576,
+    "backing_path": "/data/phasee04_monitor_v2_fallback_20260812_019f7da1_ssd/uflow_ssd_object_108",
+    "ddr_path": "",
+    "dtype": "uint8",
+    "name": "monitor.check.ssd.1m",
+    "object_id": 108,
+    "placement": "ssd",
+    "requested_bytes": 1048576,
+    "role": "user",
+    "shape": "1048576",
+    "state": "Created",
+    "target": "ssd:local0"
+  }
+}

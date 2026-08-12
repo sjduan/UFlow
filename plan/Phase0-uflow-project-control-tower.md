@@ -143,13 +143,13 @@ Phase A 的主要未闭环项：
 |---|---|---:|---|---|
 | B00 SSD 架构 | `active` | E1 | Gate 0-4 已有实现路径，Gate 5/6 未闭环 | 以 B05/B06 完成作为 PhaseB 首轮收口 |
 | B01 SSD DataObject | `integrated` | E2 | SSD object/backend 已进入 `main@6179941`，旧 2号机文档验收通过 | 在 `serving-b` 纳入自动回归，并把计划/结果归档绑定到 commit |
-| B02 SSD↔DDR | `integrated` | E3 | 代码已集成；本地结果归档含 `UFLOW_B02_ALL_PASS`；E06 Trace v2 双向观测通过 | 自动回归与 E04 Monitor v2 观测验收 |
-| B03 SSD↔HBM relay | `integrated` | E3 | 代码已集成；完整 size matrix 含 `UFLOW_B03_ALL_PASS`；E06 runtime fallback trace 通过 | fallback 自动回归与 E04 Monitor v2 观测验收 |
+| B02 SSD↔DDR | `integrated` | E3 | 代码已集成；本地结果归档含 `UFLOW_B02_ALL_PASS`；E06 Trace v2 与 E04 Monitor v2 双向观测通过 | 纳入长期自动回归并收拢 PhaseB 证据基线 |
+| B03 SSD↔HBM relay | `integrated` | E3 | 代码已集成；完整 size matrix 含 `UFLOW_B03_ALL_PASS`；E06 runtime fallback trace 与 E04 Monitor v2 功能验收通过 | 纳入长期 fallback 回归；补齐 E04 当前页面截图证据 |
 | B04 SSD↔HBM direct candidates | `integrated-policy-first-version` | E3 | 代码已集成；`auto` 对 `>=256MiB` 采用 `file_mmap_acl_direct`；256MiB+ 汇总优于 relay | 必须始终标注 logical direct；完成 B05 repeat 稳定性与 runtime fallback 收口 |
 | B05 优化与策略 | `active-planning` | E0 | 指标与 benchmark 设计存在，尚无实施闭环 | 重复矩阵、p50/p90、冷热页、fallback、阈值升级规则全部通过 |
 | B06 Prepare/Prefetch | `planned` | E0 | 只有 API/事件/验收草案 | 实现显式 prepare/prefetch，证明 prepared hit 与未准备 fallback |
 
-PhaseB 的 SSD runtime、SDK、examples 与说明已通过 `ba78523`、`59fec14`、`6179941` 进入稳定代码基线；E06 Trace v2 又在 `5f47d22` 前后的提交链补齐了 SSD↔DDR、SSD↔HBM relay/logical direct/runtime fallback 的正式 event-level 观测。剩余治理风险转为：PhaseB 计划和大量结果目录仍是 untracked，代码 commit 与原始证据尚未形成一个可移植的归档索引；E04 Monitor v2 仍不能完整展示这些新路径。
+PhaseB 的 SSD runtime、SDK、examples 与说明已通过 `ba78523`、`59fec14`、`6179941` 进入稳定代码基线；E06 Trace v2 在 `5f47d22` 前后的提交链补齐 event-level 观测，E04 Monitor v2 在 `1f9749f`～`3e932b1` 又完成三介质容量、recent transfers、planned→actual、logical direct/runtime fallback 与 trace artifact 的统一读模型和 UI。剩余治理风险转为：PhaseB 计划和大量结果目录仍是 untracked，代码 commit 与原始证据尚未形成一个可移植的归档索引；E04 当前页面截图仍待用户显式共享 loopback tab 后补录。
 
 ### 4.4 Phase C：UB 超节点仿真
 
@@ -189,7 +189,7 @@ PhaseB 的 SSD runtime、SDK、examples 与说明已通过 `ba78523`、`59fec14`
 | E01 统一 IDL 与 local exchange | `done-local` | E2 | Object/Placement/Plan/Cost/Event 与本机交换矩阵通过 | 正式跨语言 wire IDL |
 | E02 service-owned executor | `done-local` | E2 | daemon 持有 HBM/DDR runtime view，MarkDirty/Ready 与负例通过 | 真实跨进程 event 与更完整一致性 |
 | E03 DDR 策略 benchmark | `done-local` | E3 | memfd + THP/pre-touch 结论形成并进入默认路径 | 拓扑/硬件变化后的自动重校准 |
-| E04 monitor/lifecycle | `v1-historical / env-migration+v2-planned` | E2 / E0 | v1 在旧 machine2 环境通过；当前需先迁移 serving-b 单 alias，再实现三介质容量、最近传输、planned→actual、fallback 与 trace artifact 联动 | 实施 `PhaseE-04 §13` 的 E04-M0～M6，并通过 G0～G8 |
+| E04 monitor/lifecycle | `v2-integrated / functional-current-pass / visual-evidence-pending` | E3 | E04-M0～M6 已进入 `main@3e932b1`；serving-b regular 24 transfers 与 fallback 4 transfers、Trace/HTTP/cleanup、单 alias lifecycle 全部通过；canonical dirty repo 未改 | 用户手工打开并共享 loopback tab，补录 regular/fallback/v1/stale 四类截图后关闭 G1～G8 的视觉证据项 |
 | E05 transfer channel | `done-fallback` | E2 | pinned channel manager 作为 fallback 成立 | topology-driven budget、并发/双卡补测 |
 | E06 trace framework | `done / integrated / current-pass` | E3 | Trace schema v2、唯一 terminal outcome、HBM↔DDR/SSD 多路径分段、五件套与 per-transfer summary 已进入 `main@5f47d22`；serving-b G0～G10 已闭环 | 由 E04 Monitor v2 消费最终合同；后续只做 Perfetto protobuf/多 daemon clock 等扩展 |
 | E07 direct default | `done-local` | E3 | memfd direct ACL async 成为 DDR↔HBM 默认 | 已由 E08 优化小对象固定开销 |
@@ -197,7 +197,7 @@ PhaseB 的 SSD runtime、SDK、examples 与说明已通过 `ba78523`、`59fec14`
 
 Phase E 距离总纲完整目标仍缺：
 
-- E04 对当前 HBM↔DDR direct/pinned 与 SSD↔DDR、SSD↔HBM relay/logical direct/runtime fallback 的统一 monitor 展示；Trace v2 已闭环；
+- E04 多介质 Monitor v2 功能闭环已完成；只剩当前环境页面截图证据，不能把截图缺口外推为数据面或接口未完成；
 - 正式跨语言 RPC/IDL；
 - 全局多 daemon placement planner 和持久化 catalog/recovery；
 - namespace/tenant、鉴权和 share permission；
@@ -210,16 +210,16 @@ Phase E 距离总纲完整目标仍缺：
 
 ## 5. 当前关键路径
 
-### P0-A：补齐当前多介质传输的 Observability（E06 已完成，剩余 E04）
+### P0-A：补齐当前多介质传输的 Observability（功能已完成，剩余 E04 视觉证据）
 
 实施顺序固定为：
 
 1. E06 已用隔离树绕开并保护 `serving-b/openeuler-2403-DS` 的 remote `e854fa0` dirty repo；Trace v2 实现进入 `data-service/main@5f47d22`，G0～G10 证据位于 `results/phasee06_trace_v2_20260812/`。
-2. 当前实施 `PhaseE-04 §13`：先完成 serving-b helper 迁移，再基于最终 event/trace 合同增加三介质容量、最近传输、planned→actual、fallback 和 artifact UI。
-3. 在 `serving-b/openeuler-2403-DS` 现场选择健康 device，覆盖 Monitor 的 HBM↔DDR direct/pinned、SSD↔DDR、SSD↔HBM relay/logical direct/runtime fallback 双向矩阵。
-4. 把 daemon `PollEvent`、raw trace、transfer summary、HTTP JSON 和 UI 抽样对齐到同一 event id。
+2. `PhaseE-04 §13` 的 serving-b helper、三介质容量、最近传输、planned→actual、fallback 和 artifact UI 已实现并进入 `main@3e932b1`。
+3. `serving-b/openeuler-2403-DS` 现场选择 device 7，regular/fallback 双向矩阵、HTTP/event/Trace 对齐和最终清理均通过；证据位于 `results/phasee04_monitor_v2_20260812/`。
+4. 当前只补视觉产物：用户手工打开 loopback 页面并显式共享 tab 后，保存 regular、fallback、v1-compatible、stale/offline 截图并完成同 event id 抽样。
 
-退出条件：E06 G0～G10 已通过；待 E04 G0～G8 通过后关闭整个 P0-A。最终代码、环境快照、五件套 trace、API 快照、UI 截图、命令、清理记录和 commit 必须可复核；logical direct 无误标，planner relay 与 runtime fallback 无混淆。
+退出条件：代码、环境快照、五件套 trace、API 快照、命令、清理记录和 commit 已可复核；logical direct 无误标，planner relay 与 runtime fallback 无混淆。待四类当前页面截图归档后关闭整个 P0-A；不得用截图缺失否定已通过的功能门禁，也不得在截图未归档时声称完整 DoD。
 
 ### P0-B：恢复 serving 当前主线兼容性
 
@@ -276,7 +276,7 @@ PhaseC 先完成仿真语义和故障闭环，PhaseD 再做远端 HBM。不得�
 | R8 | 单机成功被外推为生产多机能力 | 高 | C/D 无实施文档和证据 | 状态表严格保持 `not-started` |
 | R9 | 本机缺少 Cargo，无法现场复核 Rust | 中 | `cargo` 不在 PATH；Python compileall 通过 | 远端构建产物绑定 commit；补 CI |
 | R10 | 文档和 run dir 多但缺统一索引 | 中 | 计划约 1.5 万行、结果目录分散 | 每次验证回填本文的基线、命令、结果路径 |
-| R11 | Monitor 仍落后当前 HBM↔DDR direct 与 SSD 多路径，可能看不到 runtime fallback 或误报 direct | 中高 | E06 Trace v2 已通过双向矩阵并输出 planned→actual/fallback/logical-direct；E04 UI 仍无完整 transfer history | 直接实施 E04 §13，消费已冻结的 Trace v2/PollEvent 合同并完成 UI/API 一致性检查 |
+| R11 | Monitor 多介质语义曾落后，可能看不到 runtime fallback 或误报 physical direct | 低（功能已关闭，视觉证据待补） | E04 `1f9749f`～`3e932b1` 已实现 bounded history、planned→actual、fallback、logical direct 标签并通过 serving-b 矩阵与 UI 合同测试 | 补录四类当前页面截图；后续回归必须保留 logical direct 与 runtime fallback 断言 |
 | R12 | 大量历史性能/功能结论来自旧 2号机，可能被误当成 serving-b 当前能力 | 高 | 旧文档常写 NPU7、5.10 kernel、双跳链路；新主机/kernel/device 尚未逐项复验 | 所有新 run 强制保存 serving-b 环境快照；kernel/SSD/DMA/带宽结论优先重跑，未重跑保持 historical-pass |
 | R13 | serving-b 容器 remote repo 落后本地主线且 dirty，覆盖式同步可能丢失远端证据 | 高 | remote `e854fa0` 仍保持原状；E06 在 `/tmp/phasee06_v2_stage_019f7da1` 隔离验证，没有修改 canonical repo | E04 继续采用无损隔离/明确 baseline；禁用 `--delete`、reset/checkout/clean，另行治理 canonical repo |
 
@@ -300,13 +300,13 @@ PhaseC 先完成仿真语义和故障闭环，PhaseD 再做远端 HBM。不得�
 | 检查 | 结果 |
 |---|---|
 | Python SDK 与 PhaseB examples `compileall` | Pass |
-| Rust `cargo fmt/check/test` | serving-b 容器 PASS；E06 最终为 8 个 Rust tests |
+| Rust `cargo fmt/check/test` | serving-b 容器 PASS；E04/E06 合并基线为 10 个 daemon Rust tests |
 | PhaseB-02 本地结果摘要 | `UFLOW_B02_ALL_PASS` |
 | PhaseB-03 本地结果摘要 | `UFLOW_B03_ALL_PASS` |
 | PhaseB-04 final policy | 256MiB-2GiB `auto` 使用 logical direct；summary 记录 direct/relay 比值 |
 | PhaseB 代码基线 | SSD runtime/SDK/examples/docs 已通过 `ba78523`、`59fec14`、`6179941` 进入 `data-service/main` |
 | PhaseB 计划与结果 | 仍为 untracked；代码已集成不等于证据归档已收口 |
-| Monitor 当前适配 | API 可透出部分新 stats/event 字段；UI 仍以 DDR-first 为主，无 recent transfers、SSD stage、planned→actual/fallback 完整视图 |
+| Monitor 当前适配 | Monitor v2 已完成三介质容量、bounded recent transfers、SSD/relay/direct stage、planned→actual/fallback、Trace 五件套与 v1 N/A 兼容；serving-b 功能通过，当前页面截图待补 |
 | Trace 当前适配 | Trace v2 已完成；regular 144 transfers/3144 events、fallback 14/396、cancel 2/81，均 0 drop/mismatch；incomplete/drop 负例按预期失败；五件套与 HTTP 出口通过 |
 | serving-b 连通性 | `ssh serving-b` 成功；hostname `liteserver-560t-1.novalocal`，IP `192.169.0.85`，`openeuler-2403-DS` running |
 | serving-b repo | `/home/sj/git/data-service@e854fa0`，触发 dubious ownership 且 working tree dirty；核心源码 SHA-256 抽查 16/16 等同 local `6179941`，但其余 artifacts/provenance 未收口；只读命令使用临时 `-c safe.directory=...` |
@@ -353,3 +353,4 @@ owner:
 | 2026-08-12 | 开发环境迁移到 abcd 四机体系；统一默认 `ssh serving-b -> openeuler-2403-DS -> /home/sj/git/data-service`，停止使用旧 HOST1/HOST2/next 双跳口径；旧 1/2号机结果保留为 historical evidence，新增 R12 防止跨机器误用性能结论。 |
 | 2026-08-12 | 现场只读验证 serving-b 与目标容器；发现 remote repo 仍为 `e854fa0` dirty、落后 local `6179941`，且 Git 有 dubious ownership 检查。新增 R13，并把无损收口远端执行基线设为 E06/E04 开工前置门禁。 |
 | 2026-08-12 | 完成 PhaseE-06 Trace v2：代码提交链至 `5f47d22`，在 serving-b 隔离树完成 G0～G10；regular/fallback/cancel/incomplete/drop/HTTP/disabled 证据同步至 `results/phasee06_trace_v2_20260812/`。P0-A 从“E06+E04 待实施”推进为“E06 完成，仅余 E04 Monitor v2”；R11 降为 Monitor 单侧风险。 |
+| 2026-08-12 | 完成 PhaseE-04 Monitor v2 功能闭环：代码提交链 `1f9749f`～`3e932b1`；serving-b/device 7 的 regular 24 transfers、fallback 4 transfers、Trace/HTTP/cleanup、helper lifecycle 与 G0 合同测试通过，证据归档到 `results/phasee04_monitor_v2_20260812/`。Codex Browser 的 loopback URL policy 阻止当前截图，故 P0-A 只保留 regular/fallback/v1/stale 四类视觉证据门禁，R11 降为低风险。 |

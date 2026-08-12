@@ -1,0 +1,65 @@
+date=2026-08-12
+ssh_alias=serving-b
+host=liteserver-560t-1.novalocal
+container=openeuler-2403-DS
+container_image=image-transfer/old2-openeuler-2403-ds:20260706_194906
+container_id=68527857ede227ab53199265eb6ff41e51314a5dba28f9b78d7c072a30a273dd
+container_state=running
+kernel=5.10.0-182.0.0.95.r2220_157.hce2.aarch64
+canonical_repo=/home/sj/git/data-service
+canonical_commit=e854fa0003f719a2c451c07ba77a81ea1fa58eac
+canonical_worktree=dirty-preserved
+isolated_repo=/tmp/phasee04_v2_stage_019f7da1
+local_code_commit=3e932b16fca43750526b1bd6e2a64cbdd2fcdbdd
+selected_device=7
+final_port_8082=free
+final_matching_test_processes=0
+regular_socket=removed
+regular_ddr_root=removed
+regular_ssd_root=removed
+fallback_socket=removed
+fallback_ddr_root=removed
+fallback_ssd_root=removed
+
+Canonical worktree entries observed and deliberately left untouched:
+
+ M crates/uf-core/src/idl.rs
+ M crates/uf-daemon/src/acl_backend/mod.rs
+ M crates/uf-daemon/src/capabilities.rs
+ M crates/uf-daemon/src/catalog.rs
+ M crates/uf-daemon/src/common.rs
+ M crates/uf-daemon/src/main.rs
+ M crates/uf-daemon/src/object_service.rs
+ M crates/uf-daemon/src/stats_service.rs
+ M crates/uf-daemon/src/transfer_executor.rs
+ M crates/uf-daemon/src/transfer_planner.rs
+ M sdk/python/uflow/__init__.py
+ M sdk/python/uflow/client.py
+ M sdk/python/uflow/idl.py
+ M sdk/python/uflow/objects.py
+?? build/
+?? build_output/
+?? crates/uf-daemon/src/ssd_backend.rs
+?? crates/uf-daemon/src/ssd_direct.rs
+?? examples/phasea08/__pycache__/
+?? examples/phasea09/__pycache__/
+?? examples/phaseb01/
+?? examples/phaseb02/
+?? examples/phaseb03/
+?? examples/phaseb04/
+?? plan/PhaseB-00-ssd-backend-architecture.md
+?? plan/PhaseB-01-local-ssd-dataobject.md
+?? plan/PhaseB-02-ssd-ddr-transfer.md
+?? plan/PhaseB-03-ssd-hbm-relay-transfer.md
+?? plan/PhaseB-04-ssd-hbm-direct-path.md
+?? plan/PhaseB-05-ssd-transfer-optimization-and-strategy.md
+?? plan/PhaseB-06-ssd-hbm-prepare-prefetch.md
+?? results/phaseb02_ssd_ddr_20260706_182327/
+?? results/phaseb03_ssd_hbm_relay_20260706_182638/
+?? results/phaseb04_ssd_hbm_direct_20260706_213907/
+?? results/phaseb04_ssd_hbm_direct_20260706_221911/
+?? results/phaseb04_ssd_hbm_direct_final_policy_20260707.csv
+?? results/phaseb04_ssd_hbm_direct_longrun_20260707_summary.md
+?? results/phaseb04_ssd_hbm_direct_policy_report.html
+?? sdk/python/uflow/__pycache__/
+?? target/

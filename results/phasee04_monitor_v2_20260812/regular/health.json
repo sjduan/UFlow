@@ -1,0 +1,11 @@
+{
+  "daemon_reachable": true,
+  "daemon_socket": "/tmp/phasee04_monitor_v2_regular_20260812_019f7da1.sock",
+  "detail": "",
+  "hbm_available": true,
+  "hbm_probe_error": "",
+  "latency_ms": 2.004,
+  "monitor_api": "ok",
+  "ok": true,
+  "ts": 1786535397
+}

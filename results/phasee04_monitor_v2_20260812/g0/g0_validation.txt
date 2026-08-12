@@ -1,0 +1,94 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/tmp/phasee04_v2_target_019f7da1/debug/deps/uf_acl_sys-b727529afce899f1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/tmp/phasee04_v2_target_019f7da1/debug/deps/uf_core-c345996ac38f080c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/tmp/phasee04_v2_target_019f7da1/debug/deps/uf_daemon-054e05338d194654)
+
+running 10 tests
+test ssd_direct::tests::validation_failpoint_requires_both_switches ... ok
+test trace::tests::enriches_transfer_context_and_stage_role ... ok
+test trace::tests::event_finishing_after_trace_is_disabled_is_not_buffered ... ok
+test trace::tests::atomic_write_failure_does_not_publish_or_leave_temp_file ... ok
+test transfer_executor::monitor_tests::list_transfer_events_is_stable_bounded_and_filterable ... ok
+test trace::tests::emits_real_instant_and_hides_raw_args_without_losing_summary ... ok
+test transfer_executor::monitor_tests::poll_event_includes_persisted_plan_context_without_live_objects ... ok
+test trace::tests::transfer_csv_has_stable_columns_and_nullable_fields ... ok
+test trace::tests::marks_missing_duplicate_and_dropped_traces_incomplete ... ok
+test trace::tests::escapes_json_csv_and_writes_five_atomic_artifacts ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests uf_acl_sys
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests uf_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+test_model_objects_use_medium_neutral_backing_path (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_model_objects_use_medium_neutral_backing_path) ... ok
+test_observability_remains_compatible_with_v1_daemon (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_observability_remains_compatible_with_v1_daemon) ... ok
+test_partial_result_skips_disappeared_event (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_partial_result_skips_disappeared_event) ... ok
+test_summary_groups_paths_and_aggregates_fallback_and_ssd_io (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_summary_groups_paths_and_aggregates_fallback_and_ssd_io) ... ok
+test_transfer_query_is_bounded_and_rejects_invalid_filters (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_transfer_query_is_bounded_and_rejects_invalid_filters) ... ok
+test_transfer_window_success_invalid_offline_and_partial (tools.tests.test_uflow_monitor_api.MonitorApiUnitTests.test_transfer_window_success_invalid_offline_and_partial) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+OK
+test_ancestor_chain_contains_self_and_parent (test_check_remote_cleanup.CheckRemoteCleanupTests.test_ancestor_chain_contains_self_and_parent) ... ok
+test_explicit_launcher_substring_is_ignored (test_check_remote_cleanup.CheckRemoteCleanupTests.test_explicit_launcher_substring_is_ignored) ... ok
+test_process_scan_excludes_ancestor_chain (test_check_remote_cleanup.CheckRemoteCleanupTests.test_process_scan_excludes_ancestor_chain) ... ok
+test_dropped_events_fail_explicitly (test_check_trace_v2.TraceV2CheckerTest.test_dropped_events_fail_explicitly) ... ok
+test_missing_outcome_fails_explicitly (test_check_trace_v2.TraceV2CheckerTest.test_missing_outcome_fails_explicitly) ... ok
+test_numeric_stage_csv_formatting_is_equivalent (test_check_trace_v2.TraceV2CheckerTest.test_numeric_stage_csv_formatting_is_equivalent) ... ok
+test_transfer_csv_mismatch_fails_explicitly (test_check_trace_v2.TraceV2CheckerTest.test_transfer_csv_mismatch_fails_explicitly) ... ok
+test_valid_fixture_passes (test_check_trace_v2.TraceV2CheckerTest.test_valid_fixture_passes) ... ok
+test_fails_over_threshold (test_compare_disabled_benchmark.DisabledBenchmarkCompareTest.test_fails_over_threshold) ... ok
+test_passes_under_threshold (test_compare_disabled_benchmark.DisabledBenchmarkCompareTest.test_passes_under_threshold) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.305s
+
+OK
+TAP version 13
+# Subtest: v1 stats with missing Monitor v2 fields render as N/A
+ok 1 - v1 stats with missing Monitor v2 fields render as N/A
+  ---
+  duration_ms: 2.69992
+  ...
+# Subtest: logical direct is never labeled physical direct
+ok 2 - logical direct is never labeled physical direct
+  ---
+  duration_ms: 1.434409
+  ...
+# Subtest: runtime fallback and metadata mismatch remain distinct
+ok 3 - runtime fallback and metadata mismatch remain distinct
+  ---
+  duration_ms: 0.281761
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 155.493158
+UFLOW_E04_G0_PASS
