@@ -7,12 +7,45 @@ import os
 from pathlib import Path
 
 
-def process_command_lines() -> list[tuple[int, str]]:
+def ancestor_pids(start_pid: int | None = None) -> set[int]:
+    """Return the current process and its ancestor chain.
+
+    Remote runners commonly carry the run id in their ssh/docker/batch command
+    line.  Those wrapper processes are expected to remain alive until this
+    checker exits and must not be reported as leaked workload processes.
+    """
+
+    current = os.getpid() if start_pid is None else start_pid
+    ancestors: set[int] = set()
+    while current > 0 and current not in ancestors:
+        ancestors.add(current)
+        try:
+            status = Path(f"/proc/{current}/status").read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError:
+            break
+        parent = 0
+        for line in status.splitlines():
+            if line.startswith("PPid:"):
+                try:
+                    parent = int(line.split(":", 1)[1].strip())
+                except ValueError:
+                    parent = 0
+                break
+        current = parent
+    return ancestors
+
+
+def process_command_lines(
+    excluded_pids: set[int] | None = None,
+) -> list[tuple[int, str]]:
+    excluded = {os.getpid()} if excluded_pids is None else excluded_pids
     processes: list[tuple[int, str]] = []
     for entry in Path("/proc").glob("[0-9]*"):
         try:
             pid = int(entry.name)
-            if pid == os.getpid():
+            if pid in excluded:
                 continue
             command = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(
                 "utf-8", "replace"
@@ -43,7 +76,7 @@ def main() -> int:
     remaining_paths = [str(path) for path in expected_removed if path.exists()]
     live_processes = [
         {"pid": pid, "command": command}
-        for pid, command in process_command_lines()
+        for pid, command in process_command_lines(ancestor_pids())
         if "check_remote_cleanup.py" not in command
         and any(run_id in command for run_id in run_ids)
     ]
