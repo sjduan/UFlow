@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UFlow 分层概念架构</title>
+  <style>
+    :root {
+      --ink: #152a3a;
+      --muted: #607383;
+      --border: #27445b;
+      --grid: #d8e0e6;
+      --paper: #ffffff;
+      --wash: #f4f7f9;
+      --blue: #3478b9;
+      --blue-soft: #dceaf7;
+      --blue-deep: #245b8d;
+      --green: #2f9b73;
+      --green-soft: #d9efe6;
+      --coral: #df6658;
+      --coral-soft: #f8ddd8;
+      --gold: #c48a21;
+      --gold-soft: #f8eccb;
+      --purple: #7657a5;
+      --purple-soft: #e9e2f3;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; min-height: 100%; background: #edf2f5; }
+    body { font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); }
+    main { width: min(1664px, 100%); margin: 0 auto; padding: 32px; }
+    figure {
+      margin: 0;
+      padding: 32px;
+      border: 1px solid var(--grid);
+      border-radius: 24px;
+      background: var(--paper);
+      box-shadow: 0 16px 42px rgba(21, 42, 58, .08);
+    }
+    .figure-frame { overflow-x: auto; }
+    svg { display: block; width: 100%; min-width: 900px; height: auto; }
+    figcaption {
+      margin: 18px 16px 2px;
+      color: #3f5667;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <figure>
+      <div class="figure-frame">
+        <svg viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+          <title id="title">UFlow 分层概念架构</title>
+          <desc id="desc">上层 Client 通过统一接口访问中间的数据管理 daemon，由 daemon 管理数据对象、生命周期、放置、传输和观测，并调度下层 HBM、DDR 与 SSD 异构存储。</desc>
+          <defs>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#3478b9"></path>
+            </marker>
+            <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#607383"></path>
+            </marker>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#152a3a" flood-opacity="0.10"></feDropShadow>
+            </filter>
+            <style>
+              .ink { fill: #152a3a; }
+              .muted { fill: #607383; }
+              .layer { fill: #f7f9fb; stroke: #d8e0e6; stroke-width: 2; }
+              .layer-accent { fill: #edf5fb; stroke: #3478b9; stroke-width: 3; }
+              .title { font-size: 38px; font-weight: 800; letter-spacing: -.7px; }
+              .subtitle { font-size: 18px; font-weight: 400; }
+              .layer-title { font-size: 20px; font-weight: 750; }
+              .layer-note { font-size: 15px; font-weight: 500; }
+              .card-title { font-size: 20px; font-weight: 750; }
+              .card-note { font-size: 15px; font-weight: 500; }
+              .module-title { font-size: 18px; font-weight: 750; }
+              .module-note { font-size: 14px; font-weight: 500; }
+              .flow-label { fill: #245b8d; font-size: 15px; font-weight: 700; }
+              .api-text { fill: white; font-size: 18px; font-weight: 750; }
+              .small-chip { fill: #607383; font-size: 13px; font-weight: 700; }
+              .primary-flow { fill: none; stroke: #3478b9; stroke-width: 5; marker-end: url(#arrow-blue); }
+              .secondary-flow { fill: none; stroke: #607383; stroke-width: 3; stroke-dasharray: 8 7; marker-start: url(#arrow-muted); marker-end: url(#arrow-muted); }
+            </style>
+          </defs>
+
+          <text x="800" y="55" text-anchor="middle" class="ink title">UFlow：统一数据管理连接应用与异构存储</text>
+          <text x="800" y="88" text-anchor="middle" class="muted subtitle">Client 无需感知底层介质差异，数据对象的放置、迁移与观测由 daemon 统一负责</text>
+
+          <!-- Client layer -->
+          <rect x="70" y="120" width="1460" height="210" rx="22" class="layer"></rect>
+          <rect x="96" y="142" width="154" height="34" rx="17" fill="#d9efe6"></rect>
+          <text x="173" y="160" text-anchor="middle" dominant-baseline="middle" fill="#216f54" class="layer-title">Client 层</text>
+          <text x="275" y="162" class="muted layer-note">面向业务与运行时的统一访问入口</text>
+
+          <g filter="url(#shadow)">
+            <rect x="215" y="196" width="330" height="102" rx="16" fill="#ffffff" stroke="#2f9b73" stroke-width="2.4"></rect>
+            <circle cx="258" cy="247" r="24" fill="#d9efe6" stroke="#2f9b73" stroke-width="2"></circle>
+            <path d="M247 248 L255 256 L270 238" fill="none" stroke="#2f9b73" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+            <text x="298" y="235" class="ink card-title">推理 / Serving</text>
+            <text x="298" y="264" class="muted card-note">权重、KV Cache、激活数据</text>
+
+            <rect x="635" y="196" width="330" height="102" rx="16" fill="#ffffff" stroke="#2f9b73" stroke-width="2.4"></rect>
+            <circle cx="678" cy="247" r="24" fill="#d9efe6" stroke="#2f9b73" stroke-width="2"></circle>
+            <path d="M666 255 H690 M672 239 H684 M675 239 V255 M681 239 V255" fill="none" stroke="#2f9b73" stroke-width="3" stroke-linecap="round"></path>
+            <text x="718" y="235" class="ink card-title">训练 / Runtime</text>
+            <text x="718" y="264" class="muted card-note">Tensor、Checkpoint、临时工作区</text>
+
+            <rect x="1055" y="196" width="330" height="102" rx="16" fill="#ffffff" stroke="#2f9b73" stroke-width="2.4"></rect>
+            <circle cx="1098" cy="247" r="24" fill="#d9efe6" stroke="#2f9b73" stroke-width="2"></circle>
+            <path d="M1087 240 L1079 247 L1087 254 M1109 240 L1117 247 L1109 254 M1103 235 L1093 259" fill="none" stroke="#2f9b73" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+            <text x="1138" y="235" class="ink card-title">SDK / CLI</text>
+            <text x="1138" y="264" class="muted card-note">创建、查询、传输与诊断</text>
+          </g>
+
+          <!-- Request arrow -->
+          <path d="M800 330 V382" class="primary-flow"></path>
+          <rect x="682" y="344" width="236" height="30" rx="15" fill="#ffffff" stroke="#b7d1e6" stroke-width="1.5"></rect>
+          <text x="800" y="359" text-anchor="middle" dominant-baseline="middle" class="flow-label">统一对象与传输请求</text>
+
+          <!-- Daemon layer -->
+          <rect x="70" y="390" width="1460" height="318" rx="24" class="layer-accent"></rect>
+          <rect x="96" y="412" width="310" height="38" rx="19" fill="#3478b9"></rect>
+          <text x="251" y="431" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" class="layer-title">UFlow 数据管理 daemon</text>
+          <text x="430" y="433" class="muted layer-note">统一控制面 + 数据面执行器</text>
+
+          <rect x="188" y="474" width="1224" height="48" rx="12" fill="#245b8d"></rect>
+          <text x="800" y="498" text-anchor="middle" dominant-baseline="middle" class="api-text">Unified DataObject / Placement / Transfer / Event API</text>
+
+          <g filter="url(#shadow)">
+            <rect x="188" y="548" width="270" height="126" rx="16" fill="#ffffff" stroke="#3478b9" stroke-width="2.4"></rect>
+            <rect x="210" y="570" width="54" height="28" rx="14" fill="#dceaf7"></rect>
+            <text x="237" y="584" text-anchor="middle" dominant-baseline="middle" fill="#245b8d" class="small-chip">01</text>
+            <text x="286" y="589" class="ink module-title">Catalog &amp; Lifecycle</text>
+            <text x="216" y="625" class="muted module-note">对象、租约、状态与命名空间</text>
+            <text x="216" y="650" class="muted module-note">资源申请与自动回收</text>
+
+            <rect x="506" y="548" width="270" height="126" rx="16" fill="#ffffff" stroke="#3478b9" stroke-width="2.4"></rect>
+            <rect x="528" y="570" width="54" height="28" rx="14" fill="#dceaf7"></rect>
+            <text x="555" y="584" text-anchor="middle" dominant-baseline="middle" fill="#245b8d" class="small-chip">02</text>
+            <text x="604" y="589" class="ink module-title">Placement Planner</text>
+            <text x="534" y="625" class="muted module-note">容量、拓扑、代价与策略</text>
+            <text x="534" y="650" class="muted module-note">选择目标介质与执行路径</text>
+
+            <rect x="824" y="548" width="270" height="126" rx="16" fill="#ffffff" stroke="#3478b9" stroke-width="2.4"></rect>
+            <rect x="846" y="570" width="54" height="28" rx="14" fill="#dceaf7"></rect>
+            <text x="873" y="584" text-anchor="middle" dominant-baseline="middle" fill="#245b8d" class="small-chip">03</text>
+            <text x="922" y="589" class="ink module-title">Transfer Engine</text>
+            <text x="852" y="625" class="muted module-note">Direct / Relay / Fallback</text>
+            <text x="852" y="650" class="muted module-note">异步调度与完成事件</text>
+
+            <rect x="1142" y="548" width="270" height="126" rx="16" fill="#ffffff" stroke="#3478b9" stroke-width="2.4"></rect>
+            <rect x="1164" y="570" width="54" height="28" rx="14" fill="#dceaf7"></rect>
+            <text x="1191" y="584" text-anchor="middle" dominant-baseline="middle" fill="#245b8d" class="small-chip">04</text>
+            <text x="1240" y="589" class="ink module-title">Monitor &amp; Trace</text>
+            <text x="1170" y="625" class="muted module-note">容量、路径、延迟与吞吐</text>
+            <text x="1170" y="650" class="muted module-note">planned → actual 可观测</text>
+          </g>
+
+          <!-- Resource arrow -->
+          <path d="M800 708 V760" class="primary-flow"></path>
+          <rect x="650" y="720" width="300" height="30" rx="15" fill="#ffffff" stroke="#b7d1e6" stroke-width="1.5"></rect>
+          <text x="800" y="735" text-anchor="middle" dominant-baseline="middle" class="flow-label">按需分配 · 路径执行 · 生命周期管理</text>
+
+          <!-- Storage layer -->
+          <rect x="70" y="768" width="1460" height="202" rx="22" class="layer"></rect>
+          <rect x="96" y="790" width="214" height="34" rx="17" fill="#e9e2f3"></rect>
+          <text x="203" y="807" text-anchor="middle" dominant-baseline="middle" fill="#5d4385" class="layer-title">异构存储设备层</text>
+          <text x="334" y="809" class="muted layer-note">统一编排性能、容量与持久性</text>
+
+          <g filter="url(#shadow)">
+            <rect x="230" y="844" width="300" height="94" rx="16" fill="#f8ddd8" stroke="#df6658" stroke-width="2.5"></rect>
+            <circle cx="274" cy="891" r="23" fill="#ffffff" stroke="#df6658" stroke-width="2"></circle>
+            <path d="M263 884 H285 M263 891 H285 M263 898 H285" stroke="#df6658" stroke-width="3" stroke-linecap="round"></path>
+            <text x="316" y="882" class="ink card-title">HBM</text>
+            <text x="316" y="910" class="muted card-note">高带宽 · 低延迟 · 设备内存</text>
+
+            <rect x="650" y="844" width="300" height="94" rx="16" fill="#f8eccb" stroke="#c48a21" stroke-width="2.5"></rect>
+            <circle cx="694" cy="891" r="23" fill="#ffffff" stroke="#c48a21" stroke-width="2"></circle>
+            <rect x="682" y="879" width="24" height="24" rx="3" fill="none" stroke="#c48a21" stroke-width="3"></rect>
+            <path d="M686 875 V879 M694 875 V879 M702 875 V879 M686 903 V907 M694 903 V907 M702 903 V907" stroke="#c48a21" stroke-width="2"></path>
+            <text x="736" y="882" class="ink card-title">DDR</text>
+            <text x="736" y="910" class="muted card-note">主机内存 · 中等容量 · Relay</text>
+
+            <rect x="1070" y="844" width="300" height="94" rx="16" fill="#e9e2f3" stroke="#7657a5" stroke-width="2.5"></rect>
+            <circle cx="1114" cy="891" r="23" fill="#ffffff" stroke="#7657a5" stroke-width="2"></circle>
+            <ellipse cx="1114" cy="882" rx="12" ry="5" fill="none" stroke="#7657a5" stroke-width="2.5"></ellipse>
+            <path d="M1102 882 V900 C1102 907 1126 907 1126 900 V882 M1102 891 C1102 898 1126 898 1126 891" fill="none" stroke="#7657a5" stroke-width="2.5"></path>
+            <text x="1156" y="882" class="ink card-title">SSD / NVMe</text>
+            <text x="1156" y="910" class="muted card-note">大容量 · 持久化 · 分层存储</text>
+          </g>
+
+          <path d="M535 891 H645" class="secondary-flow"></path>
+          <path d="M955 891 H1065" class="secondary-flow"></path>
+        </svg>
+      </div>
+      <figcaption><strong>核心思想：</strong>Client 只面向统一数据抽象；UFlow daemon 屏蔽 HBM、DDR、SSD/NVMe 的差异，并集中负责数据对象生命周期、放置规划、传输执行和全链路观测。</figcaption>
+    </figure>
+  </main>
+</body>
+</html>
