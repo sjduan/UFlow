@@ -2,7 +2,7 @@
 
 > 开发环境统一口径（2026-08-12）：所有新开发、构建和验证默认使用 `ssh serving-b` → `openeuler-2403-DS` → `/home/sj/git/data-service`；device 必须现场探测并记录。本文中的“1号机/2号机/NPU7”等旧称仅表示历史证据，不再是当前执行指令。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-08-31
 
 Status: active; this document is the single project-level status and future-work outlet.
 
@@ -83,7 +83,7 @@ ssh serving-b
 | Prepare/Prefetch 与异步预取 | 仅 B06 计划 | 未实现 |
 | 独立 daemon、SDK、monitor、trace | daemon/SDK 与 Trace v2 已落地 | Trace v2 已覆盖当前 HBM↔DDR direct/pinned 与 SSD 多路径；E04 Monitor v2 仍待实施 |
 | Topology/Capability/Cost 动态闭环 | 仅静态/局部探测 | 未达到总纲目标 |
-| ub-sim 多节点验证 | 未见 PhaseC 实施文档或执行证据 | 未开始 |
+| ub-sim 多节点验证 | PhaseC-00 总路线与 PhaseC-01 latest-ready 门禁已建立 | 规划已启动；最新上游锁定不可获取的 mem_service commit，尚无 UFlow 适配代码或执行证据 |
 | Remote DDR / UB shmem / SSU block | 无 backend 与端到端证据 | 未开始 |
 | Remote HBM direct/relay | 无 PhaseD 实施文档与执行证据 | 未开始 |
 | namespace/tenant、鉴权、持久化 catalog、recovery | 长期项 | 未完成 |
@@ -95,7 +95,7 @@ PhaseA 本机原型
   -> PhaseE 本机独立服务与 Transfer Engine 底座
      -> PhaseA-08/A09 serving 新路径
      -> PhaseB 本机 SSD 扩展
-  -> PhaseC UB/多节点仿真（尚未开始）
+  -> PhaseC UB/多节点仿真（规划已启动，C01 baseline gate 未通过）
   -> PhaseD 远端 HBM direct/relay（尚未开始）
 ```
 
@@ -153,17 +153,16 @@ PhaseB 的 SSD runtime、SDK、examples 与说明已通过 `ba78523`、`59fec14`
 
 ### 4.4 Phase C：UB 超节点仿真
 
-`plan/` 下当前没有 PhaseC 实施文档，代码审计也未发现 UB transport/ub-sim executor 的落地证据。
+PhaseC 总入口已经建立：
 
-状态：`not-started`，证据等级 E0。
+- `PhaseC-00-ub-sim-adaptation-roadmap.md`：冻结 UFlow/ub-sim 边界，并将 Phase C 拆成 C01～C08；
+- `PhaseC-01-ub-sim-upstream-sync-and-selftest.md`：负责持续维护 ub-sim `latest-ready` 基线。
 
-启动门禁：
+状态：`active-planning / code-absent / validation-not-run`，证据等级 E0。
 
-1. 冻结 topology、capability、cost table 的最小 IDL；
-2. 给出 ub-sim backend 与 executor 的明确代码边界；
-3. 覆盖 remote DDR import、remote SSD/SSU block、异步 completion、failure injection；
-4. 用至少两套 cost table 验证 a2a3 与 a5/UB-domain 的不同选路；
-5. 所有路径选择必须输出可解释 effort 和 fallback 原因。
+2026-08-31 的首次只读上游审计发现：本地 `ub_sim@7aec390` 落后 `origin/master@0fecb3b` 23 个提交；最新 root gitlink 与 lock 同时指向 `mem_service@4b13ec0`，但该对象无法从声明 remote 获取。当前 canonical checkout 的 `mem_service` 也与本地 root gitlink/lock 漂移。因此 C01 为 `latest-unreachable`，不得在 dirty checkout 上直接更新，也不得用相近 dependency revision 顶替。
+
+当前唯一启动门禁：先让最新 ub-sim root 与全部子模块可精确获取，在隔离 checkout 中完成 source/unit/contract、2-node integrated smoke 和按影响选择的 4/8-node canary，发布可机读 latest-ready manifest。C01 通过后再按 C02 中立合同、C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 的顺序实施。
 
 ### 4.5 Phase D：远端 HBM 与 relay
 
@@ -260,7 +259,7 @@ Phase E 距离总纲完整目标仍缺：
 
 ### P2：启动 PhaseC，再进入 PhaseD
 
-PhaseC 先完成仿真语义和故障闭环，PhaseD 再做远端 HBM。不得跳过仿真直接把本机静态 cost table 扩写成“跨节点已支持”。
+PhaseC 先执行 C01 latest-ready 基线门禁，再完成仿真语义和故障闭环；PhaseD 随后做远端 HBM。不得跳过 C01，也不得直接把本机静态 cost table 扩写成“跨节点已支持”。
 
 ## 6. 风险登记
 
@@ -279,6 +278,7 @@ PhaseC 先完成仿真语义和故障闭环，PhaseD 再做远端 HBM。不得�
 | R11 | Monitor 多介质语义曾落后，可能看不到 runtime fallback 或误报 physical direct | 低（功能已关闭，视觉证据待补） | E04 `1f9749f`～`3e932b1` 已实现 bounded history、planned→actual、fallback、logical direct 标签并通过 serving-b 矩阵与 UI 合同测试 | 补录四类当前页面截图；后续回归必须保留 logical direct 与 runtime fallback 断言 |
 | R12 | 大量历史性能/功能结论来自旧 2号机，可能被误当成 serving-b 当前能力 | 高 | 旧文档常写 NPU7、5.10 kernel、双跳链路；新主机/kernel/device 尚未逐项复验 | 所有新 run 强制保存 serving-b 环境快照；kernel/SSD/DMA/带宽结论优先重跑，未重跑保持 historical-pass |
 | R13 | serving-b 容器 remote repo 落后本地主线且 dirty，覆盖式同步可能丢失远端证据 | 高 | remote `e854fa0` 仍保持原状；E06 在 `/tmp/phasee06_v2_stage_019f7da1` 隔离验证，没有修改 canonical repo | E04 继续采用无损隔离/明确 baseline；禁用 `--delete`、reset/checkout/clean，另行治理 canonical repo |
+| R14 | ub-sim 最新根提交锁定了远端不可获取的子模块对象，latest 不等于 latest-ready | 高 | 2026-08-31：`origin/master@0fecb3b` 指向 `mem_service@4b13ec0`；显式 fetch 后仍 `not our ref`，而 mem_service `origin/master=366a335` | C01 fail closed；上游推送缺失对象或原子更新 gitlink+lock，隔离 checkout 通过 U0-U4 后才启动 C02 |
 
 ## 7. 本次审计事实
 
@@ -311,7 +311,7 @@ PhaseC 先完成仿真语义和故障闭环，PhaseD 再做远端 HBM。不得�
 | serving-b 连通性 | `ssh serving-b` 成功；hostname `liteserver-560t-1.novalocal`，IP `192.169.0.85`，`openeuler-2403-DS` running |
 | serving-b repo | `/home/sj/git/data-service@e854fa0`，触发 dubious ownership 且 working tree dirty；核心源码 SHA-256 抽查 16/16 等同 local `6179941`，但其余 artifacts/provenance 未收口；只读命令使用临时 `-c safe.directory=...` |
 | A09 基线新鲜度 | 过时；current main 已领先 62 commits |
-| PhaseC/PhaseD | 未发现实施文档或执行证据 |
+| PhaseC/PhaseD | PhaseC-00/01 计划已建立；C01 当前 `latest-unreachable`，仍无 UFlow UB 实现/运行证据；PhaseD 未启动 |
 
 ## 8. 后续更新协议
 
@@ -354,3 +354,4 @@ owner:
 | 2026-08-12 | 现场只读验证 serving-b 与目标容器；发现 remote repo 仍为 `e854fa0` dirty、落后 local `6179941`，且 Git 有 dubious ownership 检查。新增 R13，并把无损收口远端执行基线设为 E06/E04 开工前置门禁。 |
 | 2026-08-12 | 完成 PhaseE-06 Trace v2：代码提交链至 `5f47d22`，在 serving-b 隔离树完成 G0～G10；regular/fallback/cancel/incomplete/drop/HTTP/disabled 证据同步至 `results/phasee06_trace_v2_20260812/`。P0-A 从“E06+E04 待实施”推进为“E06 完成，仅余 E04 Monitor v2”；R11 降为 Monitor 单侧风险。 |
 | 2026-08-12 | 完成 PhaseE-04 Monitor v2 功能闭环：代码提交链 `1f9749f`～`3e932b1`；serving-b/device 7 的 regular 24 transfers、fallback 4 transfers、Trace/HTTP/cleanup、helper lifecycle 与 G0 合同测试通过，证据归档到 `results/phasee04_monitor_v2_20260812/`。Codex Browser 的 loopback URL policy 阻止当前截图，故 P0-A 只保留 regular/fallback/v1/stale 四类视觉证据门禁，R11 降为低风险。 |
+| 2026-08-31 | 启动 PhaseC 规划：新增 C00 总路线与 C01 ub-sim latest-ready 门禁，明确以数据共享和 topology-aware routing 为主线，任务顺序为 baseline→contract→topology/capability→remote DDR→remote SSD/SSU→routing→failure/replan→E2E。首次上游审计发现 `ub_sim origin/master@0fecb3b` 锁定不可获取的 `mem_service@4b13ec0`，新增 R14 并阻断 C02。 |
