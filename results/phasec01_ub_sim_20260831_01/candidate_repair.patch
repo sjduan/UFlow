@@ -1,0 +1,100 @@
+From d78143e604fe904a1f4567222e4f6fb3f2c277d8 Mon Sep 17 00:00:00 2001
+From: UFlow-PhaseC <uflow-phasec@localhost>
+Date: Mon, 31 Aug 2026 11:44:04 +0800
+Subject: [PATCH 1/2] Repair unavailable Memory Service pin for Phase C
+
+---
+ guest-linux/aarch64/mem_service.lock | 2 +-
+ mem_service                          | 2 +-
+ vendor/qemu_8.2.0_ub                 | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/guest-linux/aarch64/mem_service.lock b/guest-linux/aarch64/mem_service.lock
+index b0947cd..171baea 100644
+--- a/guest-linux/aarch64/mem_service.lock
++++ b/guest-linux/aarch64/mem_service.lock
+@@ -1,3 +1,3 @@
+ lock_version=1
+ version=0.1.0
+-revision=4b13ec0eae2d1f91a1e203fe2644c9df1e0765f6
++revision=366a335275d14c277dc44d3a75070f35951a8fb4
+diff --git a/mem_service b/mem_service
+index 4b13ec0..366a335 160000
+--- a/mem_service
++++ b/mem_service
+@@ -1 +1 @@
+-Subproject commit 4b13ec0eae2d1f91a1e203fe2644c9df1e0765f6
++Subproject commit 366a335275d14c277dc44d3a75070f35951a8fb4
+diff --git a/vendor/qemu_8.2.0_ub b/vendor/qemu_8.2.0_ub
+index 1595130..3a247cb 160000
+--- a/vendor/qemu_8.2.0_ub
++++ b/vendor/qemu_8.2.0_ub
+@@ -1 +1 @@
+-Subproject commit 15951308ea8fa1fbce600d434a5b8cf72e132f14
++Subproject commit 3a247cbe1532438f27805efe2e124c4ab882528f
+-- 
+2.43.0
+
+
+From c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072 Mon Sep 17 00:00:00 2001
+From: Super User <root@liteserver-560t-1.novalocal>
+Date: Mon, 31 Aug 2026 12:48:02 +0800
+Subject: [PATCH 2/2] Restore QEMU bridge compatibility alias
+
+---
+ crates/sim-qemu/include/linqu_ub_bridge.h |  7 +++++++
+ crates/sim-qemu/src/ffi.rs                | 20 ++++++++++++++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/crates/sim-qemu/include/linqu_ub_bridge.h b/crates/sim-qemu/include/linqu_ub_bridge.h
+index 38c4baa..4c91e6b 100644
+--- a/crates/sim-qemu/include/linqu_ub_bridge.h
++++ b/crates/sim-qemu/include/linqu_ub_bridge.h
+@@ -40,6 +40,13 @@ int linqu_ub_bridge_register_model_runtime_object_payload(LinquUbBridge *bridge,
+                                                           const uint8_t *payload,
+                                                           size_t payload_len);
+ 
++/* Compatibility alias for reachable QEMU revisions with the old name. */
++int linqu_ub_bridge_register_qwen3_runtime_object_payload(LinquUbBridge *bridge,
++                                                          const uint8_t *object_ref,
++                                                          size_t object_ref_len,
++                                                          const uint8_t *payload,
++                                                          size_t payload_len);
++
+ int linqu_ub_bridge_ring_doorbell(LinquUbBridge *bridge,
+                                   uint16_t endpoint_id,
+                                   uint32_t max_batch,
+diff --git a/crates/sim-qemu/src/ffi.rs b/crates/sim-qemu/src/ffi.rs
+index ba4a3c8..28a638b 100644
+--- a/crates/sim-qemu/src/ffi.rs
++++ b/crates/sim-qemu/src/ffi.rs
+@@ -193,6 +193,26 @@ pub extern "C" fn linqu_ub_bridge_register_model_runtime_object_payload(
+     }
+ }
+ 
++/// Backward-compatible entrypoint for QEMU revisions that predate the
++/// model-neutral runtime payload name.  The wire contract is identical; keep
++/// the alias until every reachable QEMU pin has migrated to the new symbol.
++#[unsafe(no_mangle)]
++pub extern "C" fn linqu_ub_bridge_register_qwen3_runtime_object_payload(
++    ptr: *mut LinquUbBridge,
++    object_ref_data: *const u8,
++    object_ref_len: usize,
++    payload: *const u8,
++    payload_len: usize,
++) -> c_int {
++    linqu_ub_bridge_register_model_runtime_object_payload(
++        ptr,
++        object_ref_data,
++        object_ref_len,
++        payload,
++        payload_len,
++    )
++}
++
+ fn bridge_mut<'a>(ptr: *mut LinquUbBridge) -> Result<&'a mut LinquUbBridge, c_int> {
+     unsafe { ptr.as_mut() }.ok_or(-1)
+ }
+-- 
+2.43.0
+

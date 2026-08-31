@@ -1,0 +1,74 @@
+captured_at_utc=2026-08-31T05:16:29Z
+execution_user=root
+workspace_root=/home/sj
+canonical_ub_sim=/home/sj/git/ub_sim
+candidate_ub_sim=/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim
+Linux liteserver-560t-1.novalocal 5.10.0-182.0.0.95.r2220_157.hce2.aarch64 #1 SMP Wed Jul 30 11:31:47 UTC 2025 aarch64 aarch64 aarch64 GNU/Linux
+uid=0(root) gid=0(root) groups=0(root)
+Architecture:                         aarch64
+CPU op-mode(s):                       64-bit
+Byte Order:                           Little Endian
+CPU(s):                               320
+On-line CPU(s) list:                  0-319
+Vendor ID:                            HiSilicon
+BIOS Vendor ID:                       HiSilicon
+Model name:                           -
+BIOS Model name:                      Kunpeng 920 7285Z To be filled by O.E.M. CPU @ 3.0GHz
+BIOS CPU family:                      280
+Model:                                0
+Thread(s) per core:                   1
+Core(s) per socket:                   80
+Socket(s):                            4
+Stepping:                             0x0
+Frequency boost:                      disabled
+CPU(s) scaling MHz:                   100%
+CPU max MHz:                          3000.0000
+CPU min MHz:                          400.0000
+BogoMIPS:                             200.00
+Flags:                                fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svef32mm svef64mm svebf16 i8mm bf16 dgh rng ecv
+L1d cache:                            20 MiB (320 instances)
+L1i cache:                            20 MiB (320 instances)
+L2 cache:                             400 MiB (320 instances)
+L3 cache:                             560 MiB (8 instances)
+NUMA node(s):                         8
+NUMA node0 CPU(s):                    0-39
+NUMA node1 CPU(s):                    40-79
+NUMA node2 CPU(s):                    80-119
+NUMA node3 CPU(s):                    120-159
+NUMA node4 CPU(s):                    160-199
+NUMA node5 CPU(s):                    200-239
+NUMA node6 CPU(s):                    240-279
+NUMA node7 CPU(s):                    280-319
+Vulnerability Gather data sampling:   Not affected
+Vulnerability Itlb multihit:          Not affected
+Vulnerability L1tf:                   Not affected
+Vulnerability Mds:                    Not affected
+Vulnerability Meltdown:               Not affected
+Vulnerability Mmio stale data:        Not affected
+Vulnerability Reg file data sampling: Not affected
+Vulnerability Retbleed:               Not affected
+Vulnerability Spec rstack overflow:   Not affected
+Vulnerability Spec store bypass:      Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:             Mitigation; __user pointer sanitization
+Vulnerability Spectre v2:             Not affected
+Vulnerability Srbds:                  Not affected
+Vulnerability Tsx async abort:        Not affected
+               total        used        free      shared  buff/cache   available
+Mem:           2.0Ti        33Gi       781Gi        10Gi       1.2Ti       1.9Ti
+Swap:             0B          0B          0B
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdb         10T  6.4T  3.6T  65% /home
+os_release:
+NAME="openEuler"
+VERSION="24.03 (LTS-SP2)"
+ID="openEuler"
+VERSION_ID="24.03"
+PRETTY_NAME="openEuler 24.03 (LTS-SP2)"
+ANSI_COLOR="0;31"
+
+toolchain:
+gcc (GCC) 12.3.1 (openEuler 12.3.1-99.oe2403sp2)
+rustc 1.95.0 (59807616e 2026-04-14)
+cargo 1.95.0 (f2d3ce0bd 2026-03-21)
+Python 3.11.6
+zsh 5.9 (aarch64-openEuler-linux-gnu)

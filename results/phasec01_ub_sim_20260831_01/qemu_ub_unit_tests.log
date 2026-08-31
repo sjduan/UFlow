@@ -1,0 +1,39 @@
+TAP version 13
+# random seed: R02Sfe1feeb3f3deb269a022915370e8a7ff
+1..6
+# Start of obmm-remote tests
+ok 1 /obmm-remote/inline
+ok 2 /obmm-remote/stats-reset
+ok 3 /obmm-remote/capacity-and-stale-token
+ok 4 /obmm-remote/multichild-reverse-completion
+ok 5 /obmm-remote/timeout-wins-once
+ok 6 /obmm-remote/stale-sink-and-retire
+# End of obmm-remote tests
+TAP version 13
+# random seed: R02S5c9eb2e6821c5b3b1076e29122cf073a
+1..7
+# Start of obmm-remote-model tests
+ok 1 /obmm-remote-model/golden-decision
+ok 2 /obmm-remote-model/capacity
+ok 3 /obmm-remote-model/virtual-due-and-duplicate
+ok 4 /obmm-remote-model/drop-does-not-publish
+ok 5 /obmm-remote-model/observability-reset
+ok 6 /obmm-remote-model/manifest-load
+ok 7 /obmm-remote-model/manifest-hash-mismatch
+# End of obmm-remote-model tests
+TAP version 13
+# random seed: R02S37d983f71185f19ca4157544d4f8a640
+1..9
+# Start of ub tests
+# Start of async_load tests
+ok 1 /ub/async_load/model-spec
+ok 2 /ub/async_load/context-id-logical-ordinal
+ok 3 /ub/async_load/pending-complete-events
+ok 4 /ub/async_load/scalar-value-matrix
+ok 5 /ub/async_load/pending-priority
+ok 6 /ub/async_load/fault-stale
+ok 7 /ub/async_load/replay-consume-once
+ok 8 /ub/async_load/replay-mismatch
+ok 9 /ub/async_load/capacity-fail-stop
+# End of async_load tests
+# End of ub tests

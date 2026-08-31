@@ -1,0 +1,22 @@
+    Finished `release` profile [optimized] target(s) in 0.03s
+[build_qemu_binary] configuring QEMU in /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+mkvenv: Creating non-isolated virtual environment at 'pyvenv'
+
+*** Ouch! ***
+
+found no usable distlib, please install it 
+
+
+[ub_common] build_qemu_binary.sh failed
+[ub_common] qemu preflight failed
+[ub_common] expected source: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub
+[ub_common] expected build dir: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+[ub_common] expected binary: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build/qemu-system-aarch64
+[ub_common] suggested script:
+[ub_common]   /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/scripts/build_qemu_binary.sh
+[ub_common] manual fallback:
+[ub_common]   cd /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub
+[ub_common]   mkdir -p build
+[ub_common]   cd build
+[ub_common]   ../configure --target-list=aarch64-softmmu
+[ub_common]   ninja -j8 qemu-system-aarch64

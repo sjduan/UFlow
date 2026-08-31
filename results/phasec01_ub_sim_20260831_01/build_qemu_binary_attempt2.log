@@ -1,0 +1,11 @@
+    Finished `release` profile [optimized] target(s) in 0.03s
+[build_qemu_binary] configuring QEMU in /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+python determined to be '/usr/local/python3.11.14/bin/python3'
+python version: Python 3.11.14
+mkvenv: Creating non-isolated virtual environment at 'pyvenv'
+
+*** Ouch! ***
+
+found no usable distlib, please install it 
+
+

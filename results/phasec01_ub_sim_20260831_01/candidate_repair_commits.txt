@@ -1,0 +1,2 @@
+c68cfb8 (HEAD) Restore QEMU bridge compatibility alias
+d78143e Repair unavailable Memory Service pin for Phase C

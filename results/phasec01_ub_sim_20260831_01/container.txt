@@ -1,0 +1,1 @@
+name=/openeuler-2403-DS id=dce7d2c36e575186d2b8b9828cd352277d9648ef34e38f46c6d8badb6a46a5c5 image=openeuler-2403:v0.0.5 image_id=sha256:c181a9e0583bdc3475f795c9811214f9c0f8b6f9d92e3238af96946c115b76c5 status=running

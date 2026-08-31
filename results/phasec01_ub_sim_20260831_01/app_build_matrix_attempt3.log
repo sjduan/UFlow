@@ -1,0 +1,57 @@
+[app-build-matrix] RUN app=ub_chat cmd=make -C apps/ub_chat
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+/usr/bin/aarch64-openEuler-linux-gcc -O2 -Wall -Wextra -static ub_chat.c -o ub_chat
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+rm -f ub_chat
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+[app-build-matrix] RUN app=ub_rpc cmd=make -C apps/ub_rpc
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+/usr/bin/aarch64-openEuler-linux-gcc -O2 -Wall -Wextra -static ub_rpc.c -o ub_rpc
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+rm -f ub_rpc
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+[app-build-matrix] RUN app=ub_tcp_each_server cmd=make -C apps/ub_tcp_each_server
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+/usr/bin/aarch64-openEuler-linux-gcc -O2 -Wall -Wextra -static ub_tcp_each_server.c -o ub_tcp_each_server
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+rm -f ub_tcp_each_server
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+[app-build-matrix] RUN app=ub_udma cmd=make -C apps/ub_udma
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+/usr/bin/aarch64-openEuler-linux-gcc -O2 -Wall -Wextra -static -I../.. -I../../.. ub_udma.c -o ub_udma
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+rm -f ub_udma
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+[app-build-matrix] RUN app=ub_obmm_pool cmd=make -C apps/ub_obmm_pool
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+/usr/bin/aarch64-openEuler-linux-gcc -O2 -Wall -Wextra -static -I../.. -I../../.. ub_obmm_pool.c -o ub_obmm_pool
+ub_obmm_pool.c: In function 'main':
+ub_obmm_pool.c:283:46: warning: '%d' directive output may be truncated writing between 1 and 10 bytes into a region of size 9 [-Wformat-truncation=]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                              ^~
+In function 'resolve_pool_nodes',
+    inlined from 'main' at ub_obmm_pool.c:1482:10:
+ub_obmm_pool.c:283:38: note: directive argument in the range [1, 2147483647]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                      ^~~~~~~~~~~
+ub_obmm_pool.c:283:13: note: 'snprintf' output between 9 and 18 bytes into a destination of size 16
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+rm -f ub_obmm_pool
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+[app-build-matrix] RUN app=obmm_queue cmd=make -C apps/obmm_queue
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+aarch64-linux-gnu-gcc -static -O2 -Wall -Wextra -I../../kernel_ub/include/uapi -I../../libs/obmm_queue -I. -o obmm_queue obmm_queue.c
+make: aarch64-linux-gnu-gcc: No such file or directory
+make: *** [Makefile:17: obmm_queue] Error 127
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+rm -f obmm_queue
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+[app-build-matrix] FAIL app=obmm_queue rc=2

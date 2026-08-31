@@ -1,0 +1,120 @@
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 0.006s
+
+OK
+{
+  "gates": {
+    "U0": {
+      "status": "pass"
+    },
+    "U1": {
+      "status": "pass"
+    },
+    "U2": {
+      "status": "pass"
+    },
+    "U3": {
+      "status": "pass"
+    }
+  },
+  "latest": false,
+  "ready": true,
+  "repaired": true,
+  "required_gates": [
+    "U0",
+    "U1",
+    "U2",
+    "U3"
+  ],
+  "schema_version": 1,
+  "source_mode": "offline",
+  "status": "last-known-good",
+  "updated_at": "2026-08-31T05:48:55.983214+00:00"
+}
+{
+  "gates": {
+    "U3": {
+      "checked_at": "2026-08-31T05:48:55.984652+00:00",
+      "evidence": [
+        "/tmp/tmpanbarav_/smoke.log"
+      ],
+      "status": "pass",
+      "tier": "two"
+    }
+  },
+  "schema_version": 1,
+  "updated_at": "2026-08-31T05:48:55.984670+00:00"
+}
+{
+  "commands": [],
+  "created_at": "2026-08-31T05:48:55.985674+00:00",
+  "gates": {
+    "U2": {
+      "checked_at": "2026-08-31T05:48:55.985683+00:00",
+      "evidence": [
+        "/tmp/tmp6b6w5ec1/cargo.log"
+      ],
+      "status": "pass"
+    }
+  },
+  "schema_version": 1,
+  "updated_at": "2026-08-31T05:48:55.985714+00:00"
+}
+{
+  "gates": {
+    "U0": {
+      "status": "pass"
+    },
+    "U1": {
+      "status": "pass"
+    },
+    "U2": {
+      "status": "pass"
+    },
+    "U3": {
+      "status": "pass"
+    }
+  },
+  "latest": true,
+  "ready": false,
+  "repaired": true,
+  "required_gates": [
+    "U0",
+    "U1",
+    "U2",
+    "U3",
+    "U4"
+  ],
+  "schema_version": 1,
+  "status": "latest-testing",
+  "updated_at": "2026-08-31T05:48:55.986294+00:00"
+}
+{
+  "gates": {
+    "U0": {
+      "status": "pass"
+    },
+    "U1": {
+      "status": "pass"
+    },
+    "U2": {
+      "status": "pass"
+    },
+    "U3": {
+      "status": "pass"
+    }
+  },
+  "latest": true,
+  "ready": true,
+  "repaired": true,
+  "required_gates": [
+    "U0",
+    "U1",
+    "U2",
+    "U3"
+  ],
+  "schema_version": 1,
+  "status": "latest-repaired-ready",
+  "updated_at": "2026-08-31T05:48:55.987051+00:00"
+}

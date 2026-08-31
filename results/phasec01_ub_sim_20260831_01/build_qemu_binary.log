@@ -1,0 +1,46 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling unicode-ident v1.0.24
+   Compiling serde_core v1.0.228
+   Compiling thiserror v2.0.18
+   Compiling serde v1.0.228
+   Compiling itoa v1.0.18
+   Compiling equivalent v1.0.2
+   Compiling hashbrown v0.16.1
+   Compiling ryu v1.0.23
+   Compiling libc v0.2.185
+   Compiling unsafe-libyaml v0.2.11
+   Compiling cfg-if v1.0.4
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling memchr v2.8.0
+   Compiling tinyvec_macros v0.1.1
+   Compiling libloading v0.8.9
+   Compiling tinyvec v1.11.0
+   Compiling unicode-normalization v0.1.25
+   Compiling indexmap v2.13.0
+   Compiling syn v2.0.117
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling sim-chipbackend-simpler v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-chipbackend-simpler)
+   Compiling sim-core v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-core)
+   Compiling serde_yaml v0.9.34+deprecated
+   Compiling sim-config v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-config)
+   Compiling sim-topology v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-topology)
+   Compiling sim-runtime v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-runtime)
+   Compiling sim-services v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-services)
+   Compiling sim-models v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-models)
+   Compiling sim-memory v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-memory)
+   Compiling sim-uapi v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-uapi)
+   Compiling sim-qemu v0.1.0 (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/crates/sim-qemu)
+    Finished `release` profile [optimized] target(s) in 33.01s
+[build_qemu_binary] configuring QEMU in /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+python determined to be '/usr/local/python3.11.14/bin/python3'
+python version: Python 3.11.14
+mkvenv: Creating non-isolated virtual environment at 'pyvenv'
+
+*** Ouch! ***
+
+found no usable distlib, please install it 
+
+

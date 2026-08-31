@@ -1,0 +1,31 @@
+[build_guest_artifacts] using existing local out/ artifacts
+[build_guest_artifacts] rebuilding initramfs
+mem_service_source_check=ok version=0.1.0 revision=366a335275d14c277dc44d3a75070f35951a8fb4
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c: In function 'main':
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:46: warning: '%d' directive output may be truncated writing between 1 and 10 bytes into a region of size 9 [-Wformat-truncation=]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                              ^~
+In function 'resolve_pool_nodes',
+    inlined from 'main' at /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:1482:10:
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:38: note: directive argument in the range [1, 2147483647]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                      ^~~~~~~~~~~
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:13: note: 'snprintf' output between 9 and 18 bytes into a destination of size 16
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function 'test_mmap_strict':
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:93:67: warning: unused parameter 'node_idx' [-Wunused-parameter]
+   93 | static void test_mmap_strict(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                               ~~~~^~~~~~~~
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function 'test_stale_epoch':
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:266:67: warning: unused parameter 'node_idx' [-Wunused-parameter]
+  266 | static void test_stale_epoch(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                               ~~~~^~~~~~~~
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function 'test_aperture_mmap_reject':
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:311:76: warning: unused parameter 'node_idx' [-Wunused-parameter]
+  311 | static void test_aperture_mmap_reject(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                                        ~~~~^~~~~~~~
+[build_initramfs] packaged modules:
+[build_initramfs]   linqu_ub_drv.ko
+/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz
+built /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz

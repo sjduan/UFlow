@@ -1,0 +1,6 @@
+{
+  "classification": "mem_service/OBMM/GSVA/QEMU/kernel/UAPI",
+  "minimum_gates": "U0-U4 (2+4-node)",
+  "reason": "Repaired unreachable mem_service and QEMU gitlinks and restored QEMU bridge ABI compatibility; no node-count or routing semantic change.",
+  "eight_node_decision": "not-required: no node-count, full-mesh, routing, scale-out, or release semantic change"
+}

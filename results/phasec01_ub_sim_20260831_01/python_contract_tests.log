@@ -1,0 +1,71 @@
+...............................................dgx_mtp_canary: stage=preflight
+dgx_mtp_canary: stage=stop-distributed-coordinator
+dgx_mtp_canary: stage=q2-no-mtp
+dgx_mtp_canary: stage=restore-coordinator
+dgx_mtp_canary: cleanup-error=copy /tmp/ds4-mtp-canary-20260831-122354-q2-no-mtp.log: synthetic copy failure
+dgx_mtp_canary: cleanup-error=copy /tmp/ds4-mtp-canary-20260831-122354-q2-mtp.log: synthetic copy failure
+....dgx_ds4_proxy: client=127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+dgx_ds4_proxy: method=GET path=/v1/models backend=http://127.0.0.1:45993 elapsed_ms=1.104
+..dgx_ds4_proxy: client=127.0.0.1 "GET /healthz HTTP/1.1" 200 -
+.usage: python3 -m unittest [-h] [--listen-host LISTEN_HOST]
+                           [--listen-port LISTEN_PORT] --backend BACKEND
+                           [--connect-timeout CONNECT_TIMEOUT]
+                           [--read-timeout READ_TIMEOUT]
+                           [--health-path HEALTH_PATH]
+                           [--health-interval HEALTH_INTERVAL]
+python3 -m unittest: error: argument --backend: backend must be an HTTP origin such as http://127.0.0.1:8100
+..dgx_ds4_proxy: client=127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+dgx_ds4_proxy: method=POST path=/v1/chat/completions backend=http://127.0.0.1:45303 elapsed_ms=1.084
+........................................................................................................................................................................................................................................................
+----------------------------------------------------------------------
+Ran 304 tests in 53.578s
+
+OK
+{
+  "ssh_host": "dgx1",
+  "endpoint": "http://192.168.8.7:8000",
+  "benchmark_via_ssh": false,
+  "benchmark_endpoint": "http://192.168.8.7:8000",
+  "remote_env": "/tmp/ds4-mtp-canary-20260831-122354.env",
+  "mtp_mode": "instrumented-fast",
+  "mtp_environment": {
+    "DS4_MTP_TIMING": "1",
+    "DS4_MTP_SPEC_LOG": "1",
+    "DS4_MTP_CONF_LOG": "1"
+  },
+  "baseline_server": [
+    "./ds4-server",
+    "--cuda",
+    "-m",
+    "gguf/DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8000",
+    "--ctx",
+    "4096",
+    "--tokens",
+    "1024"
+  ],
+  "mtp_server": [
+    "./ds4-server",
+    "--cuda",
+    "-m",
+    "gguf/DeepSeek-V4-Flash-IQ2XXS-w2Q2K-AProjQ8-SExpQ8-OutQ8-chat-v2-imatrix.gguf",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8000",
+    "--ctx",
+    "4096",
+    "--tokens",
+    "1024",
+    "--mtp",
+    "gguf/DeepSeek-V4-Flash-MTP-Q4K-Q8_0-F32.gguf",
+    "--mtp-draft",
+    "2",
+    "--mtp-margin",
+    "3"
+  ],
+  "output_dir": "/tmp/tmpi466869r/artifacts"
+}

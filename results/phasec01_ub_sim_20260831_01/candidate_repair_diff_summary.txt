@@ -1,0 +1,6 @@
+ crates/sim-qemu/include/linqu_ub_bridge.h |  7 +++++++
+ crates/sim-qemu/src/ffi.rs                | 20 ++++++++++++++++++++
+ guest-linux/aarch64/mem_service.lock      |  2 +-
+ mem_service                               |  2 +-
+ vendor/qemu_8.2.0_ub                      |  2 +-
+ 5 files changed, 30 insertions(+), 3 deletions(-)

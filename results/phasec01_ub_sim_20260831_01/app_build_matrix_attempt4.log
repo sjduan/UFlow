@@ -1,0 +1,85 @@
+[app-build-matrix] RUN app=ub_chat cmd=make -C apps/ub_chat
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static ub_chat.c -o ub_chat
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+rm -f ub_chat
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+[app-build-matrix] RUN app=ub_rpc cmd=make -C apps/ub_rpc
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static ub_rpc.c -o ub_rpc
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+rm -f ub_rpc
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_rpc'
+[app-build-matrix] RUN app=ub_tcp_each_server cmd=make -C apps/ub_tcp_each_server
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static ub_tcp_each_server.c -o ub_tcp_each_server
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+rm -f ub_tcp_each_server
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_tcp_each_server'
+[app-build-matrix] RUN app=ub_udma cmd=make -C apps/ub_udma
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static -I../.. -I../../.. ub_udma.c -o ub_udma
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+rm -f ub_udma
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_udma'
+[app-build-matrix] RUN app=ub_obmm_pool cmd=make -C apps/ub_obmm_pool
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static -I../.. -I../../.. ub_obmm_pool.c -o ub_obmm_pool
+ub_obmm_pool.c: In function 'main':
+ub_obmm_pool.c:283:46: warning: '%d' directive output may be truncated writing between 1 and 10 bytes into a region of size 9 [-Wformat-truncation=]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                              ^~
+In function 'resolve_pool_nodes',
+    inlined from 'main' at ub_obmm_pool.c:1482:10:
+ub_obmm_pool.c:283:38: note: directive argument in the range [1, 2147483647]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                      ^~~~~~~~~~~
+ub_obmm_pool.c:283:13: note: 'snprintf' output between 9 and 18 bytes into a destination of size 16
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+rm -f ub_obmm_pool
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool'
+[app-build-matrix] RUN app=obmm_queue cmd=make -C apps/obmm_queue
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+aarch64-linux-gnu-gcc -static -O2 -Wall -Wextra -I../../kernel_ub/include/uapi -I../../libs/obmm_queue -I. -o obmm_queue obmm_queue.c
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+rm -f obmm_queue
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_queue'
+[app-build-matrix] RUN app=obmm_dataplane_microbench cmd=make -C apps/obmm_dataplane_microbench
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_dataplane_microbench'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static -I../../kernel_ub/include/uapi -I../../common -D__EXPORTED_HEADERS__ -I../../common/../../../vendor/obmm/src/libobmm -I../../common/../../../guest-linux/kernel_ub/include/uapi -I../../common/../../../guest-linux/kernel_ub/include obmm_dataplane_microbench.c ../../common/../../../vendor/obmm/src/libobmm/libobmm.c ../../common/obmm_vendor_adaptor_sim.c -o obmm_dataplane_microbench
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_dataplane_microbench'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_dataplane_microbench'
+rm -f obmm_dataplane_microbench
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_dataplane_microbench'
+[app-build-matrix] RUN app=obmm_import_stress cmd=make -C apps/obmm_import_stress
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_import_stress'
+aarch64-linux-gnu-gcc -static -O2 -Wall -Wextra -I../../kernel_ub/include/uapi -I../../common -I../obmm_queue -D__EXPORTED_HEADERS__ -I../../common/../../../vendor/obmm/src/libobmm -I../../common/../../../guest-linux/kernel_ub/include/uapi -I../../common/../../../guest-linux/kernel_ub/include obmm_import_stress.c ../../common/../../../vendor/obmm/src/libobmm/libobmm.c ../../common/obmm_vendor_adaptor_sim.c -o obmm_import_stress
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_import_stress'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_import_stress'
+rm -f obmm_import_stress
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_import_stress'
+[app-build-matrix] RUN app=obmm_async_coroutine cmd=make -C apps/obmm_async_coroutine
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_async_coroutine'
+make -C ../../libs/obmm_async all
+make[1]: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/libs/obmm_async'
+mkdir -p ../../out/obmm_async/lib
+aarch64-linux-gnu-gcc -I. -idirafter ../../../kernel_ub/include/uapi -O2 -Wall -Wextra -Werror -std=c11 -c obmm_async.c -o ../../out/obmm_async/lib/obmm_async.o
+aarch64-linux-gnu-gcc -I. -idirafter ../../../kernel_ub/include/uapi -O2 -Wall -Wextra -Werror -c obmm_async_aarch64.S -o ../../out/obmm_async/lib/obmm_async_aarch64.o
+aarch64-linux-gnu-ar rcs ../../out/obmm_async/lib/libobmm_async.a ../../out/obmm_async/lib/obmm_async.o ../../out/obmm_async/lib/obmm_async_aarch64.o
+make[1]: aarch64-linux-gnu-ar: No such file or directory
+make[1]: *** [Makefile:20: ../../out/obmm_async/lib/libobmm_async.a] Error 127
+make[1]: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/libs/obmm_async'
+make: *** [Makefile:29: ../../out/obmm_async/lib/libobmm_async.a] Error 2
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_async_coroutine'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_async_coroutine'
+rm -f ../../out/obmm_async_coroutine/obmm_async_coroutine
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/obmm_async_coroutine'
+[app-build-matrix] FAIL app=obmm_async_coroutine rc=2

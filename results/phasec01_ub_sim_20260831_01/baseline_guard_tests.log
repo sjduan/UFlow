@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/main.py", line 101, in __init__
+    self.parseArgs(argv)
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/main.py", line 150, in parseArgs
+    self.createTests()
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/main.py", line 161, in createTests
+    self.test = self.testLoader.loadTestsFromNames(self.testNames,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/loader.py", line 232, in loadTestsFromNames
+    suites = [self.loadTestsFromName(name, module) for name in names]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/loader.py", line 232, in <listcomp>
+    suites = [self.loadTestsFromName(name, module) for name in names]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/python3.11.14/lib/python3.11/unittest/loader.py", line 162, in loadTestsFromName
+    module = __import__(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/guard/test_phasec_ub_sim_baseline_guard.py", line 13, in <module>
+    SPEC.loader.exec_module(guard)
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1073, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1130, in get_data
+FileNotFoundError: [Errno 2] No such file or directory: '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/phasec/ub_sim_baseline_guard.py'

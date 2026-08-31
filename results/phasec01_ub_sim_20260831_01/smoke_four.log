@@ -1,0 +1,8 @@
+    Finished `release` profile [optimized] target(s) in 0.03s
+[build_qemu_binary] using existing QEMU binary: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build/qemu-system-aarch64
+[ub_common] preparing guest artifacts via build_guest_artifacts.sh (source=auto)
+[build_guest_artifacts] using existing local out/ artifacts
+[build_guest_artifacts] rebuilding initramfs
+[build_initramfs] initramfs is up to date: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz
+iteration 1: PASS
+Passed: 1 / 1

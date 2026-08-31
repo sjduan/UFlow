@@ -1,0 +1,10 @@
+[app-build-matrix] RUN app=ub_chat cmd=make -C apps/ub_chat
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+aarch64-linux-gnu-gcc -O2 -Wall -Wextra -static ub_chat.c -o ub_chat
+make: aarch64-linux-gnu-gcc: No such file or directory
+make: *** [Makefile:7: ub_chat] Error 127
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+make: Entering directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+rm -f ub_chat
+make: Leaving directory '/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/guest-linux/aarch64/apps/ub_chat'
+[app-build-matrix] FAIL app=ub_chat rc=2

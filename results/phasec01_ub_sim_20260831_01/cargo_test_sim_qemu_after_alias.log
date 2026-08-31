@@ -1,0 +1,38 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running unittests src/lib.rs (target/debug/deps/sim_qemu-89deef886f0cb147)
+
+running 25 tests
+test ffi::tests::default_segment_bytes_accepts_explicit_value ... ok
+test ffi::tests::default_segment_bytes_rejects_invalid_or_too_small_value ... ok
+test ffi::tests::default_segment_bytes_uses_qwen_safe_fallback ... ok
+test obmm_remote_model::tests::capacity_rejection_does_not_create_a_decision ... ok
+test obmm_remote_model::tests::disabled_model_preserves_zero_delay_success ... ok
+test obmm_remote_model::tests::decisions_do_not_depend_on_accept_order ... ok
+test obmm_remote_model::tests::operation_key_and_decision_have_stable_golden_values ... ok
+test tests::compact_model_range_dispatch_descriptor_decodes_object_ref_sideband ... ok
+test tests::compact_model_range_dispatch_descriptor_decodes_task_contract ... ok
+test tests::linqu_device_model_reports_last_error_for_invalid_mmio_write ... ok
+test tests::linqu_device_model_reports_last_error_for_invalid_offset ... ok
+test tests::linqu_device_model_raises_error_irq_on_invalid_mmio_write ... ok
+test tests::linqu_device_model_reports_last_error_for_queue_overflow ... ok
+test tests::qemu_backend_adapter_maps_guest_service_descriptor ... ok
+test tests::linqu_device_model_sets_and_acks_irq_status ... ok
+test tests::linqu_device_model_bridges_mmio_ring_to_backend_adapter ... ok
+test tests::linqu_device_model_tracks_cmdq_head_tail_status ... ok
+test tests::linqu_device_model_supports_partial_cq_poll ... ok
+test tests::linqu_device_model_exposes_mmio_register_reads_and_writes ... ok
+test tests::linqu_device_model_tracks_cq_head_tail_after_poll ... ok
+test tests::linqu_device_model_supports_service_descriptors_via_mmio_path ... ok
+test tests::qemu_backend_adapter_round_trips_guest_io_descriptor ... ok
+test tests::qemu_backend_adapter_supports_partial_cq_poll ... ok
+test tests::qemu_mmio_handler_wraps_device_reads_and_writes ... ok
+test tests::qemu_backend_adapter_maps_guest_dispatch_to_chipbackend_completion ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+   Doc-tests sim_qemu
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

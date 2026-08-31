@@ -1,0 +1,18 @@
+qemu_configure_args=--disable-werror --python=/usr/bin/python3
+qemu_build_jobs=16
+kernel_jobs=32
+glib2-devel-2.78.3-15.oe2403sp2.aarch64
+pixman-devel-0.42.2-1.oe2403sp2.aarch64
+zlib-devel-1.2.13-5.oe2403sp2.aarch64
+flex-2.6.4-8.oe2403sp2.aarch64
+bison-3.8.2-5.oe2403sp2.aarch64
+bc-1.07.1-12.oe2403sp2.aarch64
+openssl-devel-3.0.12-25.oe2403sp2.aarch64
+elfutils-libelf-devel-0.190-10.oe2403sp2.aarch64
+rsync-3.2.7-7.oe2403sp2.aarch64
+cpio-2.14-3.oe2403sp2.aarch64
+compat_symlinks:
+lrwxrwxrwx 1 root root 11 Aug 31 13:44 /usr/local/bin/aarch64-linux-gnu-ar -> /usr/bin/ar
+lrwxrwxrwx 1 root root 36 Aug 31 13:43 /usr/local/bin/aarch64-linux-gnu-gcc -> /usr/bin/aarch64-openEuler-linux-gcc
+actual_compiler:
+aarch64-openEuler-linux-gcc (GCC) 12.3.1 (openEuler 12.3.1-99.oe2403sp2)

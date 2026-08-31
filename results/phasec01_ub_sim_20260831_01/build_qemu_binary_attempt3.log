@@ -1,0 +1,68 @@
+    Finished `release` profile [optimized] target(s) in 0.03s
+[build_qemu_binary] configuring QEMU in /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+python determined to be '/usr/bin/python3'
+python version: Python 3.11.6
+mkvenv: Creating non-isolated virtual environment at 'pyvenv'
+mkvenv: checking for meson>=0.63.0
+mkvenv: installing meson==1.2.3
+The Meson build system
+Version: 1.2.3
+Source dir: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub
+Build dir: /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build
+Build type: native build
+Project name: qemu
+Project version: 8.2.0
+C compiler for the host machine: cc (gcc 12.3.1 "cc (GCC) 12.3.1 (openEuler 12.3.1-99.oe2403sp2)")
+C linker for the host machine: cc ld.bfd 2.41
+Host machine cpu family: aarch64
+Host machine cpu: aarch64
+Program scripts/symlink-install-tree.py found: YES (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build/pyvenv/bin/python3 /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/scripts/symlink-install-tree.py)
+Program sh found: YES (/usr/bin/sh)
+Program python3 found: YES (/home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build/pyvenv/bin/python3)
+Program bzip2 found: YES (/usr/bin/bzip2)
+Program iasl found: NO
+Compiler for C supports link arguments -Wl,-z,relro: YES 
+Compiler for C supports link arguments -Wl,-z,now: YES 
+Compiler for C supports link arguments -Wl,--warn-common: YES 
+Compiler for C supports arguments -Wundef: YES 
+Compiler for C supports arguments -Wwrite-strings: YES 
+Compiler for C supports arguments -Wmissing-prototypes: YES 
+Compiler for C supports arguments -Wstrict-prototypes: YES 
+Compiler for C supports arguments -Wredundant-decls: YES 
+Compiler for C supports arguments -Wold-style-declaration: YES 
+Compiler for C supports arguments -Wold-style-definition: YES 
+Compiler for C supports arguments -Wtype-limits: YES 
+Compiler for C supports arguments -Wformat-security: YES 
+Compiler for C supports arguments -Wformat-y2k: YES 
+Compiler for C supports arguments -Winit-self: YES 
+Compiler for C supports arguments -Wignored-qualifiers: YES 
+Compiler for C supports arguments -Wempty-body: YES 
+Compiler for C supports arguments -Wnested-externs: YES 
+Compiler for C supports arguments -Wendif-labels: YES 
+Compiler for C supports arguments -Wexpansion-to-defined: YES 
+Compiler for C supports arguments -Wimplicit-fallthrough=2: YES 
+Compiler for C supports arguments -Wmissing-format-attribute: YES 
+Compiler for C supports arguments -Wno-initializer-overrides: NO 
+Compiler for C supports arguments -Wno-missing-include-dirs: YES 
+Compiler for C supports arguments -Wno-shift-negative-value: YES 
+Compiler for C supports arguments -Wno-string-plus-int: NO 
+Compiler for C supports arguments -Wno-typedef-redefinition: NO 
+Compiler for C supports arguments -Wno-tautological-type-limit-compare: NO 
+Compiler for C supports arguments -Wno-psabi: YES 
+Compiler for C supports arguments -Wno-gnu-variable-sized-type-not-at-end: NO 
+Compiler for C supports arguments -Wshadow=local: YES 
+Compiler for C supports arguments -Wthread-safety: NO 
+Program cgcc found: NO
+Library m found: YES
+Run-time dependency threads found: YES
+Library util found: YES
+Run-time dependency appleframeworks found: NO (tried framework)
+Found pkg-config: /usr/bin/pkg-config (1.9.5)
+Run-time dependency glib-2.0 found: NO (tried pkgconfig)
+
+../meson.build:753:10: ERROR: Dependency "glib-2.0" not found, tried pkgconfig
+
+A full log can be found at /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim/vendor/qemu_8.2.0_ub/build/meson-logs/meson-log.txt
+
+ERROR: meson setup failed
+

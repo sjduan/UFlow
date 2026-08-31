@@ -1,10 +1,10 @@
 # PhaseC-00: UFlow × ub-sim 适配总路线
 
-> 开发环境统一口径（2026-08-31）：UFlow 开发、构建和默认验证入口仍为 `ssh serving-b` → `openeuler-2403-DS` → `/home/sj/git/data-service`。`serving-a/c/d` 只在文档明确要求物理多机或故障验证时使用。ub-sim 的 2/4/8 个 logical node 不等同于 2/4/8 台 serving 物理机。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
+> 开发环境统一口径（2026-08-31）：UFlow 开发、构建和默认验证入口为 `ssh serving-b` → `openeuler-2403-DS`；容器执行用户为 `root`，workspace 根目录为 `/home/sj`，UFlow 仓库为 `/home/sj/git/data-service`，ub-sim 权威 checkout 为 `/home/sj/git/ub_sim`。`serving-a/c/d` 只在文档明确要求物理多机或故障验证时使用。ub-sim 的 2/4/8 个 logical node 不等同于 2/4/8 台 serving 物理机。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
 
 Last reviewed: 2026-08-31
 
-Status: `active-planning`; Phase C 的总入口与任务路由已建立，代码实施尚未开始。
+Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，C02 中立合同任务可以基于固定 repair candidate 开工；UFlow 的 UB provider/remote placement 尚未实现。
 
 ## 1. 文档定位
 
@@ -44,7 +44,7 @@ Phase A/B/E 已经提供 Phase C 可复用的本机底座：
 
 ### 2.2 ub-sim 当前可利用的能力
 
-本地已有独立仓库 `/Users/sean/Desktop/gitee/MemoryService/ub_sim`。从当前源码和历史报告可确认，ub-sim 已包含：
+本地镜像为 `/Users/sean/Desktop/gitee/MemoryService/ub_sim`；正式开发与验证使用 `serving-b/openeuler-2403-DS:/home/sj/git/ub_sim`。从当前源码和历史报告可确认，ub-sim 已包含：
 
 - 2/4/8 logical-node topology 与 QEMU/headless harness；
 - GVA/GSVA、OBMM remote mapping、一致性和生命周期验证路径；
@@ -56,14 +56,14 @@ Phase A/B/E 已经提供 Phase C 可复用的本机底座：
 
 ### 2.3 当前启动结论
 
-Phase C 可以进入规划和接口审计，但暂时不能进入正式适配基线：
+原始 upstream 仍不能直接作为正式适配基线：
 
 - 本地 ub-sim `HEAD=7aec390`，在 2026-08-31 刷新远端后落后 `origin/master=0fecb3b` 23 个提交；
 - 当前 checkout 的 `mem_service` HEAD 与根仓 gitlink/lock 不一致；
 - 最新 `origin/master` 锁定 `mem_service=4b13ec0`，但该对象当前无法从 `mem_service` 远端取得；
-- 因此当前既不是 latest，也不是 reproducible/latest-ready。
+- 最新 root 还锁定不可获取的 `qemu@15951308`；因此 raw upstream 不是 reproducible/latest-ready。
 
-PhaseC-01 必须先关闭该基线门禁。不得在 dirty checkout 上直接 fast-forward、强制重置或用相近的 `mem_service` revision 顶替缺失 gitlink。
+PhaseC-01 已在不修改 canonical dirty checkout 的前提下建立隔离 repair candidate `c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`：显式修复 `mem_service/QEMU` gitlink 和 bridge ABI，U0-U4、2-node provider conformance 与 4-node canary 全部通过。该状态是 `latest-repaired-ready / manual-active`，允许 C02～C07 内部开发，但不能冒充 upstream plain `latest-ready` 或对外 release。证据见 [phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。
 
 ## 3. Phase C 架构边界
 
@@ -298,11 +298,14 @@ C00 总路线
 ```text
 ssh serving-b
   -> openeuler-2403-DS
+  -> user root
+  -> workspace /home/sj
   -> /home/sj/git/data-service
+  -> /home/sj/git/ub_sim
   -> actual device 现场探测并记录
 ```
 
-ub-sim checkout/runtime 路径由 C01 在每次 evidence manifest 中记录，不在本文假定为 `/home/sj/git/ub_sim`。若 serving-b 上尚无合格 checkout，C01 应在明确的隔离目录创建 candidate workspace，不能修改或覆盖未知 dirty 仓库。
+ub-sim canonical checkout 固定为 `/home/sj/git/ub_sim`，但它当前包含历史产物和未跟踪文件，只作为来源与 last-known state。C01 candidate 必须在 `/home/sj` 下的明确隔离目录运行，例如 `/home/sj/phasec01_runs/<run_id>/ub_sim`；不能修改或覆盖 canonical dirty 仓库。
 
 ### 8.2 logical node 与 physical host
 
@@ -338,8 +341,8 @@ summary.md
 
 Phase C 状态升级规则：
 
-- C00/C01 文档建立只表示 `active-planning`，不表示 UB 适配已开始；
-- 只有 C01 latest-ready 通过后，C02 才可进入正式实现；
+- C00 文档建立只表示 `active-planning`，不表示 UB 适配已开始；
+- C01 的 plain `latest-ready` 或带完整 patch/manifest/U0-U4 的 `latest-repaired-ready` 通过后，C02 才可进入实现；repaired candidate 不得用于 release；
 - 只有 C04/C05 的真实 UFlow provider 通过，才可写“remote DDR/SSD supported”；
 - 只有 C06/C07 通过，才可写“topology-aware routing supported”；
 - 只有 C08 acceptance bundle 完整，Phase C 才可标记 `done-first-version`。
@@ -359,4 +362,6 @@ Phase C 首版完成必须同时满足：
 
 ## 11. 当前 Future Work
 
-唯一下一门禁：执行 PhaseC-01，先修复或等待上游修复 `origin/master@0fecb3b` 对 `mem_service@4b13ec0` 的不可获取引用，随后在隔离 checkout 中完成 source、submodule、轻量测试和 internal smoke 基线。C01 未通过前，不派发 C02 代码适配。
+当前主门禁转为 PhaseC-02：基于 `c68cfb8` 冻结 transport-neutral topology/capability/placement/handle/TransferEvent 合同，确保后续数据共享与 topology-aware routing 不把 QEMU/OBMM 私有语义泄漏到 UFlow core。
+
+并行维护项：上游仍需原子修复 `origin/master@0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 可获取性并吸收 bridge compatibility alias；C01 guard 仍需接入每日/事件触发。在此之前每个 Phase C agent 必须绑定 `c68cfb8` 或归档 patch，不能自行选择“相近”子模块版本。
