@@ -162,7 +162,7 @@ PhaseC 总入口已经建立：
 
 2026-08-31 的首次只读上游审计发现：本地 `ub_sim@7aec390` 落后 `origin/master@0fecb3b` 23 个提交；最新 root 锁定的 `mem_service@4b13ec0` 与 `qemu@15951308` 都无法从声明 remote 读取。当时 serving-b canonical `/home/sj/git/ub_sim@67c3ce5` 也 dirty，因此 raw upstream 保持 `latest-unreachable`；该历史 checkout 后续没有 reset/clean，已完整改名保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。
 
-C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。`c68cfb8` 已提升为 `/home/sj/git/ub_sim` 当前内部正式仿真方案，并从新路径复验 U1 与 2-node U3（1/1 PASS、无 QEMU 残留）。证据位于 `results/phasec01_ub_sim_20260831_01/`。当前门禁转为 C02 中立合同，随后按 C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 实施；对外 release 仍需 upstream 原子修复并重跑 C01。
+C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。`c68cfb8` 已提升为 `/home/sj/git/ub_sim` 当前内部正式仿真方案，并从新路径复验 U1 与 2-node U3（1/1 PASS、无 QEMU 残留）。证据位于 `results/phasec01_ub_sim_20260831_01/`。C02 已完成代码走读和一般对接方案，采用 host UFlow daemon + per-QEMU-guest sim agent、descriptor-only simulated object 与 mem-service neutral provider 复用边界，当前状态 `ready-for-implementation`；随后按 C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 实施。对外 release 仍需 upstream 原子修复并重跑 C01。
 
 ### 4.5 Phase D：远端 HBM 与 relay
 
@@ -311,7 +311,7 @@ PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再
 | serving-b 连通性 | `ssh serving-b` 成功；hostname `liteserver-560t-1.novalocal`，IP `192.169.0.85`，`openeuler-2403-DS` running |
 | serving-b repo | `/home/sj/git/data-service@e854fa0`，触发 dubious ownership 且 working tree dirty；核心源码 SHA-256 抽查 16/16 等同 local `6179941`，但其余 artifacts/provenance 未收口；只读命令使用临时 `-c safe.directory=...` |
 | A09 基线新鲜度 | 过时；current main 已领先 62 commits |
-| PhaseC/PhaseD | C01 `latest-repaired-ready`：`/home/sj/git/ub_sim@c68cfb8` 为当前内部正式仿真基线；Cargo/Python/QEMU/guest/24-app、2-node、4-node、提升后 2-node 复验和 cleanup 通过；C02 可开工，但 UFlow UB adapter/remote placement 仍未实现；PhaseD 未启动 |
+| PhaseC/PhaseD | C01 `latest-repaired-ready`：`/home/sj/git/ub_sim@c68cfb8` 为当前内部正式仿真基线；C02 code walk/接口/启动/仿真对象方案已完成，状态 `ready-for-implementation`，但 UbSimProvider、guest agent 与 remote placement 尚未实现；PhaseD 未启动 |
 
 ## 8. 后续更新协议
 
@@ -357,3 +357,4 @@ owner:
 | 2026-08-31 | 启动 PhaseC 规划：新增 C00 总路线与 C01 ub-sim latest-ready 门禁，明确以数据共享和 topology-aware routing 为主线，任务顺序为 baseline→contract→topology/capability→remote DDR→remote SSD/SSU→routing→failure/replan→E2E。首次上游审计发现 `ub_sim origin/master@0fecb3b` 锁定不可获取的 `mem_service@4b13ec0`，新增 R14 并阻断 C02。 |
 | 2026-08-31 | 完成 PhaseC-01 首轮闭环：保护 `/home/sj/git/ub_sim@67c3ce5` dirty canonical，在隔离目录以 `0fecb3b` 建立 repair `d78143e -> c68cfb8`；补齐 openEuler 构建依赖和 QEMU bridge ABI，U0-U4、Python 304、sim-qemu 25、QEMU focused 22、24-app、2-node/4-node 与 cleanup 全部通过。状态为 `latest-repaired-ready / manual-active`，C02 内部解锁；raw upstream/release 风险 R14 保留。 |
 | 2026-08-31 | 按项目决策将已验证 `c68cfb8` 原子提升为 `/home/sj/git/ub_sim` 当前内部正式 ub-sim 方案；原 dirty `67c3ce5` 未 reset/clean，完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。从新路径重建 QEMU 后 U1 与 2-node U3 1/1 通过，退出后无 QEMU 残留；promotion 证据归档到 PhaseC-01 结果目录。 |
+| 2026-08-31 | 完成 PhaseC-02 代码走读与任务设计：确认 UFlow 当前 catalog/object/executor 直接耦合 ACL/mmap/file，ub-sim semantic NPU 不等价真实 HBM，mem-service provider 可复用但对象 daemon 不可作为第二套 catalog。冻结 host UFlow daemon + per-guest sim agent、virtio-serial bridge、descriptor-only simulated placement、M0～M8 与 G0～G10 方案；状态仅为 `ready-for-implementation`。 |

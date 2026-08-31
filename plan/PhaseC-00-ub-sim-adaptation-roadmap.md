@@ -4,7 +4,7 @@
 
 Last reviewed: 2026-08-31
 
-Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，并将固定 repair baseline 提升到正式 `/home/sj/git/ub_sim`；C02 中立合同任务可以开工，UFlow 的 UB provider/remote placement 尚未实现。
+Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，并将固定 repair baseline 提升到正式 `/home/sj/git/ub_sim`；C02 已完成代码走读和任务设计、状态为 `ready-for-implementation`，UFlow 的 UB provider/remote placement 尚未实现。
 
 ## 1. 文档定位
 
@@ -194,6 +194,8 @@ C00 总路线
 - wire/schema 有 version 和 compatibility 负例；
 - disabled provider 不影响现有本机路径。
 
+详细实施方案见 [PhaseC-02-uflow-ub-sim-functional-integration.md](PhaseC-02-uflow-ub-sim-functional-integration.md)。C02 采用 host UFlow daemon + per-QEMU-guest sim agent；复用 mem-service neutral provider/OBMM 数据面，不复用其对象 catalog。simulated HBM 必须是 descriptor-only、semantic fidelity，禁止伪造真实 device pointer。
+
 ### C03：TopologyProvider 与 CapabilityProvider
 
 目标：把 ub-sim scenario、logical node/device/link 和运行时健康状态转换为 UFlow snapshot。
@@ -362,6 +364,6 @@ Phase C 首版完成必须同时满足：
 
 ## 11. 当前 Future Work
 
-当前主门禁转为 PhaseC-02：基于 `c68cfb8` 冻结 transport-neutral topology/capability/placement/handle/TransferEvent 合同，确保后续数据共享与 topology-aware routing 不把 QEMU/OBMM 私有语义泄漏到 UFlow core。
+当前主门禁为 [PhaseC-02](PhaseC-02-uflow-ub-sim-functional-integration.md)：基于 `c68cfb8` 实现 host UFlow daemon + guest sim-agent integration spine，冻结 transport-neutral topology/capability/placement/binding/handle/TransferEvent 合同，确保后续数据共享与 topology-aware routing 不把 QEMU/OBMM 私有语义泄漏到 UFlow core。
 
 并行维护项：上游仍需原子修复 `origin/master@0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 可获取性并吸收 bridge compatibility alias；C01 guard 仍需接入每日/事件触发。在此之前每个 Phase C agent 必须绑定 `c68cfb8` 或归档 patch，不能自行选择“相近”子模块版本。
