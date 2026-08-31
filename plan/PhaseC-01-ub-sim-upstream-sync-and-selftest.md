@@ -4,7 +4,7 @@
 
 Last reviewed: 2026-08-31
 
-Status: `done-first-run / latest-repaired-ready / manual-active`; 原始 upstream 仍有不可获取 gitlink，但显式下游修复候选已在 serving-b 通过 U0-U4。未接入每日 watcher，不能写成 plain `latest-ready` 或 release-ready。
+Status: `done-first-run / latest-repaired-ready / manual-active`; 原始 upstream 仍有不可获取 gitlink，但显式下游修复版本已在 serving-b 通过 U0-U4、提升到正式 `/home/sj/git/ub_sim`，并从新路径复验 U1/U3。未接入每日 watcher，不能写成 plain `latest-ready` 或 release-ready。
 
 ## 1. 任务定位
 
@@ -114,10 +114,12 @@ status:              latest-unreachable
 
 ```text
 run root:          /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01
-canonical:         /home/sj/git/ub_sim@67c3ce5 (dirty, 未修改)
+historic staging:  /home/sj/phasec01_runs/phasec01_ub_sim_20260831_01/ub_sim (已移动提升)
 upstream root:     0fecb3b1037a424d7d285ed8c2792f08031e88ed
 repair commit 1:   d78143e (reachable mem_service/QEMU gitlink + mem_service.lock)
 validated commit:  c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072
+current canonical: /home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072 (tracked clean)
+previous backup:   /home/sj/git/ub_sim.pre_phasec01_20260831@67c3ce5 (原 dirty checkout，完整保留)
 result:            latest-repaired-ready / manual-active
 ```
 
@@ -130,6 +132,8 @@ result:            latest-repaired-ready / manual-active
 - U3：QEMU、guest kernel/modules/UAPI/initramfs、24-app matrix 全部构建通过；2-node provider conformance 1/1；
 - U4：4-node canary 1/1；本次不改变 node-count/full-mesh/routing/release 语义，因此不要求 8-node；
 - cleanup：无 QEMU 进程或 candidate runtime socket 残留。
+
+提升后复验：2026-08-31 将已通过 U0-U4 的 checkout 从 staging 原子移动到 `/home/sj/git/ub_sim`，没有 reset/clean 原版本；旧目录以 `.pre_phasec01_20260831` 备份保留。新正式路径重新触发 QEMU 构建后，U1 source/lock gate PASS，U3 2-node apps 1/1 PASS，退出后 QEMU 进程数为 0。复验证据位于结果目录的 `promotion/` 子目录。
 
 证据入口：[results/phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。C02～C07 内部开发必须绑定 `c68cfb8` 或归档的 `candidate_repair.patch`；对外 release 仍须等待 upstream 原子修复或接收该 repair。
 
@@ -437,6 +441,6 @@ PhaseC-01 首版关闭必须同时满足：
 
 ## 14. 当前 Next Gate
 
-内部主线：C02 可以基于 `c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072` 开工，先冻结 UFlow/ub-sim 中立合同；每次开工前继续用 guard 检查 freshness，不得回退到 canonical dirty checkout。
+内部主线：C02 可以直接基于 `/home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072` 开工，先冻结 UFlow/ub-sim 中立合同；每次开工前继续用 guard 检查 freshness，不得回退到 `/home/sj/git/ub_sim.pre_phasec01_20260831` 的历史 dirty checkout。
 
 上游/release 主线：请 ub_sim 上游原子修复 `mem_service@4b13ec0` 与 `qemu@15951308` 的可获取性或 gitlink，并吸收 bridge compatibility alias。新 upstream root 到达后重新执行 U0-U4，只有不依赖下游 patch 时才升级为 plain `latest-ready`。另需把 guard 接入每日/事件触发，才能从 `manual-active` 升级为持续门禁。

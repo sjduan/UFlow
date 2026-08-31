@@ -4,7 +4,7 @@
 
 Last reviewed: 2026-08-31
 
-Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，C02 中立合同任务可以基于固定 repair candidate 开工；UFlow 的 UB provider/remote placement 尚未实现。
+Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，并将固定 repair baseline 提升到正式 `/home/sj/git/ub_sim`；C02 中立合同任务可以开工，UFlow 的 UB provider/remote placement 尚未实现。
 
 ## 1. 文档定位
 
@@ -63,7 +63,7 @@ Phase A/B/E 已经提供 Phase C 可复用的本机底座：
 - 最新 `origin/master` 锁定 `mem_service=4b13ec0`，但该对象当前无法从 `mem_service` 远端取得；
 - 最新 root 还锁定不可获取的 `qemu@15951308`；因此 raw upstream 不是 reproducible/latest-ready。
 
-PhaseC-01 已在不修改 canonical dirty checkout 的前提下建立隔离 repair candidate `c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`：显式修复 `mem_service/QEMU` gitlink 和 bridge ABI，U0-U4、2-node provider conformance 与 4-node canary 全部通过。该状态是 `latest-repaired-ready / manual-active`，允许 C02～C07 内部开发，但不能冒充 upstream plain `latest-ready` 或对外 release。证据见 [phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。
+PhaseC-01 先在不修改原 canonical dirty checkout 的前提下建立隔离 repair candidate `c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`：显式修复 `mem_service/QEMU` gitlink 和 bridge ABI，U0-U4、2-node provider conformance 与 4-node canary 全部通过。2026-08-31 按项目决策将该版本提升为 `/home/sj/git/ub_sim` 当前内部正式仿真基线，原 `/home/sj/git/ub_sim@67c3ce5` 完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`；提升后从新路径重新完成 U1 与 2-node U3（1/1 PASS），且无 QEMU 残留。该状态仍是 `latest-repaired-ready / manual-active`，允许 C02～C07 内部开发，但不能冒充 upstream plain `latest-ready` 或对外 release。证据见 [phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。
 
 ## 3. Phase C 架构边界
 
@@ -305,7 +305,7 @@ ssh serving-b
   -> actual device 现场探测并记录
 ```
 
-ub-sim canonical checkout 固定为 `/home/sj/git/ub_sim`，但它当前包含历史产物和未跟踪文件，只作为来源与 last-known state。C01 candidate 必须在 `/home/sj` 下的明确隔离目录运行，例如 `/home/sj/phasec01_runs/<run_id>/ub_sim`；不能修改或覆盖 canonical dirty 仓库。
+ub-sim canonical checkout 固定为 `/home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`，它是当前可运行的内部 repaired baseline，tracked working tree clean；QEMU/kernel/initramfs 等预期构建产物保留供开发复用。提升前的 dirty checkout 完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831@67c3ce5`，不得清理或复用为当前基线。后续 C01 新 candidate 仍必须在 `/home/sj` 下的明确隔离目录运行，例如 `/home/sj/phasec01_runs/<run_id>/ub_sim`；只有门禁通过且项目明确决定提升后，才可切换 canonical。
 
 ### 8.2 logical node 与 physical host
 

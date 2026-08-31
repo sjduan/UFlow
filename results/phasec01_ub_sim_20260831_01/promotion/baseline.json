@@ -1,0 +1,59 @@
+{
+  "candidate_sha": "c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072",
+  "commands": [],
+  "created_at": "2026-08-31T06:13:10.512907+00:00",
+  "gates": {
+    "U1": {
+      "checked_at": "2026-08-31T06:13:10.579276+00:00",
+      "status": "pass"
+    },
+    "U3": {
+      "checked_at": "2026-08-31T06:29:12.024000+00:00",
+      "status": "pass",
+      "tier": "two"
+    }
+  },
+  "schema_version": 1,
+  "source": {
+    "dependencies": {
+      "guest-linux/kernel_ub": {
+        "actual": "70c7272a8b66bc9981a2fa3235ae71489ceb7789",
+        "expected": "70c7272a8b66bc9981a2fa3235ae71489ceb7789"
+      },
+      "mem_service": {
+        "actual": "366a335275d14c277dc44d3a75070f35951a8fb4",
+        "expected": "366a335275d14c277dc44d3a75070f35951a8fb4"
+      },
+      "vendor/obmm": {
+        "actual": "53011eed10716b422d2ac29199f68b55f7c5bdc5",
+        "expected": "53011eed10716b422d2ac29199f68b55f7c5bdc5"
+      },
+      "vendor/pto-isa": {
+        "actual": "ecb6c303f797749f811a494742c3c08156aacabb",
+        "expected": "ecb6c303f797749f811a494742c3c08156aacabb"
+      },
+      "vendor/pypto": {
+        "actual": "8ebddcb87a95c091c02f7f53b0a877c1e3f3d444",
+        "expected": "8ebddcb87a95c091c02f7f53b0a877c1e3f3d444"
+      },
+      "vendor/pypto-lib": {
+        "actual": "6b9576d7b240bd14d70fb4be6b2a72ffb5895d33",
+        "expected": "6b9576d7b240bd14d70fb4be6b2a72ffb5895d33"
+      },
+      "vendor/qemu_8.2.0_ub": {
+        "actual": "3a247cbe1532438f27805efe2e124c4ab882528f",
+        "expected": "3a247cbe1532438f27805efe2e124c4ab882528f"
+      },
+      "vendor/simpler": {
+        "actual": "8a6a28f405c8e46a91c15216478dd7a4acc29aed",
+        "expected": "8a6a28f405c8e46a91c15216478dd7a4acc29aed"
+      }
+    },
+    "mem_service_lock": {
+      "lock_version": "1",
+      "revision": "366a335275d14c277dc44d3a75070f35951a8fb4",
+      "version": "0.1.0"
+    }
+  },
+  "updated_at": "2026-08-31T06:29:12.024031+00:00"
+}

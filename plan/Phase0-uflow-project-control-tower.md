@@ -160,9 +160,9 @@ PhaseC 总入口已经建立：
 
 状态：`active-implementation / C01 latest-repaired-ready / UFlow-adapter-absent`，C01 证据等级 E3；Phase C 整体仍不能写 supported。
 
-2026-08-31 的首次只读上游审计发现：本地 `ub_sim@7aec390` 落后 `origin/master@0fecb3b` 23 个提交；最新 root 锁定的 `mem_service@4b13ec0` 与 `qemu@15951308` 都无法从声明 remote 读取。serving-b canonical `/home/sj/git/ub_sim@67c3ce5` 也 dirty，因此 raw upstream 保持 `latest-unreachable`，canonical 未被更新或清理。
+2026-08-31 的首次只读上游审计发现：本地 `ub_sim@7aec390` 落后 `origin/master@0fecb3b` 23 个提交；最新 root 锁定的 `mem_service@4b13ec0` 与 `qemu@15951308` 都无法从声明 remote 读取。当时 serving-b canonical `/home/sj/git/ub_sim@67c3ce5` 也 dirty，因此 raw upstream 保持 `latest-unreachable`；该历史 checkout 后续没有 reset/clean，已完整改名保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。
 
-C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。证据位于 `results/phasec01_ub_sim_20260831_01/`。当前门禁转为 C02 中立合同，随后按 C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 实施；对外 release 仍需 upstream 原子修复并重跑 C01。
+C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。`c68cfb8` 已提升为 `/home/sj/git/ub_sim` 当前内部正式仿真方案，并从新路径复验 U1 与 2-node U3（1/1 PASS、无 QEMU 残留）。证据位于 `results/phasec01_ub_sim_20260831_01/`。当前门禁转为 C02 中立合同，随后按 C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 实施；对外 release 仍需 upstream 原子修复并重跑 C01。
 
 ### 4.5 Phase D：远端 HBM 与 relay
 
@@ -278,7 +278,7 @@ PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再
 | R11 | Monitor 多介质语义曾落后，可能看不到 runtime fallback 或误报 physical direct | 低（功能已关闭，视觉证据待补） | E04 `1f9749f`～`3e932b1` 已实现 bounded history、planned→actual、fallback、logical direct 标签并通过 serving-b 矩阵与 UI 合同测试 | 补录四类当前页面截图；后续回归必须保留 logical direct 与 runtime fallback 断言 |
 | R12 | 大量历史性能/功能结论来自旧 2号机，可能被误当成 serving-b 当前能力 | 高 | 旧文档常写 NPU7、5.10 kernel、双跳链路；新主机/kernel/device 尚未逐项复验 | 所有新 run 强制保存 serving-b 环境快照；kernel/SSD/DMA/带宽结论优先重跑，未重跑保持 historical-pass |
 | R13 | serving-b 容器 remote repo 落后本地主线且 dirty，覆盖式同步可能丢失远端证据 | 高 | remote `e854fa0` 仍保持原状；E06 在 `/tmp/phasee06_v2_stage_019f7da1` 隔离验证，没有修改 canonical repo | E04 继续采用无损隔离/明确 baseline；禁用 `--delete`、reset/checkout/clean，另行治理 canonical repo |
-| R14 | ub-sim 最新根提交锁定远端不可获取对象，downstream repaired-ready 可能被误报成 upstream/release-ready | 高（内部开发已缓解） | raw `0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 均不可读；repair `c68cfb8` 已 U0-U4 全过 | C02-C07 只绑定 repair SHA/patch；上游原子修复两条 gitlink并吸收 ABI alias 后重跑，才升级 plain latest-ready |
+| R14 | ub-sim 最新根提交锁定远端不可获取对象，downstream repaired-ready 可能被误报成 upstream/release-ready | 高（内部开发已缓解） | raw `0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 均不可读；repair `c68cfb8` 已 U0-U4 全过并提升到 canonical，新路径 U1/U3 复验通过 | C02-C07 只绑定 `/home/sj/git/ub_sim@c68cfb8` 或 repair patch；上游原子修复两条 gitlink并吸收 ABI alias 后重跑，才升级 plain latest-ready |
 
 ## 7. 本次审计事实
 
@@ -311,7 +311,7 @@ PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再
 | serving-b 连通性 | `ssh serving-b` 成功；hostname `liteserver-560t-1.novalocal`，IP `192.169.0.85`，`openeuler-2403-DS` running |
 | serving-b repo | `/home/sj/git/data-service@e854fa0`，触发 dubious ownership 且 working tree dirty；核心源码 SHA-256 抽查 16/16 等同 local `6179941`，但其余 artifacts/provenance 未收口；只读命令使用临时 `-c safe.directory=...` |
 | A09 基线新鲜度 | 过时；current main 已领先 62 commits |
-| PhaseC/PhaseD | C01 `latest-repaired-ready`：Cargo/Python/QEMU/guest/24-app、2-node、4-node 和 cleanup 通过；C02 可开工，但 UFlow UB adapter/remote placement 仍未实现；PhaseD 未启动 |
+| PhaseC/PhaseD | C01 `latest-repaired-ready`：`/home/sj/git/ub_sim@c68cfb8` 为当前内部正式仿真基线；Cargo/Python/QEMU/guest/24-app、2-node、4-node、提升后 2-node 复验和 cleanup 通过；C02 可开工，但 UFlow UB adapter/remote placement 仍未实现；PhaseD 未启动 |
 
 ## 8. 后续更新协议
 
@@ -356,3 +356,4 @@ owner:
 | 2026-08-12 | 完成 PhaseE-04 Monitor v2 功能闭环：代码提交链 `1f9749f`～`3e932b1`；serving-b/device 7 的 regular 24 transfers、fallback 4 transfers、Trace/HTTP/cleanup、helper lifecycle 与 G0 合同测试通过，证据归档到 `results/phasee04_monitor_v2_20260812/`。Codex Browser 的 loopback URL policy 阻止当前截图，故 P0-A 只保留 regular/fallback/v1/stale 四类视觉证据门禁，R11 降为低风险。 |
 | 2026-08-31 | 启动 PhaseC 规划：新增 C00 总路线与 C01 ub-sim latest-ready 门禁，明确以数据共享和 topology-aware routing 为主线，任务顺序为 baseline→contract→topology/capability→remote DDR→remote SSD/SSU→routing→failure/replan→E2E。首次上游审计发现 `ub_sim origin/master@0fecb3b` 锁定不可获取的 `mem_service@4b13ec0`，新增 R14 并阻断 C02。 |
 | 2026-08-31 | 完成 PhaseC-01 首轮闭环：保护 `/home/sj/git/ub_sim@67c3ce5` dirty canonical，在隔离目录以 `0fecb3b` 建立 repair `d78143e -> c68cfb8`；补齐 openEuler 构建依赖和 QEMU bridge ABI，U0-U4、Python 304、sim-qemu 25、QEMU focused 22、24-app、2-node/4-node 与 cleanup 全部通过。状态为 `latest-repaired-ready / manual-active`，C02 内部解锁；raw upstream/release 风险 R14 保留。 |
+| 2026-08-31 | 按项目决策将已验证 `c68cfb8` 原子提升为 `/home/sj/git/ub_sim` 当前内部正式 ub-sim 方案；原 dirty `67c3ce5` 未 reset/clean，完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。从新路径重建 QEMU 后 U1 与 2-node U3 1/1 通过，退出后无 QEMU 残留；promotion 证据归档到 PhaseC-01 结果目录。 |
