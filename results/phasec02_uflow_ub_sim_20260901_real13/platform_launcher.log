@@ -1,0 +1,417 @@
+[ub_common] using verified prebuilt QEMU binary: /home/sj/phasec02_promotion_20260901/ub_sim/vendor/qemu_8.2.0_ub/build/qemu-system-aarch64
+iteration 1 logs: /home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/platform-logs/phasec02_uflow_ub_sim_20260901_real13_apps_iter1
+Starting nodeA...
+Starting nodeB...
+Waiting for FM links to be ready (timeout 30s)...
+FM links ready!
+Checking entity readiness on nodeA (timeout 30s, expected 2 entities)...
+PASS: Entities ready on nodeA (4 entities)
+Checking entity readiness on nodeB (timeout 30s, expected 2 entities)...
+PASS: Entities ready on nodeB (4 entities)
+=== nodeA guest(apps:1) ===
+0xc4c2
+[init] cat /sys/bus/ub/devices/00001/port1/neighbor
+No Neighbor
+[init] cat /sys/bus/ub/devices/00001/port1/neighbor_guid
+cc08-0541-0-2-000000-0000000010041c4d
+[init] cat /sys/bus/ub/devices/00001/port1/neighbor_port_idx
+1
+[init] cat /sys/bus/ub/devices/00001/direct_link
+0x01 : 0x01 [4d1c0410-0000-0000-0000-0002410508cc]
+[init] cat /sys/bus/ub/devices/00001/vendor
+0xcc08
+[init] cat /sys/bus/ub/devices/00001/device
+0x0541
+[init] cat /sys/bus/ub/devices/00001/instance
+0x001
+[init] open /sys/bus/ub/devices/00002/class_code failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/type failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/vendor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/device failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/primary_entity failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/instance failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/resource failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/boundary failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/linkup failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/cna failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_port_idx failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/direct_link failed: No such file or directory
+[init] ls /sys/class/net
+[init]   lo
+[init]   ipourma0
+[init] ls /sys/class/ubcore
+[init]   udma0
+[init]   ubcore
+[init] cat /proc/interrupts
+           CPU0       
+ 11:        822     GICv3  27 Level     arch_timer
+ 13:          0     GICv3  33 Level     uart-pl011
+ 15:        124     GICv3 144 Level     hi_msgq0-0
+ 16:          0  ITS-pMSI   0 Edge      ummu-evtq
+ 17:          0  ITS-pMSI   1 Edge      ummu-gerror
+ 19:          0     GICv3  34 Level     rtc-pl031
+ 20:          0     GICv3  23 Level     arm-pmu
+ 21:        217   ITS-MSI 16775168 Edge      ubase0-misc-0
+ 22:          0   ITS-MSI 16775169 Edge      ubase0-aeq-0
+ 23:          2   ITS-MSI 16775170 Edge      ubase0-ceq-0
+ 24:          0   ITS-MSI 16775171 Edge      ubase0-ceq-1
+ 25:          0   ITS-MSI 16775172 Edge      ubase0-ceq-2
+ 26:          0   ITS-MSI 16775173 Edge      ubase0-ceq-3
+ 27:          0   ITS-MSI 16775174 Edge      ubase0-ceq-4
+ 28:          0   ITS-MSI 16775175 Edge      ubase0-ceq-5
+ 29:          0   ITS-MSI 16775176 Edge      ubase0-ceq-6
+ 30:          0   ITS-MSI 16775177 Edge      ubase0-ceq-7
+ 31:          0   ITS-MSI 16775178 Edge      ubase0-ceq-8
+ 32:          0   ITS-MSI 16775179 Edge      ubase0-ceq-9
+ 33:          0   ITS-MSI 16775180 Edge      ubase0-ceq-10
+ 34:          0   ITS-MSI 16775181 Edge      ubase0-ceq-11
+ 35:          0   ITS-MSI 16775182 Edge      ubase0-ceq-12
+ 36:          0   ITS-MSI 16775183 Edge      ubase0-ceq-13
+ 37:          0   ITS-MSI 16775184 Edge      ubase0-ceq-14
+ 38:          0   ITS-MSI 16775185 Edge      ubase0-ceq-15
+IPI0:         0       Rescheduling interrupts
+IPI1:         0       Function call interrupts
+IPI2:         0       CPU stop interrupts
+IPI3:         0       CPU stop (for crash dump) interrupts
+IPI4:         0       Timer broadcast interrupts
+IPI5:         0       IRQ work interrupts
+IPI6:         0       CPU wake-up interrupts
+Err:          0
+[    8.185202][    T1]  ub_bus_controller0: hi_message_sync submit type=0 code=0x4 msn=0x77 req=0x30 rsp=0x30
+[    8.185561][    T1]  ub_bus_controller0: hi_message_sync wait done type=0 code=0x4 msn=0x77 cq_idx=125
+[init] sysfs ubc port1 linkup: 1
+
+[init] sysfs ubc port1 neighbor_port_idx: 1
+
+[init] sysfs ubc port1 neighbor_guid: cc08-0541-0-2-000000-0000000010041c4d
+
+[init] switching to /bin/run_app app boot flow
+[run_app] uflow agent launched role=nodeA pid=162
+[run_app] run linqu_ub_chat
+uf-ub-sim-agent: ready node=nodeA session=nodeA:162:1 generation=1 bridge=uflow-sim-bridge-v1
+[ub_chat] start role=initiator
+[ub_chat] static arp installed for peer on ipourma0
+[ub_chat] iface=ipourma0 ifindex=2 local=10.0.0.1 peer=10.0.0.2
+[ub_chat] sync socket bind ok port=18559
+[ub_chat] chat socket bind ok port=18556
+[ub_chat] sync send ok ret=8
+[ub_chat] sync send ok ret=8
+[ub_chat] sync send ok ret=8
+[ub_chat] sync send ok ret=8
+[ub_chat] sync send ok ret=8
+[ub_chat] startup sync complete role=initiator local=10.0.0.1 peer=10.0.0.2
+[ub_chat] send seq=0 payload="CHAT:initiator:greeting from initiator:0:9655"
+[ub_chat] send seq=0 ok len=45
+[ub_chat] recv raw len=56 head="CHAT:responder:copy, greeting back from responder:0:9177"
+[CHAT] initiator seq=0 "copy, greeting back from responder" latency=53ms
+[ub_chat] send seq=1 payload="CHAT:initiator:greeting from initiator:1:9709"
+[ub_chat] send seq=1 ok len=45
+[ub_chat] recv raw len=56 head="CHAT:responder:copy, greeting back from responder:1:9229"
+[CHAT] initiator seq=1 "copy, greeting back from responder" latency=51ms
+[ub_chat] send seq=2 payload="CHAT:initiator:greeting from initiator:2:9760"
+[ub_chat] send seq=2 ok len=45
+[ub_chat] recv raw len=56 head="CHAT:responder:copy, greeting back from responder:2:9281"
+[CHAT] initiator seq=2 "copy, greeting back from responder" latency=52ms
+[ub_chat] send seq=3 payload="CHAT:initiator:greeting from initiator:3:9812"
+[ub_chat] send seq=3 ok len=45
+[ub_chat] recv raw len=56 head="CHAT:responder:copy, greeting back from responder:3:9332"
+[CHAT] initiator seq=3 "copy, greeting back from responder" latency=52ms
+[ub_chat] send seq=4 payload="CHAT:initiator:greeting from initiator:4:9864"
+[ub_chat] send seq=4 ok len=45
+[ub_chat] recv raw len=56 head="CHAT:responder:copy, greeting back from responder:4:9384"
+[CHAT] initiator seq=4 "copy, greeting back from responder" latency=51ms
+[ub_chat] summary tx=5 rx=5 avg_latency=51ms min_latency=51ms max_latency=53ms
+[ub_chat] pass
+[run_app] linqu_ub_chat done
+[run_app] entering interactive shell
+sh: can't access tty; job control turned off
+~ # [   10.388901][  T162] platform OBMM_TDEV.1.auto: Adding to iommu group 1
+=== nodeB guest(apps:1) ===
+0x001
+[init] open /sys/bus/ub/devices/00002/class_code failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/type failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/vendor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/device failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/primary_entity failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/instance failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/resource failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/boundary failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/linkup failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/cna failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_port_idx failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/direct_link failed: No such file or directory
+[init] ls /sys/class/net
+[init]   lo
+[init]   ipourma0
+[init] ls /sys/class/ubcore
+[init]   ubcore
+[init]   udma0
+[init] cat /proc/interrupts
+           CPU0       
+ 11:        835     GICv3  27 Level     arch_timer
+ 13:          0     GICv3  33 Level     uart-pl011
+ 15:        124     GICv3 144 Level     hi_msgq0-0
+ 16:          0  ITS-pMSI   0 Edge      ummu-evtq
+ 17:          0  ITS-pMSI   1 Edge      ummu-gerror
+ 19:          0     GICv3  34 Level     rtc-pl031
+ 20:          0     GICv3  23 Level     arm-pmu
+ 21:        217   ITS-MSI 16775168 Edge      ubase0-misc-0
+ 22:          0   ITS-MSI 16775169 Edge      ubase0-aeq-0
+ 23:          2   ITS-MSI 16775170 Edge      ubase0-ceq-0
+ 24:          0   ITS-MSI 16775171 Edge      ubase0-ceq-1
+ 25:          0   ITS-MSI 16775172 Edge      ubase0-ceq-2
+ 26:          0   ITS-MSI 16775173 Edge      ubase0-ceq-3
+ 27:          0   ITS-MSI 16775174 Edge      ubase0-ceq-4
+ 28:          0   ITS-MSI 16775175 Edge      ubase0-ceq-5
+ 29:          0   ITS-MSI 16775176 Edge      ubase0-ceq-6
+ 30:          0   ITS-MSI 16775177 Edge      ubase0-ceq-7
+ 31:          0   ITS-MSI 16775178 Edge      ubase0-ceq-8
+ 32:          0   ITS-MSI 16775179 Edge      ubase0-ceq-9
+ 33:          0   ITS-MSI 16775180 Edge      ubase0-ceq-10
+ 34:          0   ITS-MSI 16775181 Edge      ubase0-ceq-11
+ 35:          0   ITS-MSI 16775182 Edge      ubase0-ceq-12
+ 36:          0   ITS-MSI 16775183 Edge      ubase0-ceq-13
+ 37:          0   ITS-MSI 16775184 Edge      ubase0-ceq-14
+ 38:          0   ITS-MSI 16775185 Edge      ubase0-ceq-15
+IPI0:         0       Rescheduling interrupts
+IPI1:         0       Function call interrupts
+IPI2:         0       CPU stop interrupts
+IPI3:         0       CPU stop (for crash dump) interrupts
+IPI4:         0       Timer broadcast interrupts
+IPI5:         0       IRQ work interrupts
+IPI6:         0       CPU wake-up interrupts
+Err:          0
+[    8.188324][    T1]  ub_bus_controller0: hi_message_sync submit type=0 code=0x4 msn=0x77 req=0x30 rsp=0x30
+[    8.188856][    T1]  ub_bus_controller0: hi_message_sync wait done type=0 code=0x4 msn=0x77 cq_idx=125
+[init] sysfs ubc port1 linkup: 1
+
+[init] sysfs ubc port1 neighbor_port_idx: 1
+
+[init] sysfs ubc port1 neighbor_guid: cc08-0541-0-2-000000-0000000010041c4c
+
+[init] switching to /bin/run_app app boot flow
+[run_app] uflow agent launched role=nodeB pid=161
+[run_app] run linqu_ub_chat
+uf-ub-sim-agent: ready node=nodeB session=nodeB:161:1 generation=1 bridge=uflow-sim-bridge-v1
+[ub_chat] start role=responder
+[ub_chat] static arp installed for peer on ipourma0
+[ub_chat] iface=ipourma0 ifindex=2 local=10.0.0.2 peer=10.0.0.1
+[ub_chat] sync socket bind ok port=18559
+[ub_chat] chat socket bind ok port=18556
+[ub_chat] startup sync complete role=responder local=10.0.0.2 peer=10.0.0.1
+[ub_chat] recv raw len=45 head="CHAT:initiator:greeting from initiator:0:9655"
+[CHAT] responder seq=0 "greeting from initiator" latency=-478ms
+[ub_chat] send reply seq=0 payload="CHAT:responder:copy, greeting back from responder:0:9177"
+[ub_chat] send reply seq=0 ok len=56
+[ub_chat] recv raw len=45 head="CHAT:initiator:greeting from initiator:1:9709"
+[CHAT] responder seq=1 "greeting from initiator" latency=-480ms
+[ub_chat] send reply seq=1 payload="CHAT:responder:copy, greeting back from responder:1:9229"
+[ub_chat] send reply seq=1 ok len=56
+[ub_chat] recv raw len=45 head="CHAT:initiator:greeting from initiator:2:9760"
+[CHAT] responder seq=2 "greeting from initiator" latency=-480ms
+[ub_chat] send reply seq=2 payload="CHAT:responder:copy, greeting back from responder:2:9281"
+[ub_chat] send reply seq=2 ok len=56
+[ub_chat] recv raw len=45 head="CHAT:initiator:greeting from initiator:3:9812"
+[CHAT] responder seq=3 "greeting from initiator" latency=-480ms
+[ub_chat] send reply seq=3 payload="CHAT:responder:copy, greeting back from responder:3:9332"
+[ub_chat] send reply seq=3 ok len=56
+[ub_chat] recv raw len=45 head="CHAT:initiator:greeting from initiator:4:9864"
+[CHAT] responder seq=4 "greeting from initiator" latency=-480ms
+[ub_chat] send reply seq=4 payload="CHAT:responder:copy, greeting back from responder:4:9384"
+[ub_chat] send reply seq=4 ok len=56
+[ub_chat] summary tx=5 rx=5 avg_latency=-479ms min_latency=-480ms max_latency=-478ms
+[ub_chat] pass
+[run_app] linqu_ub_chat done
+[run_app] entering interactive shell
+sh: can't access tty; job control turned off
+~ # [    9.903018][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1 req=0x58 rsp=0x28
+[    9.903639][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1 cq_idx=126
+[    9.904157][  T161] UB SIM Decoder: map created id=1 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    9.904456][  T161] UB SIM Decoder: OBMM import mapped map_id=0x1
+[    9.907920][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x2 req=0x20 rsp=0x8
+[    9.908469][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x2 cq_idx=127
+[    9.912219][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x3 req=0x10 rsp=0x8
+[    9.912928][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x3 cq_idx=128
+[    9.913313][  T161] UB SIM Decoder: map freed id=1
+[    9.913476][  T161] UB SIM Decoder: OBMM unimport unmapped map_id=0x1
+[    9.918552][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x4 req=0x58 rsp=0x28
+[    9.919081][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x4 cq_idx=129
+[    9.919368][  T161] UB SIM Decoder: map created id=2 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    9.919617][  T161] UB SIM Decoder: OBMM import mapped map_id=0x2
+[   10.197042][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x5 req=0x20 rsp=0x8
+[   10.197540][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x5 cq_idx=130
+[   10.203169][  T161]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x6 req=0x10 rsp=0x8
+[   10.203638][  T161]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x6 cq_idx=131
+[   10.203929][  T161] UB SIM Decoder: map freed id=2
+[   10.204062][  T161] UB SIM Decoder: OBMM unimport unmapped map_id=0x2
+=== nodeA qemu(apps:1) ===
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+=== nodeB qemu(apps:1) ===
+ubc_msgq sim_dec read_resp dispatch req=4064 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4065 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4066 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4067 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4068 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4069 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4070 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4071 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4072 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4073 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4074 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4075 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4076 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4077 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4078 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4079 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4080 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4081 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4082 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4083 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4084 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4085 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4086 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4087 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4088 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4089 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4090 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4091 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4092 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4093 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4094 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4095 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4096 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4097 status=0 data_len=1 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=3 len=49 scna=0xc4c2
+ubc_msgq sim_dec read_resp dispatch req=4098 status=0 data_len=1 scna=0xc4c2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=130 cq_pi=131
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+SIM_DEC: UNMAP success id=2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=131 cq_pi=132
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+iteration 1: dual-node apps pass
+interactive shells ready; use node input or Stop to terminate
+serial manifest: /home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/platform-out/dual_node_serial_env.phasec02_uflow_ub_sim_20260901_real13.sh

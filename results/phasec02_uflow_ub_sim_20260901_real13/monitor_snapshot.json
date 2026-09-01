@@ -1,0 +1,17 @@
+{
+  "access_binding_id": 50000,
+  "accessor_node_id": "nodeB",
+  "execution_mode": "simulated",
+  "fidelity": "functional",
+  "object_id": 100,
+  "parent_terminal_count": 1,
+  "placement_id": 10000,
+  "plan_id": 20000,
+  "provider_id": "ub_sim",
+  "provider_session_id": "nodeB:161:1",
+  "resource_binding_id": 40000,
+  "schema": "uflow-phasec02-monitor-snapshot-v1",
+  "source_node_id": "nodeA",
+  "typed_event_count": 4,
+  "typed_step_count": 3
+}

@@ -1,0 +1,11 @@
+category,name,count,total_us,avg_us,max_us,bytes
+control,command.handle,11,333261.767,30296.524,277501.995,0
+backend,provider.remote_map.checksum,2,277496.555,138748.277,277491.334,8192
+backend,provider.remote_map.import,1,26315.297,26315.297,26315.297,4096
+object,provider.data_object.create,1,15502.575,15502.575,15502.575,4096
+backend,provider.data_object.release,1,8924.976,8924.976,8924.976,0
+backend,provider.remote_map.revoke,1,3394.259,3394.259,3394.259,0
+backend,provider.publish,1,1281.292,1281.292,1281.292,4096
+backend,backend.startup_hbm_probe,1,28.131,28.131,28.131,1048576
+backend,provider.data_object.ready,1,0.000,0.000,0.000,0
+backend,provider.remote_map.ready,1,0.000,0.000,0.000,0

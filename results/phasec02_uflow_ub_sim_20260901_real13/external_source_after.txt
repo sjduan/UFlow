@@ -1,0 +1,6 @@
+ub_sim_sha=b624ee4318c082434ede1415e9e4d558ca47abe3
+ub_sim_status_begin
+ub_sim_status_end
+mem_service_sha=546caede8cbfe79c28c38e3659938e02f39bd953
+mem_service_status_begin
+mem_service_status_end

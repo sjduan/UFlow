@@ -1,0 +1,5 @@
+up0_source_root=/home/sj/phasec02_promotion_20260901/ub_sim/mem_service
+up0_source_kind=git-worktree
+up0_source_sha=546caede8cbfe79c28c38e3659938e02f39bd953
+up0_source_status_begin
+up0_source_status_end

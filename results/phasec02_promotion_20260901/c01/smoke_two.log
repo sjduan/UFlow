@@ -1,0 +1,457 @@
+[ub_common] using verified prebuilt QEMU binary: /home/sj/phasec02_promotion_20260901/ub_sim/vendor/qemu_8.2.0_ub/build/qemu-system-aarch64
+[ub_common] preparing guest artifacts via build_guest_artifacts.sh (source=auto)
+[build_guest_artifacts] using existing local out/ artifacts
+[build_guest_artifacts] rebuilding initramfs
+mem_service_source_check=ok version=0.1.0 revision=546caede8cbfe79c28c38e3659938e02f39bd953
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c: In function ‘main’:
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:46: warning: ‘%d’ directive output may be truncated writing between 1 and 10 bytes into a region of size 9 [-Wformat-truncation=]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                              ^~
+In function ‘resolve_pool_nodes’,
+    inlined from ‘main’ at /home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:1482:10:
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:38: note: directive argument in the range [1, 2147483647]
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |                                      ^~~~~~~~~~~
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/ub_obmm_pool/ub_obmm_pool.c:283:13: note: ‘snprintf’ output between 9 and 18 bytes into a destination of size 16
+  283 |             snprintf(ip, sizeof(ip), "10.0.0.%d", i);
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function ‘test_mmap_strict’:
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:93:67: warning: unused parameter ‘node_idx’ [-Wunused-parameter]
+   93 | static void test_mmap_strict(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                               ~~~~^~~~~~~~
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function ‘test_stale_epoch’:
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:266:67: warning: unused parameter ‘node_idx’ [-Wunused-parameter]
+  266 | static void test_stale_epoch(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                               ~~~~^~~~~~~~
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c: In function ‘test_aperture_mmap_reject’:
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/apps/gsva_lifecycle_test/gsva_lifecycle_test.c:311:76: warning: unused parameter ‘node_idx’ [-Wunused-parameter]
+  311 | static void test_aperture_mmap_reject(int obmm_fd, uint32_t local_cna, int node_idx)
+      |                                                                        ~~~~^~~~~~~~
+[build_initramfs] packaged modules:
+[build_initramfs]   linqu_ub_drv.ko
+/home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz
+built /home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz
+iteration 1 logs: /home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/logs/phasec02_promotion_20260901_u3_apps_iter1
+Starting nodeA (paused)...
+Starting nodeB (paused)...
+Resuming nodeA via QMP (/tmp/ub-qemu-links-dual/qmp/nodeA.1.sock)...
+nodeA resumed
+Resuming nodeB via QMP (/tmp/ub-qemu-links-dual/qmp/nodeB.1.sock)...
+nodeB resumed
+Waiting for FM links to be ready (timeout 30s)...
+FM links ready!
+Checking entity readiness on nodeA (timeout 30s, expected 2 entities)...
+PASS: Entities ready on nodeA (3 entities)
+Checking entity readiness on nodeB (timeout 30s, expected 2 entities)...
+PASS: Entities ready on nodeB (3 entities)
+=== nodeA guest(apps:1) ===
+[init] open /sys/bus/ub/devices/00002/vendor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/device failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/primary_entity failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/instance failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/resource failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/boundary failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/linkup failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/cna failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_guid failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/port0/neighbor_port_idx failed: No such file or directory
+[init] open /sys/bus/ub/devices/00002/direct_link failed: No such file or directory
+[init] ls /sys/class/net
+[init]   ipourma0
+[init]   lo
+[init] ls /sys/class/ubcore
+[init]   udma0
+[init]   ubcore
+[init] cat /proc/interrupts
+           CPU0       
+ 11:        839     GICv3  27 Level     arch_timer
+ 13:          0     GICv3  33 Level     uart-pl011
+ 15:        124     GICv3 144 Level     hi_msgq0-0
+ 16:          0  ITS-pMSI   0 Edge      ummu-evtq
+ 17:          0  ITS-pMSI   1 Edge      ummu-gerror
+ 19:          0     GICv3  34 Level     rtc-pl031
+ 20:          0     GICv3  23 Level     arm-pmu
+ 21:        217   ITS-MSI 16775168 Edge      ubase0-misc-0
+ 22:          0   ITS-MSI 16775169 Edge      ubase0-aeq-0
+ 23:          2   ITS-MSI 16775170 Edge      ubase0-ceq-0
+ 24:          0   ITS-MSI 16775171 Edge      ubase0-ceq-1
+ 25:          0   ITS-MSI 16775172 Edge      ubase0-ceq-2
+ 26:          0   ITS-MSI 16775173 Edge      ubase0-ceq-3
+ 27:          0   ITS-MSI 16775174 Edge      ubase0-ceq-4
+ 28:          0   ITS-MSI 16775175 Edge      ubase0-ceq-5
+ 29:          0   ITS-MSI 16775176 Edge      ubase0-ceq-6
+ 30:          0   ITS-MSI 16775177 Edge      ubase0-ceq-7
+ 31:          0   ITS-MSI 16775178 Edge      ubase0-ceq-8
+ 32:          0   ITS-MSI 16775179 Edge      ubase0-ceq-9
+ 33:          0   ITS-MSI 16775180 Edge      ubase0-ceq-10
+ 34:          0   ITS-MSI 16775181 Edge      ubase0-ceq-11
+ 35:          0   ITS-MSI 16775182 Edge      ubase0-ceq-12
+ 36:          0   ITS-MSI 16775183 Edge      ubase0-ceq-13
+ 37:          0   ITS-MSI 16775184 Edge      ubase0-ceq-14
+ 38:          0   ITS-MSI 16775185 Edge      ubase0-ceq-15
+IPI0:         0       Rescheduling interrupts
+IPI1:         0       Function call interrupts
+IPI2:         0       CPU stop interrupts
+IPI3:         0       CPU stop (for crash dump) interrupts
+IPI4:         0       Timer broadcast interrupts
+IPI5:         0       IRQ work interrupts
+IPI6:         0       CPU wake-up interrupts
+Err:          0
+[    8.199673][    T1]  ub_bus_controller0: hi_message_sync submit type=0 code=0x4 msn=0x77 req=0x30 rsp=0x30
+[    8.200150][    T1]  ub_bus_controller0: hi_message_sync wait done type=0 code=0x4 msn=0x77 cq_idx=125
+[init] sysfs ubc port1 linkup: 1
+
+[init] sysfs ubc port1 neighbor_port_idx: 1
+
+[init] sysfs ubc port1 neighbor_guid: cc08-0541-0-2-000000-0000000010041c4d
+
+[init] switching to /bin/run_app app boot flow
+[run_app] run linqu_mem_service_obmm_provider_conformance
+mem_service obmm-provider-conformance: node=0 stage=pre-canary readiness=degraded data_plane_ready=0
+[    8.449058][  T170] platform OBMM_TDEV.1.auto: Adding to iommu group 1
+[    8.456494][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1 req=0x48 rsp=0x8
+[    8.457078][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1 cq_idx=126
+[    8.457954][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x2 req=0x18 rsp=0x210
+[    8.458370][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x2 cq_idx=127
+[    8.559482][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x3 req=0x18 rsp=0x210
+[    8.559917][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x3 cq_idx=128
+[    8.562197][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x4 req=0x58 rsp=0x28
+[    8.562757][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x4 cq_idx=129
+[    8.563151][  T170] UB SIM Decoder: map created id=1 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.563456][  T170] UB SIM Decoder: OBMM import mapped map_id=0x1
+[    8.565645][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x5 req=0x20 rsp=0x8
+[    8.566173][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x5 cq_idx=130
+[    8.568610][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x6 req=0x10 rsp=0x8
+[    8.569096][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x6 cq_idx=131
+[    8.569854][  T170] UB SIM Decoder: map freed id=1
+[    8.570048][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x1
+mem_service obmm-provider-conformance: node=0 stage=post-canary readiness=ready data_plane_ready=1
+[    8.576608][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x7 req=0x58 rsp=0x28
+[    8.577288][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x7 cq_idx=132
+[    8.577592][  T170] UB SIM Decoder: map created id=2 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.577864][  T170] UB SIM Decoder: OBMM import mapped map_id=0x2
+[    8.579275][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x8 req=0x20 rsp=0x8
+[    8.579792][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x8 cq_idx=133
+[    8.583216][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x9 req=0x10 rsp=0x8
+[    8.583698][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x9 cq_idx=134
+[    8.583994][  T170] UB SIM Decoder: map freed id=2
+[    8.584130][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x2
+[    8.586202][  T170] platform OBMM_TDEV.2.auto: Adding to iommu group 2
+[    8.594576][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xa req=0x58 rsp=0x28
+[    8.595111][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xa cq_idx=135
+[    8.595410][  T170] UB SIM Decoder: map created id=3 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.595671][  T170] UB SIM Decoder: OBMM import mapped map_id=0x3
+[    8.596930][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xb req=0x20 rsp=0x8
+[    8.597787][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xb cq_idx=136
+[    8.600411][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xc req=0x20 rsp=0x8
+[    8.600913][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xc cq_idx=137
+[    8.604404][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xd req=0x20 rsp=0x8
+[    8.605052][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xd cq_idx=138
+[    8.607892][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xe req=0x20 rsp=0x8
+[    8.608408][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xe cq_idx=139
+[    8.611062][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xf req=0x20 rsp=0x8
+[    8.611547][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xf cq_idx=140
+[    8.614131][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x10 req=0x20 rsp=0x8
+[    8.614654][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x10 cq_idx=141
+[mem_service_obmm] visibility timeout expected=7744800652006572930 observed=7744800652006572931 mem_id=1 token=96 cna=50386 uba=281474974613504 imported=1 osync=1
+[    8.619748][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x11 req=0x10 rsp=0x8
+[    8.620258][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x11 cq_idx=142
+[    8.620563][  T170] UB SIM Decoder: map freed id=3
+[    8.620699][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x3
+mem_service obmm-provider-conformance: status=ok node=0 readiness=degraded-to-ready registration=verified mapping=sim-dec publish=verified invalidate=verified visibility=checksum-verified bounds=fail-closed descriptor=fail-closed checksum=fail-closed cleanup=verified
+[run_app] linqu_mem_service_obmm_provider_conformance done
+[run_app] entering interactive shell
+sh: can't access tty; job control turned off
+~ # === nodeB guest(apps:1) ===
+IPI6:         0       CPU wake-up interrupts
+Err:          0
+[    8.171373][    T1]  ub_bus_controller0: hi_message_sync submit type=0 code=0x4 msn=0x77 req=0x30 rsp=0x30
+[    8.171741][    T1]  ub_bus_controller0: hi_message_sync wait done type=0 code=0x4 msn=0x77 cq_idx=125
+[init] sysfs ubc port1 linkup: 1
+
+[init] sysfs ubc port1 neighbor_port_idx: 1
+
+[init] sysfs ubc port1 neighbor_guid: cc08-0541-0-2-000000-0000000010041c4c
+
+[init] switching to /bin/run_app app boot flow
+[run_app] run linqu_mem_service_obmm_provider_conformance
+mem_service obmm-provider-conformance: node=1 stage=pre-canary readiness=degraded data_plane_ready=0
+[    8.413563][  T170] platform OBMM_TDEV.1.auto: Adding to iommu group 1
+[    8.426807][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1 req=0x48 rsp=0x8
+[    8.427355][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1 cq_idx=126
+[    8.428039][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x2 req=0x18 rsp=0x210
+[    8.428457][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x2 cq_idx=127
+[    8.431008][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x3 req=0x58 rsp=0x28
+[    8.431578][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x3 cq_idx=128
+[    8.431968][  T170] UB SIM Decoder: map created id=1 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.432275][  T170] UB SIM Decoder: OBMM import mapped map_id=0x1
+[    8.434362][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x4 req=0x20 rsp=0x8
+[    8.434932][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x4 cq_idx=129
+[    8.437504][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x5 req=0x10 rsp=0x8
+[    8.438008][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x5 cq_idx=130
+[    8.438395][  T170] UB SIM Decoder: map freed id=1
+[    8.438555][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x1
+mem_service obmm-provider-conformance: node=1 stage=post-canary readiness=ready data_plane_ready=1
+[    8.445443][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x6 req=0x58 rsp=0x28
+[    8.445966][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x6 cq_idx=131
+[    8.446278][  T170] UB SIM Decoder: map created id=2 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.446541][  T170] UB SIM Decoder: OBMM import mapped map_id=0x2
+[    8.447902][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x7 req=0x20 rsp=0x8
+[    8.448429][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x7 cq_idx=132
+[    8.451388][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x8 req=0x20 rsp=0x8
+[    8.451906][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x8 cq_idx=133
+[    8.454717][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x9 req=0x20 rsp=0x8
+[    8.455218][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x9 cq_idx=134
+[    8.457751][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xa req=0x20 rsp=0x8
+[    8.458257][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xa cq_idx=135
+[    8.460784][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xb req=0x20 rsp=0x8
+[    8.461433][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xb cq_idx=136
+[    8.463963][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xc req=0x20 rsp=0x8
+[    8.464447][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xc cq_idx=137
+[    8.467088][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xd req=0x20 rsp=0x8
+[    8.467586][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xd cq_idx=138
+[    8.470124][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xe req=0x20 rsp=0x8
+[    8.470620][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xe cq_idx=139
+[    8.473154][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0xf req=0x20 rsp=0x8
+[    8.473647][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0xf cq_idx=140
+[    8.476183][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x10 req=0x20 rsp=0x8
+[    8.476830][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x10 cq_idx=141
+[    8.479499][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x11 req=0x20 rsp=0x8
+[    8.479995][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x11 cq_idx=142
+[    8.482634][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x12 req=0x20 rsp=0x8
+[    8.483121][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x12 cq_idx=143
+[    8.485662][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x13 req=0x20 rsp=0x8
+[    8.486151][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x13 cq_idx=144
+[    8.488670][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x14 req=0x20 rsp=0x8
+[    8.489242][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x14 cq_idx=145
+[    8.491777][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x15 req=0x20 rsp=0x8
+[    8.492271][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x15 cq_idx=146
+[    8.494916][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x16 req=0x20 rsp=0x8
+[    8.495413][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x16 cq_idx=147
+[    8.497937][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x17 req=0x20 rsp=0x8
+[    8.498423][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x17 cq_idx=148
+[    8.500952][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x18 req=0x20 rsp=0x8
+[    8.501528][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x18 cq_idx=149
+[    8.504077][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x19 req=0x20 rsp=0x8
+[    8.504572][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x19 cq_idx=150
+[    8.507223][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1a req=0x20 rsp=0x8
+[    8.507717][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1a cq_idx=151
+[    8.510351][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1b req=0x20 rsp=0x8
+[    8.510837][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1b cq_idx=152
+[    8.513367][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1c req=0x20 rsp=0x8
+[    8.513870][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1c cq_idx=153
+[    8.516390][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1d req=0x20 rsp=0x8
+[    8.516886][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1d cq_idx=154
+[    8.519531][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1e req=0x20 rsp=0x8
+[    8.520026][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1e cq_idx=155
+[    8.522646][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x1f req=0x20 rsp=0x8
+[    8.523140][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x1f cq_idx=156
+[    8.525645][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x20 req=0x20 rsp=0x8
+[    8.526164][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x20 cq_idx=157
+[    8.528682][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x21 req=0x20 rsp=0x8
+[    8.529374][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x21 cq_idx=158
+[    8.531899][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x22 req=0x20 rsp=0x8
+[    8.532393][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x22 cq_idx=159
+[    8.535025][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x23 req=0x20 rsp=0x8
+[    8.535533][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x23 cq_idx=160
+[    8.538605][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x24 req=0x10 rsp=0x8
+[    8.539156][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x24 cq_idx=161
+[    8.539457][  T170] UB SIM Decoder: map freed id=2
+[    8.539596][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x2
+[    8.541650][  T170] platform OBMM_TDEV.2.auto: Adding to iommu group 2
+[    8.550167][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x25 req=0x58 rsp=0x28
+[    8.550681][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x25 cq_idx=162
+[    8.550986][  T170] UB SIM Decoder: map created id=3 pa=40000000000 size=200000 remote_uba=ffffffe00000 token=96
+[    8.551250][  T170] UB SIM Decoder: OBMM import mapped map_id=0x3
+[    8.552539][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x26 req=0x20 rsp=0x8
+[    8.553220][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x26 cq_idx=163
+[    8.555764][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x27 req=0x20 rsp=0x8
+[    8.556388][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x27 cq_idx=164
+[    8.559623][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x28 req=0x20 rsp=0x8
+[    8.560290][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x28 cq_idx=165
+[    8.562948][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x29 req=0x20 rsp=0x8
+[    8.563451][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x29 cq_idx=166
+[    8.566101][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x2a req=0x20 rsp=0x8
+[    8.566601][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x2a cq_idx=167
+[mem_service_obmm] visibility timeout expected=5218849011362354050 observed=5218849011362354051 mem_id=1 token=96 cna=50370 uba=281474974613504 imported=1 osync=1
+[    8.571642][  T170]  ub_bus_controller0: hi_message_sync submit type=2 code=0x5 msn=0x2b req=0x10 rsp=0x8
+[    8.572137][  T170]  ub_bus_controller0: hi_message_sync wait done type=2 code=0x5 msn=0x2b cq_idx=168
+[    8.572441][  T170] UB SIM Decoder: map freed id=3
+[    8.572576][  T170] UB SIM Decoder: OBMM unimport unmapped map_id=0x3
+mem_service obmm-provider-conformance: status=ok node=1 readiness=degraded-to-ready registration=verified mapping=sim-dec publish=verified invalidate=verified visibility=checksum-verified bounds=fail-closed descriptor=fail-closed checksum=fail-closed cleanup=verified
+[run_app] linqu_mem_service_obmm_provider_conformance done
+[run_app] entering interactive shell
+sh: can't access tty; job control turned off
+~ # === nodeA qemu(apps:1) ===
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+SIM_DEC: MAP success id=2 pa=40000000000 sz=200000 remote_uba=ffffffe00000 token=96
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=132 cq_pi=133
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=133 cq_pi=134
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+SIM_DEC: UNMAP success id=2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=134 cq_pi=135
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+SIM_DEC: MAP success id=3 pa=40000000000 sz=200000 remote_uba=ffffffe00000 token=96
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=135 cq_pi=136
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=136 cq_pi=137
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=137 cq_pi=138
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=138 cq_pi=139
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4d2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=139 cq_pi=140
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=140 cq_pi=141
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=141 cq_pi=142
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+SIM_DEC: UNMAP success id=3
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=142 cq_pi=143
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+qemu-system-aarch64: terminating on signal 15 from pid 2501813 (/bin/zsh)
+{"timestamp": {"seconds": 1788228104, "microseconds": 949226}, "event": "SHUTDOWN", "data": {"guest": false, "reason": "host-signal"}}
+stop vcpu cost time: 0 ms
+SIM_DEC_STATS gva_cpu_reads=0 gva_cpu_writes=0 gva_cpu_rbytes=0 gva_cpu_wbytes=0 gva_dma_reads=0 gva_dma_writes=0 gva_dma_rbytes=0 gva_dma_wbytes=0 cpu_reads=49664 cpu_writes=0 cpu_rbytes=53248 cpu_wbytes=0 shadow_hits=49664 shadow_misses=0 page_cache_hits=0 page_cache_misses=0 page_cache_prefetches=0 page_cache_prefetch_skips=0 remote_reads=8 remote_writes=0 remote_rbytes=32768 remote_wbytes=0 dma_reads=0 dma_writes=0 dma_rbytes=0 dma_wbytes=0 read_timeouts=0 read_errors=0 write_errors=0 batch_frames=0 batch_ops=0 batch_bytes=0
+GVA_STATS cpu_reads=0 cpu_writes=0 cpu_rbytes=0 cpu_wbytes=0 dma_reads=0 dma_writes=0 dma_rbytes=0 dma_wbytes=0 remote_reads=8 remote_writes=0 remote_rbytes=32768 remote_wbytes=0 read_timeouts=0 read_errors=0 write_errors=0
+=== nodeB qemu(apps:1) ===
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=158 cq_pi=159
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=159 cq_pi=160
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=160 cq_pi=161
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+SIM_DEC: UNMAP success id=2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=161 cq_pi=162
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+SIM_DEC: MAP success id=3 pa=40000000000 sz=200000 remote_uba=ffffffe00000 token=96
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=162 cq_pi=163
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=163 cq_pi=164
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=164 cq_pi=165
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=165 cq_pi=166
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=166 cq_pi=167
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=167 cq_pi=168
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+SIM_DEC: UNMAP success id=3
+fill_cq ubcdev0 task=2 type=1 msg=2 sub=0 rq_pi=168 cq_pi=169
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=1
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=1 status=0
+ub_msgq_update_irq ubcdev0 ro=0 mask=0 status=0
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+ubc_msgq: received remote msg code=7 sub=2 len=56 scna=0xc4c2
+qemu-system-aarch64: terminating on signal 15 from pid 2501813 (/bin/zsh)
+{"timestamp": {"seconds": 1788228105, "microseconds": 152738}, "event": "SHUTDOWN", "data": {"guest": false, "reason": "host-signal"}}
+stop vcpu cost time: 0 ms
+SIM_DEC_STATS gva_cpu_reads=0 gva_cpu_writes=0 gva_cpu_rbytes=0 gva_cpu_wbytes=0 gva_dma_reads=0 gva_dma_writes=0 gva_dma_rbytes=0 gva_dma_wbytes=0 cpu_reads=160256 cpu_writes=0 cpu_rbytes=163840 cpu_wbytes=0 shadow_hits=160256 shadow_misses=0 page_cache_hits=0 page_cache_misses=0 page_cache_prefetches=0 page_cache_prefetch_skips=0 remote_reads=35 remote_writes=0 remote_rbytes=143360 remote_wbytes=0 dma_reads=0 dma_writes=0 dma_rbytes=0 dma_wbytes=0 read_timeouts=0 read_errors=0 write_errors=0 batch_frames=0 batch_ops=0 batch_bytes=0
+GVA_STATS cpu_reads=0 cpu_writes=0 cpu_rbytes=0 cpu_wbytes=0 dma_reads=0 dma_writes=0 dma_rbytes=0 dma_wbytes=0 remote_reads=35 remote_writes=0 remote_rbytes=143360 remote_wbytes=0 read_timeouts=0 read_errors=0 write_errors=0
+iteration 1: dual-node apps pass
+=== Test Results ===
+iteration 1: PASS
+=== Summary ===
+Passed: 1 / 1
+Failed: 0 / 1
+Pass rate: 100% (required >= 100%)
+Report: /home/sj/phasec02_promotion_20260901/ub_sim/guest-linux/aarch64/out/apps_report.latest.txt
+dual-node apps validation passed (1 iterations)

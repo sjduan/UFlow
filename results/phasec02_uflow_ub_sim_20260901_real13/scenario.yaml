@@ -1,0 +1,10 @@
+schema: uflow-phasec02-scenario-v1
+run_id: phasec02_uflow_ub_sim_20260901_real13
+nodes: [nodeA, nodeB]
+execution_mode: simulated
+execution_realm_id: ub_sim:phasec02_uflow_ub_sim_20260901_real13
+provider: ub_sim
+placement: {node_id: nodeA, medium: ddr, offset_bytes: 0, nbytes: 4096}
+access: {node_id: nodeB, kind: remote_map, mode: read, transport: obmm_gsva}
+fidelity: functional
+seed_id: 42

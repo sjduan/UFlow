@@ -1,0 +1,4 @@
+{"event":"daemon_hbm_probe_skipped","device_id":0,"reason":"simulated_execution_mode"}
+{"event":"daemon_started","device_id":0,"socket":"/home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/sockets/uflow.sock","block_count":0,"startup_probe_bytes":1048576,"accept_poll_us":1000,"hbm_available":false,"hbm_probe_error":""}
+{"event":"client_registered","client_id":1,"role":"phasec02-smoke","os_pid":2529347,"bare_tgid":0,"device_id":0}
+{"event":"model_registered","model_id":"phasec02"}

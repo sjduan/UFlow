@@ -1,0 +1,20 @@
+{
+  "schema": "uflow-phasec02-change-impact-v1",
+  "changed_domains": [
+    "mem_service public installable OBMM provider SDK",
+    "ub_sim mem_service gitlink and guest lock",
+    "UFlow DataProvider, UbSimProvider, Host/Guest bridge and simulated object bindings"
+  ],
+  "required_gates": ["U0", "U1", "U2", "U3", "U4"],
+  "required_node_tiers": [2, 4],
+  "eight_node_required": false,
+  "eight_node_reason": "The change does not alter node-count, full-mesh, routing, topology discovery or release semantics; four-node coverage is the highest required impact tier.",
+  "results": {
+    "U0": "pass",
+    "U1": "pass",
+    "U2": "pass",
+    "U3_two_node": "pass",
+    "U4_four_node": "pass",
+    "exact_commit_real13": "pass"
+  }
+}

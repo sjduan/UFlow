@@ -1,0 +1,77 @@
+[
+  {
+    "capability_generation": 1,
+    "completion_kind": "ub_completion",
+    "cost": {
+      "contention_score": 0,
+      "effort": 1,
+      "estimated_bandwidth_gib_s": 0,
+      "estimated_latency_us": 0,
+      "explanation": "functional simulation; physical performance is not inferred",
+      "hop_count": 1,
+      "reliability_score": 1,
+      "setup_cost_us": 0
+    },
+    "dst_placement_id": 10000,
+    "engine": "obmm_gsva",
+    "execution_realm_id": "ub_sim:phasec02_uflow_ub_sim_20260901_real13",
+    "fallback_reason": "",
+    "fallback_used": false,
+    "path": "nodeA.ddr->ub_shmem->nodeB.remote_map",
+    "plan_id": 20000,
+    "request_id": 20000,
+    "src_placement_id": 10000,
+    "steps": [
+      {
+        "access_binding_id": null,
+        "completion_state": "complete",
+        "dependencies": [],
+        "dst_placement_id": null,
+        "expected_completion_kind": "ub_completion",
+        "fallback_policy": "fail_closed",
+        "nbytes": 4096,
+        "offset_bytes": 0,
+        "operation": "publish",
+        "provider_completion_id": "ub-sim-completion-4",
+        "provider_id": "ub_sim",
+        "src_placement_id": 10000,
+        "step_id": 1
+      },
+      {
+        "access_binding_id": 50000,
+        "completion_state": "complete",
+        "dependencies": [
+          1
+        ],
+        "dst_placement_id": null,
+        "expected_completion_kind": "ub_completion",
+        "fallback_policy": "fail_closed",
+        "nbytes": 4096,
+        "offset_bytes": 0,
+        "operation": "import_read_only",
+        "provider_completion_id": "ub-sim-completion-5",
+        "provider_id": "ub_sim",
+        "src_placement_id": 10000,
+        "step_id": 2
+      },
+      {
+        "access_binding_id": 50000,
+        "completion_state": "complete",
+        "dependencies": [
+          2
+        ],
+        "dst_placement_id": null,
+        "expected_completion_kind": "ub_completion",
+        "fallback_policy": "fail_closed",
+        "nbytes": 4096,
+        "offset_bytes": 0,
+        "operation": "checksum",
+        "provider_completion_id": "ub-sim-completion-6",
+        "provider_id": "ub_sim",
+        "src_placement_id": 10000,
+        "step_id": 3
+      }
+    ],
+    "topology_generation": 1
+  }
+]

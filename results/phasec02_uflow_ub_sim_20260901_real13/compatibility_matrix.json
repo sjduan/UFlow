@@ -1,0 +1,1 @@
+{"schema":"uflow-phasec02-compatibility-v1","uflow_provider_contract":"1.0","uflow_bridge_protocol":"1","mem_service_provider_api":"1.0","mem_service_provider_abi":"1","ub_sim_revision":"b624ee4318c082434ede1415e9e4d558ca47abe3","topology":"two-node-v0","kernel_transport":"virtio-serial","status":"compatible"}

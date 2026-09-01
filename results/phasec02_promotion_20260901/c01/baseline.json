@@ -1,0 +1,105 @@
+{
+  "candidate_ref": "b624ee4318c082434ede1415e9e4d558ca47abe3",
+  "candidate_sha": "b624ee4318c082434ede1415e9e4d558ca47abe3",
+  "canonical_dirty": false,
+  "canonical_repo": "/home/sj/phasec02_promotion_20260901/ub_sim",
+  "canonical_sha": "b624ee4318c082434ede1415e9e4d558ca47abe3",
+  "commands": [],
+  "created_at": "2026-09-01T01:42:06.542122+00:00",
+  "environment": {
+    "host": "liteserver-560t-1.novalocal",
+    "user": "root",
+    "workspace_root": "/home/sj"
+  },
+  "gates": {
+    "U0": {
+      "checked_at": "2026-09-01T01:42:06.542350+00:00",
+      "status": "pass"
+    },
+    "U1": {
+      "checked_at": "2026-09-01T01:44:34.581046+00:00",
+      "status": "pass"
+    },
+    "U2": {
+      "checked_at": "2026-09-01T01:58:34.176015+00:00",
+      "status": "pass"
+    },
+    "U3": {
+      "checked_at": "2026-09-01T02:01:45.535050+00:00",
+      "status": "pass",
+      "tier": "two"
+    },
+    "U4": {
+      "checked_at": "2026-09-01T02:02:09.365377+00:00",
+      "status": "pass",
+      "tier": "four"
+    }
+  },
+  "latest": false,
+  "ready": true,
+  "remote": "origin",
+  "repaired": true,
+  "required_gates": [
+    "U0",
+    "U1",
+    "U2",
+    "U3",
+    "U4"
+  ],
+  "schema_version": 1,
+  "source": {
+    "dependencies": {
+      "guest-linux/kernel_ub": {
+        "actual": "70c7272a8b66bc9981a2fa3235ae71489ceb7789",
+        "expected": "70c7272a8b66bc9981a2fa3235ae71489ceb7789"
+      },
+      "mem_service": {
+        "actual": "546caede8cbfe79c28c38e3659938e02f39bd953",
+        "expected": "546caede8cbfe79c28c38e3659938e02f39bd953"
+      },
+      "vendor/obmm": {
+        "actual": "53011eed10716b422d2ac29199f68b55f7c5bdc5",
+        "expected": "53011eed10716b422d2ac29199f68b55f7c5bdc5"
+      },
+      "vendor/pto-isa": {
+        "actual": "ecb6c303f797749f811a494742c3c08156aacabb",
+        "expected": "ecb6c303f797749f811a494742c3c08156aacabb"
+      },
+      "vendor/pypto": {
+        "actual": "8ebddcb87a95c091c02f7f53b0a877c1e3f3d444",
+        "expected": "8ebddcb87a95c091c02f7f53b0a877c1e3f3d444"
+      },
+      "vendor/pypto-lib": {
+        "actual": "6b9576d7b240bd14d70fb4be6b2a72ffb5895d33",
+        "expected": "6b9576d7b240bd14d70fb4be6b2a72ffb5895d33"
+      },
+      "vendor/qemu_8.2.0_ub": {
+        "actual": "3a247cbe1532438f27805efe2e124c4ab882528f",
+        "expected": "3a247cbe1532438f27805efe2e124c4ab882528f"
+      },
+      "vendor/simpler": {
+        "actual": "8a6a28f405c8e46a91c15216478dd7a4acc29aed",
+        "expected": "8a6a28f405c8e46a91c15216478dd7a4acc29aed"
+      }
+    },
+    "mem_service_lock": {
+      "lock_version": "1",
+      "revision": "546caede8cbfe79c28c38e3659938e02f39bd953",
+      "version": "0.1.0"
+    }
+  },
+  "source_mode": "offline",
+  "status": "last-known-good",
+  "updated_at": "2026-09-01T02:02:23.324850+00:00",
+  "upstream_candidate_sha": "b624ee4318c082434ede1415e9e4d558ca47abe3",
+  "upstream_dependencies": {
+    "guest-linux/kernel_ub": "70c7272a8b66bc9981a2fa3235ae71489ceb7789",
+    "mem_service": "546caede8cbfe79c28c38e3659938e02f39bd953",
+    "vendor/obmm": "53011eed10716b422d2ac29199f68b55f7c5bdc5",
+    "vendor/pto-isa": "ecb6c303f797749f811a494742c3c08156aacabb",
+    "vendor/pypto": "8ebddcb87a95c091c02f7f53b0a877c1e3f3d444",
+    "vendor/pypto-lib": "6b9576d7b240bd14d70fb4be6b2a72ffb5895d33",
+    "vendor/qemu_8.2.0_ub": "3a247cbe1532438f27805efe2e124c4ab882528f",
+    "vendor/simpler": "8a6a28f405c8e46a91c15216478dd7a4acc29aed"
+  }
+}

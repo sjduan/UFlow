@@ -1,0 +1,8 @@
+status=pass
+fallback=fail_closed
+unit_contract_tests=pass
+host_dereference_rejected=true
+revoke_stale_rejected=true
+remote_map_created_placement=false
+placement_count=1
+parent_terminal_count=1

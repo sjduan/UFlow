@@ -2,9 +2,9 @@
 
 > 开发环境统一口径（2026-08-31）：UFlow 开发、构建和默认验证入口为 `ssh serving-b` → `openeuler-2403-DS`；容器执行用户为 `root`，workspace 根目录为 `/home/sj`，UFlow 仓库为 `/home/sj/git/data-service`，ub-sim 权威 checkout 为 `/home/sj/git/ub_sim`。`serving-a/c/d` 只在文档明确要求物理多机或故障验证时使用。ub-sim 的 2/4/8 个 logical node 不等同于 2/4/8 台 serving 物理机。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
-Status: `active-implementation`; C01 已以 `latest-repaired-ready / manual-active` 关闭首轮基线，并将固定 repair baseline 提升到正式 `/home/sj/git/ub_sim`；C02 已完成代码走读和任务设计、状态为 `ready-for-implementation`，UFlow 的 UB provider/remote placement 尚未实现。
+Status: `active-implementation`; C01 保持 `manual-active`，canonical `c68cfb8` 为 `latest-repaired-ready`，C02 exact commits 为 `internal-archive-ready`。C02 的统一 DataProvider、AccessBinding、Host/Guest bridge、public OBMM SDK 和双节点 4 KiB NodeA.DDR → NodeB read-only remote-map 已在 real13 闭环并正式内部归档。C03 是当前 Next Gate；动态拓扑发现、通用 remote DDR/SSD/SSU、topology-aware routing 与 failure/replan 仍未完成。
 
 ## 1. 文档定位
 
@@ -20,7 +20,7 @@ PhaseC-00 是 Phase C 的总设计和派工入口，负责回答：
 
 一句话目标：
 
-> 让 UFlow 在不依赖 simulator 私有语义的前提下，通过标准 Topology、Capability、Placement、TransferPlan 和 TransferEvent 接口驱动 ub-sim，先闭环跨节点数据共享与拓扑感知路由，再进入真实 UB 硬件适配。
+> 让 UFlow 在不依赖 simulator 私有语义的前提下，通过标准 Topology、Capability、Placement、AccessBinding、DataProvider、TransferPlan 和 TransferEvent 接口驱动 ub-sim；首版先闭环一条 NodeA.DDR 驻留、NodeB 经 UB_SHMEM/OBMM remote-map 访问的功能通路，最终在 Phase C 中覆盖不同 logical node、不同 semantic device 间的多条功能通路、拓扑选路与故障行为，再进入真实 UB 硬件适配。
 
 ## 2. 当前基线与启动判断
 
@@ -34,12 +34,11 @@ Phase A/B/E 已经提供 Phase C 可复用的本机底座：
 - 本机 direct、relay、runtime fallback 及 Monitor v2 / Trace v2 可观测合同；
 - 独立 daemon 与 Python SDK。
 
-尚未具备：
+在 C02 real13 后仍未具备：
 
-- ub-sim provider/executor；
 - 跨节点稳定地址或 block descriptor；
 - 动态 TopologyProvider / CapabilityProvider；
-- remote DDR、remote SSD/SSU 的 UFlow 端到端实现；
+- 通用 remote DDR、remote SSD/SSU 的 UFlow 端到端实现；C02 只有固定 4 KiB read-only validation slice；
 - 跨节点 cost 反馈、故障重规划和数据一致性闭环。
 
 ### 2.2 ub-sim 当前可利用的能力
@@ -65,6 +64,8 @@ Phase A/B/E 已经提供 Phase C 可复用的本机底座：
 
 PhaseC-01 先在不修改原 canonical dirty checkout 的前提下建立隔离 repair candidate `c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`：显式修复 `mem_service/QEMU` gitlink 和 bridge ABI，U0-U4、2-node provider conformance 与 4-node canary 全部通过。2026-08-31 按项目决策将该版本提升为 `/home/sj/git/ub_sim` 当前内部正式仿真基线，原 `/home/sj/git/ub_sim@67c3ce5` 完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`；提升后从新路径重新完成 U1 与 2-node U3（1/1 PASS），且无 QEMU 残留。该状态仍是 `latest-repaired-ready / manual-active`，允许 C02～C07 内部开发，但不能冒充 upstream plain `latest-ready` 或对外 release。证据见 [phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。
 
+2026-09-01，C02 在该 repair 基线上形成 provider-enabled exact commits：`ub_sim@b624ee4` 原子锁定 `mem_service@546caed`，并与 `data-service@c429d16` 一起进入 [phasec02_promotion_20260901](../results/phasec02_promotion_20260901/) complete-history 正式归档；U0～U4 与 real13 全部通过，项目状态为 `internal-archive-ready`。canonical `c68cfb8` 未被覆盖，后续 C03 绑定 archive manifest 开发；是否提升 canonical 另做项目决策。
+
 ## 3. Phase C 架构边界
 
 ### 3.1 权威职责
@@ -72,7 +73,7 @@ PhaseC-01 先在不修改原 canonical dirty checkout 的前提下建立隔离 r
 | 层 | 权威职责 | Phase C 禁止事项 |
 |---|---|---|
 | UFlow daemon/core | object identity、placement、lease、consistency、plan、cost、event、fallback | core 中出现 QEMU、SIM_DEC、OBMM 私有控制命令或硬编码 topology |
-| UFlow ub-sim adapter/provider | 把中立合同翻译为 ub-sim topology、mapping、block 和 completion 操作 | 绕过 UFlow catalog 私建第二套对象身份或生命周期 |
+| UFlow DataProvider / ub-sim adapter | 以统一 provider 合同承载本机物理、ub-sim 和未来真实 UB 资源，把中立合同翻译为 topology、mapping、block 和 completion 操作 | 为 simulation 另建一套与 physical 平行的对象、计划、事件体系，或绕过 UFlow catalog 私建第二套对象身份 |
 | ub-sim | 模拟 UB 节点、链路、GVA/GSVA、OBMM、SSD/SSU、异步完成和故障 | 决定 UFlow 的业务 placement policy，或成为生产 runtime 依赖 |
 | serving / PyPTO | 表达数据用途、约束、deadline、prefetch/migrate 请求并消费 event | 直接选择 OBMM/QEMU/URMA transport，或持有跨节点裸指针 |
 
@@ -84,7 +85,8 @@ PhaseC-01 先在不修改原 canonical dirty checkout 的前提下建立隔离 r
 4. 跨节点只传播稳定 handle/descriptor，不传播仅在某进程有效的裸 pointer。
 5. 每次传输都必须产生可等待、可追踪且只有一个 terminal outcome 的 event。
 6. `logical direct`、`simulated direct` 和真实物理 UB direct 必须分开标注。
-7. Phase C 验证 remote DDR/SSD 与路由语义；remote HBM direct/relay 的正式实现归 Phase D。
+7. Phase C 最终可以验证 DDR、SSD/SSU、semantic HBM 等不同 simulated device/node 间的多种功能通路，但这些结果必须标为 `simulated/semantic`；remote HBM direct/relay 的生产实现与物理能力声明归 Phase D。
+8. `execution_mode` 是 request/placement 约束，不进入 DataObject identity；physical 与 simulated placement 默认属于不同 execution realm，不得在没有显式 bridge capability 时声称二者数据同步。
 
 ### 3.2 目标调用链
 
@@ -95,12 +97,16 @@ client / serving / PyPTO
   -> TopologyProvider + CapabilityProvider
   -> CostModel + TransferPlanner
   -> TransferExecutor
-  -> UbSimProvider
-  -> ub-sim topology / OBMM-GSVA / UB-SSD / completion
+  -> DataProviderRegistry
+       -> LocalProvider（physical）
+       -> UbSimProvider（simulated host adapter）
+  -> versioned UFlow Guest bridge
+  -> per-Guest companion
+  -> mem-service public neutral Provider SDK / OBMM-GSVA / UB-SSD / completion
   -> TransferEvent + Trace v2 + Monitor v2
 ```
 
-`UbSimProvider` 必须是可替换 provider。后续真实 UB/URMA/SSU provider 应复用同一上层请求、计划、事件和一致性合同。
+`UbSimProvider` 必须是统一 `DataProvider` 的可替换实现，而不是独立 `SimulationBackend` 世界。后续真实 UB/URMA/SSU provider 应复用同一 registry、资源 binding、请求、计划、事件和一致性合同。故障注入、虚拟 cost profile 等 simulator-only 操作通过可选 `SimulationControl` 扩展提供，不污染通用 DataProvider。
 
 ## 4. Phase C 最小合同
 
@@ -118,7 +124,7 @@ links[]: src / dst / kind / state / bandwidth / latency / hop
 domains[]: local_node | ub_domain | supernode
 ```
 
-要求：同一份 `TransferPlan` 必须引用明确的 `snapshot_id/generation`。拓扑变化后，旧计划不得静默继续执行。
+要求：同一份 `TransferPlan` 必须引用明确的 `snapshot_id/generation`。C02 只从 scenario manifest 生成静态 snapshot，固定 `generation=1` 且 run 内不可刷新；C03 才实现动态发现、generation rollover 和 stale-plan。拓扑变化后，旧计划不得静默继续执行。
 
 ### 4.2 CapabilitySnapshot
 
@@ -134,31 +140,43 @@ max_transfer_bytes / alignment / queue_depth
 fallbacks[]
 ```
 
-capability 不得根据“脚本存在”推断，必须来自 provider 探测或明确的 scenario manifest。
+capability 不得根据“脚本存在”推断，必须来自 provider contribution 或明确的 scenario manifest。C02 使用 manifest 静态 snapshot、固定 `generation=1`；C03 才提供动态 CapabilityProvider。
 
-### 4.3 跨节点 Placement 与 Handle
+### 4.3 跨节点 Placement、ResourceBinding、AccessBinding 与 Handle
 
 首期必须支持：
 
-- `medium=UB_SHMEM`：remote DDR export/import 或 OBMM/GSVA mapping descriptor；
+- `medium=DDR`：NodeA 数据真实驻留的介质；
+- `access_kind=remote_map`、`transport_kind=ub_shmem|obmm_gsva`：NodeB 对源 DDR Placement 的远程访问方式；
 - `medium=SSU|SSD`：remote block/object descriptor；
 - `domain=ub_domain|supernode`；
 - `node_id/device_id/generation/range/access_mode`；
 - 可验证 object/version/checksum，不允许只有地址没有对象身份。
 
-### 4.4 Provider 与 Event
-
-Provider 最小操作面：
+对象与实现资源必须分层：
 
 ```text
-discover_topology
-discover_capabilities
-publish / import / revoke remote memory
-submit block read / write
-poll / wait / cancel completion
-inject or report failure
-read counters / health
+DataObject       业务身份、版本、状态和一致性
+DataPlacement    medium、node/device/domain、provider、execution mode、fidelity
+ResourceBinding  provider session/resource/generation、opaque descriptor、range、state
+AccessBinding    accessor、源 placement/binding、remote-map transport、range、permission、state
+DataHandle       object/placement/resource/access binding/lease/version/range 的受控引用
 ```
+
+本机 ACL allocation、DDR mmap、SSD extent 与 ub-sim external resource 都使用 `ResourceBinding`；不得只给仿真路径增加 `ExternalResourceBinding`，继续把本机物理字段留在 Object 内。Placement 只表示真实驻留位置/独立副本；NodeB import/map 只创建 `AccessBinding/ImportedView`，不得成为 Planner 的“最近副本”。只有真实 copy/replica 到 NodeB 独立 resource 并完成版本/checksum/ownership 登记后，才创建 NodeB Placement。
+
+### 4.4 Provider 与 Event
+
+DataProvider 最小 required 操作面：
+
+```text
+identity / probe / capability contribution / health
+submit operation: allocate/release/publish/import/revoke/checksum/read/write
+poll / wait / cancel completion
+read counters
+```
+
+完整 `discover_topology/discover_capabilities` 不属于 C02 DataProvider 最小接口：C02 由 manifest 提供 static snapshot、`generation=1`；C03 独立实现动态 TopologyProvider/CapabilityProvider。simulation failure injection 也只属于可选 SimulationControl，不进入通用 required surface。所有 mutation/data/access operation 使用一次 `submit -> completion`，一个 PlanStep 最多一个 completion 和一个 terminal outcome；bridge ACK 不是业务 completion。
 
 每次执行必须记录：planned path、actual path、fallback reason、source/destination、topology generation、provider provenance、bytes、timestamps、terminal outcome 和 checksum verdict。
 
@@ -167,7 +185,8 @@ read counters / health
 ```text
 C00 总路线
   -> C01 ub-sim latest-ready 基线
-  -> C02 中立合同与 adapter 骨架
+       ├──> C02 M1～M9：中立合同、bridge 与 4 KiB slice（real13 exact commits 已关闭）
+       └──> C02-UP0：公共 OBMM Provider library（G0～G8 已关闭）
   -> C03 Topology/CapabilityProvider
   -> C04 remote DDR 数据共享
   -> C05 remote SSD/SSU block
@@ -183,18 +202,22 @@ C00 总路线
 
 出口：根仓和所有 gitlink/lock 一致；轻量测试、2-node integrated smoke 和按变更影响选择的 4/8-node canary 通过；生成可机读 manifest。详细要求见 [PhaseC-01-ub-sim-upstream-sync-and-selftest.md](PhaseC-01-ub-sim-upstream-sync-and-selftest.md)。
 
-### C02：UFlow—ub-sim 中立合同与 adapter 骨架
+### C02：统一 DataProvider、ub-sim Guest bridge 与首条跨节点 DDR 验证
 
-目标：冻结 Topology、Capability、remote placement、provider、completion 和 error schema；创建 simulator provider，但不实现完整数据路径。
+目标：冻结 Topology、Capability、Placement/ResourceBinding/AccessBinding、统一 DataProvider、completion 和 error schema；实现 Host `UbSimProvider` + per-Guest companion 骨架，并以固定双节点、NodeB 只读、4 KiB 单 range deterministic payload 闭环一条 `NodeA.DDR Placement -> NodeB remote-map AccessBinding` validation-only 通路。C02 不要求不同设备间的完整路径矩阵。
 
 出口：
 
 - UFlow core 不依赖 ub-sim/QEMU/OBMM 头文件或命令；
-- mock provider 与 ub-sim provider 使用同一 conformance suite；
+- Local、Mock 与 UbSim provider 使用同一 DataProvider 合同；
 - wire/schema 有 version 和 compatibility 负例；
-- disabled provider 不影响现有本机路径。
+- disabled provider 不影响现有本机路径；
+- payload 只经过 Guest/OBMM 数据面，Host bridge 只承载 descriptor、control、completion 和 checksum；
+- NodeB import/map 只创建 AccessBinding，不创建 Placement；
+- C02 只使用 manifest static topology/capability snapshot、`generation=1`；
+- [C02-UP0](PhaseC-02-UP0-obmm-provider-library-enablement.md) 已形成 `mem_service@546caed`、`ub_sim@b624ee4` 正式归档并通过 C01 U0～U4；Guest companion/real13 只消费安装产物。C02 未扩大 daemon RPC，也未用 console、Host memcpy 或临时文件伪造通过。
 
-详细实施方案见 [PhaseC-02-uflow-ub-sim-functional-integration.md](PhaseC-02-uflow-ub-sim-functional-integration.md)。C02 采用 host UFlow daemon + per-QEMU-guest sim agent；复用 mem-service neutral provider/OBMM 数据面，不复用其对象 catalog。simulated HBM 必须是 descriptor-only、semantic fidelity，禁止伪造真实 device pointer。
+详细实施方案见 [PhaseC-02-uflow-ub-sim-functional-integration.md](PhaseC-02-uflow-ub-sim-functional-integration.md)。当前 `c68cfb8` 的 mem-service daemon public wire 未暴露通用 OBMM region/transfer/completion 操作，因此 C02 明确采用 host UFlow daemon + Host UbSimProvider + per-QEMU-Guest companion；companion 只消费固定版本的公共 neutral provider SDK/descriptor，不复用 mem-service 对象 catalog。simulated HBM 必须是 descriptor-only、semantic fidelity，禁止伪造真实 device pointer。
 
 ### C03：TopologyProvider 与 CapabilityProvider
 
@@ -209,7 +232,7 @@ C00 总路线
 
 ### C04：remote DDR 数据共享
 
-目标：用 UFlow DataObject/Placement/Handle 驱动 remote DDR publish/import/read/write/revoke，优先映射 ub-sim OBMM/GSVA 能力。
+目标：在 C02 固定只读 4 KiB slice 之上，用 UFlow DataObject/Placement/AccessBinding/Handle 驱动通用 remote DDR publish/import/read/write/revoke、权限、一致性、多 client 生命周期以及真正 copy/replica，优先映射 ub-sim OBMM/GSVA 能力。
 
 出口：
 
@@ -258,6 +281,7 @@ C00 总路线
 出口：
 
 - 数据共享：remote DDR 与 remote SSD/SSU 各有一条无旁路闭环；
+- 多通路：同一套 UFlow 合同至少覆盖 DDR↔DDR、SSD/SSU↔DDR、DDR↔semantic HBM 等不同 node/device 组合；可选 semantic HBM direct/relay 只作为功能仿真证据，不升级为生产能力；
 - 路由：multi-placement、cost 变化和 link failure 会产生预期路径切换；
 - 可观测：UFlow event、Trace v2、Monitor v2 与 simulator counter 可按 event/object id 对齐；
 - 2-node 必须每次通过，4/8-node 按 release gate 通过；无残留 daemon/QEMU/socket。
@@ -266,6 +290,7 @@ C00 总路线
 
 | 场景 | 首要验证 | 最小规模 | 归属 |
 |---|---|---:|---|
+| 4 KiB cross-node DDR validation slice | DataProvider/Guest bridge/descriptor/completion/checksum | 2 logical nodes | C02 |
 | remote DDR immutable share | Object/Handle 跨 address domain 与 checksum | 2 logical nodes | C04 |
 | remote DDR single-writer | owner、dirty/ready、revoke、stale generation | 2 | C04 |
 | remote SSD block → local DDR | block descriptor、async completion、range/checksum | 2 | C05 |
@@ -275,6 +300,7 @@ C00 总路线
 | link/node down | replan/fallback/fail-closed | 4 | C07 |
 | capacity exhausted/queue busy | 资源约束进入 planner 与事件 | 2/4 | C07 |
 | scale-out canary | 相同合同扩到 8-node，不新增 simulator 私有 API | 8 | C08 |
+| cross-device multi-path matrix | DDR、SSD/SSU、semantic HBM 间多条路径语义正确且 truth label 准确 | 2/4/8 | C08 |
 
 性能不是 Phase C 首轮的主退出条件。首轮先证明语义、选路、事件、故障和证据正确；带宽/延迟数值只用于确定性 cost profile 与相对选路，不得外推为真实 UB 硬件性能。
 
@@ -283,13 +309,13 @@ C00 总路线
 | Gate | 条件 | 证据 |
 |---|---|---|
 | C-G0 baseline | C01 `latest-ready=pass`；根仓、gitlink、lock、环境唯一 | baseline manifest、fetch/submodule/test logs |
-| C-G1 contract | 中立 schema、version、mock/provider conformance 通过 | schema、unit/contract test |
+| C-G1 contract | 中立 schema、version、Local/Mock/UbSim DataProvider conformance 通过 | schema、unit/contract test |
 | C-G2 discovery | 2/4/8 topology 和 capability 可发现、可失效 | snapshots、negative cases |
 | C-G3 sharing | remote DDR publish/import/revoke 与数据校验通过 | object/placement/event/trace |
 | C-G4 block | remote SSD/SSU async block 与 relay 通过 | plan/event/checksum/provider trace |
 | C-G5 routing | 不同 topology/cost/capability 得到预期路由 | decision matrix、explanation |
 | C-G6 failure | 故障注入、fallback/replan、清理通过 | failure matrix、cleanup manifest |
-| C-G7 E2E | 2-node golden + 4/8-node canary 无旁路闭环 | immutable acceptance bundle |
+| C-G7 E2E | 2-node golden + 4/8-node canary、多节点/多设备通路矩阵无旁路闭环 | immutable acceptance bundle |
 
 任一 Gate 不得只写 `PASS`。必须绑定：UFlow commit、ub-sim commit、全部子模块 commit、scenario hash、机器/容器、命令、开始结束时间、exit code、raw log、summary 和 cleanup 结果。
 
@@ -360,10 +386,11 @@ Phase C 首版完成必须同时满足：
 5. 所有远端操作统一进入 TransferEvent、Trace v2 和 Monitor v2；
 6. 故障注入会触发显式 fallback/replan 或 fail closed，且无资源泄漏；
 7. 2-node golden 与 4/8-node canary 有当前 revision、无旁路、可复核证据；
-8. Phase D 可以只新增 remote HBM capability/executor，而不需要重写 Phase C 的对象、路由和事件合同。
+8. 不同 simulated node/device 间的多条功能通路通过统一 DataProvider/Plan/Event 合同验证，且不把 semantic 结果外推为物理性能或生产能力；
+9. Phase D 可以只新增真实 remote HBM capability/executor，而不需要重写 Phase C 的对象、binding、路由和事件合同。
 
 ## 11. 当前 Future Work
 
-当前主门禁为 [PhaseC-02](PhaseC-02-uflow-ub-sim-functional-integration.md)：基于 `c68cfb8` 实现 host UFlow daemon + guest sim-agent integration spine，冻结 transport-neutral topology/capability/placement/binding/handle/TransferEvent 合同，确保后续数据共享与 topology-aware routing 不把 QEMU/OBMM 私有语义泄漏到 UFlow core。
+当前主线已转入 C03：基于 C02 `data-service@c429d16 / ub_sim@b624ee4 / mem_service@546caed` 的正式内部归档，实现动态 topology/capability discovery、generation rollover、snapshot freshness 与 stale-plan fail-closed，再进入 C04 通用 remote DDR。real13 只证明固定双节点、只读、4 KiB 单 range 的 functional validation slice，不代表通用 remote DDR、topology-aware routing 或生产远端 HBM。
 
-并行维护项：上游仍需原子修复 `origin/master@0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 可获取性并吸收 bridge compatibility alias；C01 guard 仍需接入每日/事件触发。在此之前每个 Phase C agent 必须绑定 `c68cfb8` 或归档 patch，不能自行选择“相近”子模块版本。
+并行维护项：上游仍需原子修复 `origin/master@0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 可获取性并吸收 bridge compatibility alias；C01 guard 仍需接入每日/事件触发。C03 agent 必须绑定 `phasec02_promotion_20260901/commit_manifest.json` 中的 exact commits，不能自行选择“相近”子模块版本。

@@ -1,0 +1,11 @@
+{
+  "schema": "lingqu-mem-service-obmm-provider-version-v1",
+  "provider": "obmm",
+  "api_major": 1,
+  "api_minor": 0,
+  "abi_major": 1,
+  "descriptor": "opaque-versioned-bounded-read-only",
+  "completion": "single-terminal",
+  "library": "liblingqu_mem_service_provider_obmm.a",
+  "source_sha": "546caede8cbfe79c28c38e3659938e02f39bd953"
+}

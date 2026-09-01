@@ -1,6 +1,8 @@
 # UFlow Framework Scope
 
-Last reviewed: 2026-06-15
+> 开发环境统一口径（2026-08-12）：所有新开发、构建和验证默认使用 `ssh serving-b` → `openeuler-2403-DS` → `/home/sj/git/data-service`；device 必须现场探测并记录。本文中的“1号机/2号机/NPU7”等旧称仅表示历史证据，不再是当前执行指令。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
+
+Last reviewed: 2026-09-01
 
 ## 1. 背景
 
@@ -45,7 +47,7 @@ UFlow 的长期目标不是只做一个本机 allocator，而是面向未来超�
 
 这次重构的价值不在于重新发明一个缓存系统，而在于把 950+ 硬件已经提供的 UB-native 能力变成可编程、可观测、可调度的数据服务：
 
-- **把硬件直连能力变成软件可用的统一抽象**：上层通过 DataObject / DataPlacement / DataHandle 表达数据，不关心底层是 local HBM、UB import、SSU LBA，还是 relay path。
+- **把硬件直连能力变成软件可用的统一抽象**：上层通过 DataObject / DataPlacement / ResourceBinding / AccessBinding / DataHandle 表达数据；Placement 说明字节真正驻留在哪里，AccessBinding 说明某个节点如何远程访问，不把“可达”误当成“副本”。
 - **把异构协议差异收敛到 Transfer Engine**：DDR↔HBM DMA、UB shmem、Urma read/write、UB block、DFS read 统一变成可规划、可回退、可异步等待的 TransferPlan。
 - **让 pypto-serving 从数据路径细节中解耦**：serving 只表达权重、KVCache、prefix、生命周期和 policy，不在业务代码里写死 CPU staging、NPU upload、远端读取或 SSU 路由。
 - **让调度器可以基于数据位置调度计算**：prefill/decode 放置、KV owner 迁移、prefix 副本选择、远端 HBM relay 都可以由 cost model 参与决策。
@@ -143,14 +145,29 @@ placement_id
 object_id
 node_id
 device_id
-medium: DDR | SSD | HBM | UB_SHMEM | DFS
-address_kind: local_ptr | device_ptr | ub_addr_lba | ub_import_base | file_path_offset
+medium: DDR | SSD | HBM | DFS | DEDICATED_UB_POOL
+address_kind: local_ptr | device_ptr | ub_addr_lba | file_path_offset | provider_only
 offset / nbytes
 state: creating | ready | dirty | stale | evicting | failed
 performance_class: latency_ns / bandwidth_gbps / hop_count
 ```
 
-### 4.3 DataHandle
+规则：`medium` 只表达数据的真实驻留介质。remote DDR 通过 UB import/map 后仍是源节点的 `medium=DDR` Placement；`UB_SHMEM/remote_map/OBMM-GSVA` 是 access/transport，不是新 medium，也不创建访问方 Placement。只有未来存在独立、真实驻留的 UB shared-memory pool 时，才可经架构审查启用 `DEDICATED_UB_POOL`。
+
+### 4.3 ResourceBinding 与 AccessBinding
+
+`ResourceBinding` 把 Placement 绑定到实际 provider resource；`AccessBinding`（或 `ImportedView`）描述某个 accessor 对已有 Placement 的远程访问视图：
+
+```text
+ResourceBinding: placement_id / provider_session / resource_id / generation / range / state
+AccessBinding: source_placement_id / source_binding_id / accessor_node_id
+               access_kind=remote_map / transport_kind=ub_shmem|obmm_gsva
+               permission / range / source_generation / state
+```
+
+Planner 的“最近副本”候选只能来自 Placement。AccessBinding 可以影响指定 accessor 的可达性、setup cost 和 route state，但不能被当作本地副本。只有真正 copy/replica 到访问节点的独立 resource，并完成版本、checksum 和 ownership 登记后，才新增 Placement + ResourceBinding。
+
+### 4.4 DataHandle
 
 DataHandle 是应用和 runtime 传递的稳定引用，不等于裸指针。
 
@@ -169,7 +186,7 @@ DataHandle 是应用和 runtime 传递的稳定引用，不等于裸指针。
 - pointer 只在明确的 address domain 内有效。
 - 上层只持有 handle，UFlow 负责解析和路径选择。
 
-### 4.4 TransferPlan
+### 4.5 TransferPlan
 
 TransferPlan 是一次数据读取、迁移、同步或预取的执行计划。
 
@@ -187,7 +204,7 @@ async_event
 fallback_path
 ```
 
-### 4.5 TransferCost
+### 4.6 TransferCost
 
 TransferCost 是 UFlow 对“把数据从 A 送到 B 要付出多大代价”的统一度量。它不是单纯的物理距离，也不是固定 NUMA 亲和，而是一个可随平台代际、拓扑、介质和运行时拥塞变化的综合权重。
 
@@ -209,7 +226,7 @@ relay_required
 
 其中 `effort` 是用于排序和决策的综合标量，`estimated_*` 和其它字段用于解释、调试和策略约束。不同代际可以有不同的 cost table 和校准数据，但上层接口不应写死 NUMA、UB、SSU 或 DFS 的某一种具体路径。
 
-### 4.6 TopologyDomain
+### 4.7 TopologyDomain
 
 TopologyDomain 描述一组访问代价相近的数据与设备范围。它是 NUMA node、PCIe/NPU locality、UB domain、supernode、cluster 等概念的统一上位抽象。
 
@@ -733,6 +750,13 @@ UFlow 做 placement 和 transfer 时至少考虑：
 
 ub-sim 首期用于验证功能，而不是追求真实性能。
 
+验证按两层推进：
+
+- C02 第一版固定双节点、NodeB 只读、4 KiB 单 range 的 `NodeA.DDR Placement -> NodeB AccessBinding(remote_map over UB_SHMEM/OBMM)` 已在 2026-09-01 exact-commit real13 完成内部闭环，证明统一 DataProvider、descriptor、completion、checksum 和 cleanup 正确；三仓提交、正式归档和 C01 U0～U4 均已收口。C02 仍只使用 manifest 静态 topology/capability snapshot、固定 `generation=1`；
+- Phase C 最终验收再覆盖不同 logical node、DDR/SSD/SSU/semantic HBM 等不同 simulated device 间的多条通路、拓扑选路与故障切换。
+
+semantic HBM 通路属于功能仿真证据，不等于真实 remote HBM 支持；真实 direct/relay provider 和硬件证据归 Phase D。
+
 建议仿真能力：
 
 - 多节点 topology。
@@ -774,9 +798,14 @@ ub-sim 首期用于验证功能，而不是追求真实性能。
 ### Phase C: UB 超节点仿真
 
 - 接 ub-sim。
-- 支持 remote DDR shmem。
+- 建立 physical/simulated/未来真实 UB 共用的 DataProvider、Placement/ResourceBinding/AccessBinding、PlanStep 和 Event 合同。
+- 第一版先闭环固定双节点、只读、4 KiB 单 range 的 NodeA.DDR 驻留、NodeB UB_SHMEM/OBMM remote-map access/checksum；remote map 不创建 NodeB Placement。
+- C02 使用 manifest 静态 topology/capability snapshot、固定 `generation=1`；C03 才实现动态发现和 generation rollover。
+- C02-UP0 公共可安装 Provider library 与真实 OBMM bridge 已在 exact commits `data-service@c429d16 / ub_sim@b624ee4 / mem_service@546caed` 上通过，未扩大 mem-service daemon RPC；complete-history 正式归档、gitlink/lock 与 C01 U0～U4 已关闭。C03 是当前动态 topology/capability 门禁，C04 再提供任意 range、read/write、权限、一致性、多 client 生命周期和真正 copy/replica。
+- 支持通过 UB shmem/import 访问 remote DDR Placement。
 - 支持 remote SSD block。
 - 支持 topology-aware path selection。
+- 最终完成跨 logical node、跨 DDR/SSD/SSU/semantic HBM 的多通路功能矩阵和故障验证；仿真结果不得升级为真实硬件性能或生产 remote HBM 声明。
 
 ### Phase D: 远端 HBM 与 relay
 
@@ -801,7 +830,7 @@ ub-sim 首期用于验证功能，而不是追求真实性能。
 4. 远端 HBM 不支持直通时，relay 节点是否由 UFlow 自主选择，还是由上层 scheduler 指定？
 5. SSD→HBM 是否假设存在 direct path，还是首期统一经 DDR staging？
 6. UFlow 的 metadata 存储首期用进程内 registry，还是直接接一个轻量 KV/DB？
-7. ub-sim 验证应该先模拟语义正确性，还是从第一版就带 cost/latency 模型？
+7. ub-sim 验证顺序已确定：第一版先闭环语义正确性和跨节点 DDR；之后引入确定性 cost/latency profile 验证相对选路，仿真数值不外推为物理性能。
 8. 开放接口首期采用 Python client、Unix socket RPC，还是直接定义跨语言 IDL？
 9. 手动控制接口和自动 allocator policy 冲突时，以 pin/lease 为最高优先级，还是由 policy 决定？
 

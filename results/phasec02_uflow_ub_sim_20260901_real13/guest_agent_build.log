@@ -1,0 +1,4 @@
+make: Entering directory '/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-ub-sim-agent'
+mkdir -p /home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/build/
+gcc -O2 -Wall -Wextra -Werror -static $(pkg-config --cflags lingqu-mem-service-obmm-provider) c/uf_ub_sim_agent_obmm.c $(pkg-config --libs --static lingqu-mem-service-obmm-provider) -o /home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/build/uf-ub-sim-agent-obmm
+make: Leaving directory '/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-ub-sim-agent'

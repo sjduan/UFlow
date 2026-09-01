@@ -2,9 +2,9 @@
 
 > 开发环境统一口径（2026-08-31）：固定在 `ssh serving-b` → `openeuler-2403-DS` 内准备和验证候选基线；容器执行用户为 `root`，workspace 根目录为 `/home/sj`，UFlow 仓库为 `/home/sj/git/data-service`，ub-sim canonical checkout 为 `/home/sj/git/ub_sim`。candidate staging 和运行目录必须位于 `/home/sj` 下并由当次 manifest 记录。详见 [Phase0-development-environment.md](Phase0-development-environment.md)。
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
-Status: `done-first-run / latest-repaired-ready / manual-active`; 原始 upstream 仍有不可获取 gitlink，但显式下游修复版本已在 serving-b 通过 U0-U4、提升到正式 `/home/sj/git/ub_sim`，并从新路径复验 U1/U3。未接入每日 watcher，不能写成 plain `latest-ready` 或 release-ready。
+Status: `done-first-run / manual-active`; canonical `c68cfb8` 保持 `latest-repaired-ready`，C02 promotion `b624ee4 + mem_service@546caed` 为 `internal-archive-ready`，已在 serving-b 通过 U0-U4。原始 upstream 仍有不可获取 gitlink，未接入每日 watcher，任何版本都不能写成 plain `latest-ready` 或 release-ready。
 
 ## 1. 任务定位
 
@@ -51,6 +51,7 @@ unit/contract check:       24 hours
 | `latest-testing` | candidate 正在跑门禁 | 否 |
 | `latest-ready` | 所有强制门禁通过且证据未过期 | 是 |
 | `latest-repaired-ready` | 以最新 upstream root 为基线，显式应用下游可审计修复后通过全部影响面门禁；修复尚未被 upstream 接收 | 允许 C02～C07 内部开发与回归；不允许对外 release，必须绑定 repair patch/SHA |
+| `internal-archive-ready` | downstream exact commits 由纳入项目证据的 complete-history 正式归档提供，全部影响面门禁通过；不声称是 upstream tip | 允许绑定 exact SHA 的 C02～C07 内部开发与回归；不允许对外 release或冒充 latest |
 | `latest-failed` | 最新 candidate 可获取但测试失败 | 否；保留 last-known-good |
 | `last-known-good` | 曾通过但已不是最新或 freshness 过期 | 只允许诊断/对照，不允许新的正式验收 |
 
@@ -137,6 +138,23 @@ result:            latest-repaired-ready / manual-active
 
 证据入口：[results/phasec01_ub_sim_20260831_01](../results/phasec01_ub_sim_20260831_01/)。C02～C07 内部开发必须绑定 `c68cfb8` 或归档的 `candidate_repair.patch`；对外 release 仍须等待 upstream 原子修复或接收该 repair。
 
+边界说明：U3/U4 证明的是 ub-sim + mem-service/OBMM baseline 自身可运行，不证明 UFlow 已经拥有 Host 可调用的 provider control surface。当前 baseline 的 mem-service public daemon wire 未暴露通用 OBMM region/mapping/completion 操作，OBMM Provider 也尚未形成 Guest companion 可安装消费的公共 library；该缺口由 [C02-UP0](PhaseC-02-UP0-obmm-provider-library-enablement.md) 关闭。UP0 首选且默认只交付 in-process public Provider library，不扩大 daemon RPC；不能把已有 conformance app/console `PASS` 直接当作 UbSimProvider API。
+
+### 4.5 2026-09-01 C02 promotion exact-commit 回归
+
+C02 在不修改 canonical `/home/sj/git/ub_sim@c68cfb8` 的前提下形成了三段独立提交和 complete-history 正式归档：
+
+```text
+mem_service: 546caede8cbfe79c28c38e3659938e02f39bd953
+ub_sim:      b624ee4318c082434ede1415e9e4d558ca47abe3
+data-service:c429d16e1b0e92570e65a386bc76433058b972c3
+evidence:    data-service/results/phasec02_promotion_20260901/
+```
+
+`b624ee4` 的 mem_service gitlink、`guest-linux/aarch64/mem_service.lock` 和实际 submodule HEAD 均为 `546caed`。在 `/home/sj/phasec02_promotion_20260901/ub_sim` 的 clean isolated checkout 中，U0～U4 全部 PASS：fresh run-owned Cargo target 完成 U2，U3 2-node 与 U4 4-node 均通过；改动不涉及 node-count/full-mesh/routing/release 语义，因此不要求 8-node。exact-commit real13 随后验证 UFlow 4 KiB NodeA.DDR→NodeB read-only OBMM slice，并完成 payload scan 与 cleanup；Cargo.lock 已纳入提交，构建后 tracked checkout 保持 clean。
+
+机器报告由于 `source_mode=offline` 正确输出 `last-known-good / repaired / ready=true`；项目治理状态记为 `internal-archive-ready`，只允许绑定三仓 exact SHA 的内部开发/回归。首次 stale Cargo target 与缺失候选 QEMU/`distlib` 的失败 attempt 保留在 `commands.jsonl`；接受结果使用 fresh target 和经验证的 canonical prebuilt QEMU binary，没有修改 canonical source。
+
 ## 5. Source of Truth 与版本规则
 
 ### 5.1 权威版本
@@ -169,7 +187,7 @@ candidate SHA:  fetch 后解析 origin/master，不使用缓存日期猜测
 
 - 根 gitlink 和仓内 lock 必须在同一个可审计变更中更新；
 - 被锁定提交必须已推送并可从声明 remote 获取；
-- 下游不允许用本机只有的 commit、bundle 或 unadvertised object 作为正式基线；
+- 下游不允许用本机临时 commit、未登记 bundle 或 unadvertised object 作为正式基线；纳入项目 evidence、带 SHA256、complete-history 且通过完整门禁的正式归档只可标记 `internal-archive-ready`，不得升级 upstream/release 状态；
 - remote URL、branch、commit、fetch time、fetch exit code 全部进入 manifest；
 - tag/release 如被采用，仍需保存解析后的 immutable commit SHA。
 
@@ -273,6 +291,8 @@ Python 测试选择必须覆盖本次 diff 触及的 runner、topology、QEMU co
 3. Memory Service + OBMM provider conformance 或等价当前正式入口；
 4. remote mapping/read-write/checksum/completion；
 5. shutdown 和无残留 QEMU/socket/process。
+
+该 integrated smoke 是 external platform baseline gate。它允许 C02 复用已经验证的 neutral provider 语义和数据面，但不替代 UFlow Host `UbSimProvider`、Guest companion、bridge、DataObject/Placement/ResourceBinding/AccessBinding 和 TransferEvent 的独立验收。
 
 首选仓内正式脚本，不人工拼 QEMU command。当前可审计入口包括：
 
@@ -438,9 +458,12 @@ PhaseC-01 首版关闭必须同时满足：
 7. evidence bundle 字段齐全，latest/reproducible/ready 三个判断可机器读取；
 8. latest candidate 失败时 last-known-good 不被覆盖，Phase C 下游明确阻断；
 9. 定时/开工前触发方式已经接入，或状态明确保持 `manual-active`。
+10. baseline manifest 向 C02 明确交付 provider header/API version、OBMM provider build/install 形态、launcher/QMP/console 边界；不得把 source capability 推断为可供 UFlow 调用的 public runtime capability。
 
 ## 14. 当前 Next Gate
 
-内部主线：C02 可以直接基于 `/home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072` 开工，先冻结 UFlow/ub-sim 中立合同；每次开工前继续用 guard 检查 freshness，不得回退到 `/home/sj/git/ub_sim.pre_phasec01_20260831` 的历史 dirty checkout。
+内部主线：C02 promotion 已以 `ub_sim@b624ee4 + mem_service@546caed + data-service@c429d16` 完成正式归档、U0～U4 和 exact-commit real13，状态为 `internal-archive-ready`。C03 开工时必须绑定该 manifest/exact SHA并重新检查 freshness；不得回退到历史 dirty checkout，也不得把 archive candidate 写成 upstream latest。
+
+当前 C01 Next Gate 转为两项常驻工作：一是为 C03 的 topology/capability 变更执行新的 change-impact 门禁；二是把 guard 接入每日/事件触发。若项目决定将 `b624ee4` 提升为 `/home/sj/git/ub_sim` canonical，必须另做非破坏式 promotion decision 和提升后复验，不能由 C01 自动覆盖当前 canonical。
 
 上游/release 主线：请 ub_sim 上游原子修复 `mem_service@4b13ec0` 与 `qemu@15951308` 的可获取性或 gitlink，并吸收 bridge compatibility alias。新 upstream root 到达后重新执行 U0-U4，只有不依赖下游 patch 时才升级为 plain `latest-ready`。另需把 guard 接入每日/事件触发，才能从 `manual-active` 升级为持续门禁。

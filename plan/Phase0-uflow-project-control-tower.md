@@ -70,7 +70,7 @@ ssh serving-b
 
 `uflow_framework_scope.md` 定义的长期目标，是统一管理本机及跨节点 DDR、SSD/SSU、HBM、UB、DFS 等介质上的 DataObject、Placement、Handle、TransferPlan、TransferCost、Event 和一致性状态，并由 topology/capability/cost 驱动路径选择。
 
-截至 2026-08-12，实际落地边界是：
+截至 2026-09-01，实际落地边界是：
 
 | 总纲能力 | 当前状态 | 总控判断 |
 |---|---|---|
@@ -83,8 +83,8 @@ ssh serving-b
 | Prepare/Prefetch 与异步预取 | 仅 B06 计划 | 未实现 |
 | 独立 daemon、SDK、monitor、trace | daemon/SDK 与 Trace v2 已落地 | Trace v2 已覆盖当前 HBM↔DDR direct/pinned 与 SSD 多路径；E04 Monitor v2 仍待实施 |
 | Topology/Capability/Cost 动态闭环 | 仅静态/局部探测 | 未达到总纲目标 |
-| ub-sim 多节点验证 | C01 repaired baseline 已通过 U0-U4 | `c68cfb8` 的 2-node provider conformance 与 4-node canary 当前通过；raw upstream 仍有不可获取 gitlink，UFlow adapter 尚未实现 |
-| Remote DDR / UB shmem / SSU block | 无 backend 与端到端证据 | 未开始 |
+| ub-sim 多节点验证 | C01 repaired baseline 与 C02 promotion exact commits 均通过 U0-U4；real13 通过 | `c429d16 / b624ee4 / 546caed` 上统一 DataProvider、public OBMM SDK、Host/Guest bridge 和 2-node 4 KiB remote-map 已内部正式归档；下一门禁 C03 |
+| Remote DDR / UB shmem / SSU block | C02 有固定 4 KiB NodeA.DDR→NodeB read-only OBMM functional slice | 通用 remote DDR 与 SSD/SSU block 仍未开始；不得把 validation slice 写成完整 backend |
 | Remote HBM direct/relay | 无 PhaseD 实施文档与执行证据 | 未开始 |
 | namespace/tenant、鉴权、持久化 catalog、recovery | 长期项 | 未完成 |
 
@@ -95,7 +95,7 @@ PhaseA 本机原型
   -> PhaseE 本机独立服务与 Transfer Engine 底座
      -> PhaseA-08/A09 serving 新路径
      -> PhaseB 本机 SSD 扩展
-  -> PhaseC UB/多节点仿真（C01 repaired baseline 已通过，下一门禁 C02）
+  -> PhaseC UB/多节点仿真（C01、C02 已关闭，下一门禁 C03）
   -> PhaseD 远端 HBM direct/relay（尚未开始）
 ```
 
@@ -157,12 +157,16 @@ PhaseC 总入口已经建立：
 
 - `PhaseC-00-ub-sim-adaptation-roadmap.md`：冻结 UFlow/ub-sim 边界，并将 Phase C 拆成 C01～C08；
 - `PhaseC-01-ub-sim-upstream-sync-and-selftest.md`：负责持续维护 ub-sim `latest-ready` 基线。
+- `PhaseC-02-uflow-ub-sim-functional-integration.md`：冻结统一 DataProvider、Object/Placement/ResourceBinding/AccessBinding、Host UbSimProvider、per-Guest companion 与 NodeA.DDR→NodeB remote-map 的 4 KiB 首版验证合同；remote map 不创建 NodeB Placement。
+- `PhaseC-02-UP0-obmm-provider-library-enablement.md`：public OBMM Provider library、external commits、ub_sim gitlink/lock 与 C01 promotion 已按内部正式归档口径关闭。
 
-状态：`active-implementation / C01 latest-repaired-ready / UFlow-adapter-absent`，C01 证据等级 E3；Phase C 整体仍不能写 supported。
+状态：`active-implementation / C01 manual-active / C02 closed-internal / C02-UP0 closed-internal / C03 next`。C02 real13 与 promotion 证据达到内部 E3，三仓 exact commits 和 C01 U0～U4 已绑定；C03～C08 尚未开始，Phase C 整体不能写 supported。
 
 2026-08-31 的首次只读上游审计发现：本地 `ub_sim@7aec390` 落后 `origin/master@0fecb3b` 23 个提交；最新 root 锁定的 `mem_service@4b13ec0` 与 `qemu@15951308` 都无法从声明 remote 读取。当时 serving-b canonical `/home/sj/git/ub_sim@67c3ce5` 也 dirty，因此 raw upstream 保持 `latest-unreachable`；该历史 checkout 后续没有 reset/clean，已完整改名保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。
 
-C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。`c68cfb8` 已提升为 `/home/sj/git/ub_sim` 当前内部正式仿真方案，并从新路径复验 U1 与 2-node U3（1/1 PASS、无 QEMU 残留）。证据位于 `results/phasec01_ub_sim_20260831_01/`。C02 已完成代码走读和一般对接方案，采用 host UFlow daemon + per-QEMU-guest sim agent、descriptor-only simulated object 与 mem-service neutral provider 复用边界，当前状态 `ready-for-implementation`；随后按 C03 topology/capability、C04 remote DDR、C05 remote SSD/SSU、C06 topology-aware routing、C07 failure/replan、C08 E2E 实施。对外 release 仍需 upstream 原子修复并重跑 C01。
+C01 已建立显式 downstream repair `d78143e -> c68cfb8`，修复两条 gitlink/lock 与 QEMU bridge ABI；Cargo/Python/QEMU/guest/24-app、2-node 和 4-node 全部通过，状态为 `latest-repaired-ready / manual-active`。`c68cfb8` 已提升为 `/home/sj/git/ub_sim` 当前内部正式仿真方案，并从新路径复验 U1 与 2-node U3（1/1 PASS、无 QEMU 残留）。证据位于 `results/phasec01_ub_sim_20260831_01/`。
+
+C02 已按复审方案实现并关闭：`UbSimProvider` 使用 physical/simulated/未来真实 UB 共用的 `DataProvider`，没有形成平行 SimulationBackend；Host UFlow daemon 经 dedicated virtio-serial bridge 驱动 per-Guest companion，companion 只消费 public in-process OBMM Provider library，daemon RPC 未扩大。real13 的权威模型保持唯一 `Placement=NodeA.DDR`、NodeA `ResourceBinding` 与 NodeB 只读 `AccessBinding/ImportedView`，并以 checksum、typed Plan/Event、Trace/Monitor 和 payload scan 证明 4 KiB slice。提交 `data-service@c429d16`、`ub_sim@b624ee4`、`mem_service@546caed` 已由正式归档绑定，C01 U0～U4 全过。通用 read/write、权限、一致性、多 client 和 replica 属于 C04；动态 topology/capability 属于当前 Next Gate C03；真实 remote HBM 仍归 Phase D。
 
 ### 4.5 Phase D：远端 HBM 与 relay
 
@@ -259,7 +263,7 @@ Phase E 距离总纲完整目标仍缺：
 
 ### P2：启动 PhaseC，再进入 PhaseD
 
-PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再完成 topology/capability、数据共享、路由和故障闭环；PhaseD 随后做远端 HBM。不得把 ub-sim 自身 2/4-node 通过或本机静态 cost table 扩写成“UFlow 跨节点已支持”。
+PhaseC 的 C01 repaired baseline 与 C02/UP0 已关闭：统一 DataProvider、Placement/ResourceBinding/AccessBinding、Host/Guest bridge、public OBMM SDK、typed Plan/Event 与固定双节点 4 KiB read-only remote-map 均有 exact-commit real13 和正式归档证据。当前直接启动 C03 动态 topology/capability，再由 C04～C08 完成通用 remote DDR、SSD/SSU、多设备通路、路由和故障闭环；PhaseD 随后做真实远端 HBM。不得把 C02 functional slice 扩写成“通用远端数据共享、topology-aware routing 或生产跨节点/远端 HBM 已支持”。
 
 ## 6. 风险登记
 
@@ -278,7 +282,9 @@ PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再
 | R11 | Monitor 多介质语义曾落后，可能看不到 runtime fallback 或误报 physical direct | 低（功能已关闭，视觉证据待补） | E04 `1f9749f`～`3e932b1` 已实现 bounded history、planned→actual、fallback、logical direct 标签并通过 serving-b 矩阵与 UI 合同测试 | 补录四类当前页面截图；后续回归必须保留 logical direct 与 runtime fallback 断言 |
 | R12 | 大量历史性能/功能结论来自旧 2号机，可能被误当成 serving-b 当前能力 | 高 | 旧文档常写 NPU7、5.10 kernel、双跳链路；新主机/kernel/device 尚未逐项复验 | 所有新 run 强制保存 serving-b 环境快照；kernel/SSD/DMA/带宽结论优先重跑，未重跑保持 historical-pass |
 | R13 | serving-b 容器 remote repo 落后本地主线且 dirty，覆盖式同步可能丢失远端证据 | 高 | remote `e854fa0` 仍保持原状；E06 在 `/tmp/phasee06_v2_stage_019f7da1` 隔离验证，没有修改 canonical repo | E04 继续采用无损隔离/明确 baseline；禁用 `--delete`、reset/checkout/clean，另行治理 canonical repo |
-| R14 | ub-sim 最新根提交锁定远端不可获取对象，downstream repaired-ready 可能被误报成 upstream/release-ready | 高（内部开发已缓解） | raw `0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 均不可读；repair `c68cfb8` 已 U0-U4 全过并提升到 canonical，新路径 U1/U3 复验通过 | C02-C07 只绑定 `/home/sj/git/ub_sim@c68cfb8` 或 repair patch；上游原子修复两条 gitlink并吸收 ABI alias 后重跑，才升级 plain latest-ready |
+| R14 | ub-sim 最新根提交锁定远端不可获取对象，downstream repaired/archive-ready 可能被误报成 upstream/release-ready | 高（内部开发已缓解） | raw `0fecb3b` 的 `mem_service@4b13ec0`、`qemu@15951308` 均不可读；canonical repair `c68cfb8` 与 C02 archive `b624ee4/546caed` 均通过门禁 | C03-C07 绑定明确 manifest/exact SHA；上游原子修复两条 gitlink并吸收 ABI alias 后重跑，才升级 plain latest-ready |
+| R15 | public OBMM surface 缺少 clean/fetchable external commits | 已关闭（保留 release 边界） | `mem_service@546caed`、`ub_sim@b624ee4` clean，complete-history bundles+SHA256 已归档；C01 U0～U4 与 real13 通过 | 后续保持 daemon RPC 不扩展；只有 upstream 接收/可获取后才允许 release promotion |
+| R16 | remote map 被误登记成访问节点副本，导致最近副本与拓扑路由选错 | 低（C02 已关闭） | real13 `placement_count=1`、`remote_map_created_placement=false`，NodeB 只有 AccessBinding；Rust 合同测试通过 | C04 继续保持 remote map 与真实 copy/replica 分离，并把该断言纳入后续回归 |
 
 ## 7. 本次审计事实
 
@@ -311,7 +317,7 @@ PhaseC 的 C01 repaired baseline 已关闭，当前执行 C02 中立合同，再
 | serving-b 连通性 | `ssh serving-b` 成功；hostname `liteserver-560t-1.novalocal`，IP `192.169.0.85`，`openeuler-2403-DS` running |
 | serving-b repo | `/home/sj/git/data-service@e854fa0`，触发 dubious ownership 且 working tree dirty；核心源码 SHA-256 抽查 16/16 等同 local `6179941`，但其余 artifacts/provenance 未收口；只读命令使用临时 `-c safe.directory=...` |
 | A09 基线新鲜度 | 过时；current main 已领先 62 commits |
-| PhaseC/PhaseD | C01 `latest-repaired-ready`：`/home/sj/git/ub_sim@c68cfb8` 为当前内部正式仿真基线；C02 code walk/接口/启动/仿真对象方案已完成，状态 `ready-for-implementation`，但 UbSimProvider、guest agent 与 remote placement 尚未实现；PhaseD 未启动 |
+| PhaseC/PhaseD | canonical C01 `latest-repaired-ready`：`/home/sj/git/ub_sim@c68cfb8`；C02 promotion `c429d16/b624ee4/546caed` 为 `internal-archive-ready`，real13 已通过统一 DataProvider、UbSimProvider、Guest companion、AccessBinding 和 4 KiB NodeA.DDR→NodeB read-only OBMM slice；C03 是当前 Next Gate，C04～C08 与 PhaseD 未启动 |
 
 ## 8. 后续更新协议
 
@@ -357,4 +363,8 @@ owner:
 | 2026-08-31 | 启动 PhaseC 规划：新增 C00 总路线与 C01 ub-sim latest-ready 门禁，明确以数据共享和 topology-aware routing 为主线，任务顺序为 baseline→contract→topology/capability→remote DDR→remote SSD/SSU→routing→failure/replan→E2E。首次上游审计发现 `ub_sim origin/master@0fecb3b` 锁定不可获取的 `mem_service@4b13ec0`，新增 R14 并阻断 C02。 |
 | 2026-08-31 | 完成 PhaseC-01 首轮闭环：保护 `/home/sj/git/ub_sim@67c3ce5` dirty canonical，在隔离目录以 `0fecb3b` 建立 repair `d78143e -> c68cfb8`；补齐 openEuler 构建依赖和 QEMU bridge ABI，U0-U4、Python 304、sim-qemu 25、QEMU focused 22、24-app、2-node/4-node 与 cleanup 全部通过。状态为 `latest-repaired-ready / manual-active`，C02 内部解锁；raw upstream/release 风险 R14 保留。 |
 | 2026-08-31 | 按项目决策将已验证 `c68cfb8` 原子提升为 `/home/sj/git/ub_sim` 当前内部正式 ub-sim 方案；原 dirty `67c3ce5` 未 reset/clean，完整保存在 `/home/sj/git/ub_sim.pre_phasec01_20260831`。从新路径重建 QEMU 后 U1 与 2-node U3 1/1 通过，退出后无 QEMU 残留；promotion 证据归档到 PhaseC-01 结果目录。 |
-| 2026-08-31 | 完成 PhaseC-02 代码走读与任务设计：确认 UFlow 当前 catalog/object/executor 直接耦合 ACL/mmap/file，ub-sim semantic NPU 不等价真实 HBM，mem-service provider 可复用但对象 daemon 不可作为第二套 catalog。冻结 host UFlow daemon + per-guest sim agent、virtio-serial bridge、descriptor-only simulated placement、M0～M8 与 G0～G10 方案；状态仅为 `ready-for-implementation`。 |
+| 2026-08-31 | 完成 PhaseC-02 代码走读与任务初稿：确认 UFlow 当前 catalog/object/executor 直接耦合 ACL/mmap/file，ub-sim semantic NPU 不等价真实 HBM，mem-service provider 可复用但对象 daemon 不可作为第二套 catalog。形成 host UFlow daemon + per-guest sim agent、dedicated bridge、descriptor-only simulated resource 的初版；bridge transport 后续改为 M0 强制决策项。 |
+| 2026-08-31 | PhaseC 架构初轮复审并重置 C02：统一为 DataProviderRegistry + Host UbSimProvider + dedicated bridge + per-Guest companion；Object/Placement/ResourceBinding 分层，physical/simulated 按 execution realm 隔离。确认当前 Host-only public control surface 不足并新增 R15；当时仍以 SDK/RPC Gate 和 DDR/UB_SHMEM 作为暂定写法，已由下一条复审结论取代。 |
+| 2026-08-31 | 收紧 C02 驻留与可达性模型：NodeB import/map 只形成 AccessBinding/ImportedView，不形成 Placement；DDR 是驻留介质，UB_SHMEM/OBMM remote-map 是 access/transport。新增 C02-UP0 公共可安装 OBMM Provider library 任务，不扩大 daemon RPC；M1～M3/M4A 可继续、真实 M4B～M9 阻塞。C02 固定双节点只读 4 KiB 单 range、manifest generation=1；C03 负责动态发现，C04 负责通用读写/权限/一致性/多 client/replica。新增 R16。 |
+| 2026-08-31 | 完成 C02 技术实现与 real10 验收：public OBMM SDK/source-tree 外 consumer、统一 DataProvider、Host/Guest virtio-serial bridge、NodeA.DDR→NodeB read-only 4 KiB OBMM/GSVA、typed 3-step Plan/4 Events、Trace/Monitor、revoke/stale、payload 分类扫描与 run-owned cleanup 全过；证据归档 `results/phasec02_uflow_ub_sim_20260831_real10/`。canonical external source unchanged。保留 external commits/gitlink/lock/C01 rerun 为 promotion gate，未启动 C03。 |
+| 2026-09-01 | 关闭 C02/UP0 promotion：形成 `mem_service@546caed`、`ub_sim@b624ee4`、`data-service@c429d16` 三段独立提交与 complete-history Git bundles；gitlink/lock 同 SHA，C01 U0～U4 全过，exact-commit real13 的 4 KiB OBMM slice、payload scan、Trace/Monitor、cleanup、Cargo.lock reproducibility 和 SHA256 全过。状态升级为 `closed-internal / internal-archive-ready`，R15 关闭；canonical `/home/sj/git/ub_sim@c68cfb8` 未改，Next Gate 转入 C03 动态 topology/capability。 |

@@ -1,0 +1,6 @@
+   Compiling libc v0.2.186
+   Compiling uf-acl-sys v0.1.0 (/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-acl-sys)
+   Compiling uf-core v0.1.0 (/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-core)
+   Compiling uf-ub-sim-agent v0.1.0 (/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-ub-sim-agent)
+   Compiling uf-daemon v0.1.0 (/home/sj/phasec02_promotion_20260901/data-service-c429d16/crates/uf-daemon)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.09s

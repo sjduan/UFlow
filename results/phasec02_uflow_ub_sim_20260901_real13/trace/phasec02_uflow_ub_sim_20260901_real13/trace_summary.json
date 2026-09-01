@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "run_id": "phasec02_uflow_ub_sim_20260901_real13",
+  "mode": "full",
+  "categories": "control,object,transfer,channel,chunk,acl,backend,counter",
+  "event_count": 21,
+  "dropped_events": 0,
+  "complete": true,
+  "raw_args_exported": true,
+  "incomplete_event_ids": [],
+  "duplicate_outcome_event_ids": [],
+  "context_mismatch_event_ids": [],
+  "total_duration_us": 666204.852,
+  "stages": [
+    {"category":"control","name":"command.handle","count":11,"total_us":333261.767,"avg_us":30296.524,"max_us":277501.995,"bytes":0},
+    {"category":"backend","name":"provider.remote_map.checksum","count":2,"total_us":277496.555,"avg_us":138748.277,"max_us":277491.334,"bytes":8192},
+    {"category":"backend","name":"provider.remote_map.import","count":1,"total_us":26315.297,"avg_us":26315.297,"max_us":26315.297,"bytes":4096},
+    {"category":"object","name":"provider.data_object.create","count":1,"total_us":15502.575,"avg_us":15502.575,"max_us":15502.575,"bytes":4096},
+    {"category":"backend","name":"provider.data_object.release","count":1,"total_us":8924.976,"avg_us":8924.976,"max_us":8924.976,"bytes":0},
+    {"category":"backend","name":"provider.remote_map.revoke","count":1,"total_us":3394.259,"avg_us":3394.259,"max_us":3394.259,"bytes":0},
+    {"category":"backend","name":"provider.publish","count":1,"total_us":1281.292,"avg_us":1281.292,"max_us":1281.292,"bytes":4096},
+    {"category":"backend","name":"backend.startup_hbm_probe","count":1,"total_us":28.131,"avg_us":28.131,"max_us":28.131,"bytes":1048576},
+    {"category":"backend","name":"provider.data_object.ready","count":1,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":0},
+    {"category":"backend","name":"provider.remote_map.ready","count":1,"total_us":0.000,"avg_us":0.000,"max_us":0.000,"bytes":0}
+  ],
+  "transfers": [
+
+  ],
+  "path_summary": [
+
+  ]
+}

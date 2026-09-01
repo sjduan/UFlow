@@ -1,0 +1,17 @@
+host=serving-b
+container=openeuler-2403-DS
+container_user=root
+workspace=/home/sj
+run_root=/home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13
+uname=Linux liteserver-560t-1.novalocal 5.10.0-182.0.0.95.r2220_157.hce2.aarch64 #1 SMP Wed Jul 30 11:31:47 UTC 2025 aarch64 aarch64 aarch64 GNU/Linux
+gcc=gcc (GCC) 12.3.1 (openEuler 12.3.1-99.oe2403sp2)
+rustc=rustc 1.95.0 (59807616e 2026-04-14)
+cargo=cargo 1.95.0 (f2d3ce0bd 2026-03-21)
+python=Python 3.11.14
+ub_sim_root=/home/sj/phasec02_promotion_20260901/ub_sim
+ub_sim_sha=b624ee4318c082434ede1415e9e4d558ca47abe3
+canonical_mem_service_sha=546caede8cbfe79c28c38e3659938e02f39bd953
+up0_source_root=/home/sj/phasec02_promotion_20260901/ub_sim/mem_service
+up0_source_sha=546caede8cbfe79c28c38e3659938e02f39bd953
+uflow_root=/home/sj/phasec02_promotion_20260901/data-service-c429d16
+uflow_sha=c429d16e1b0e92570e65a386bc76433058b972c3

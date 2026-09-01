@@ -1,0 +1,40 @@
+{
+  "schema": "uflow-phasec02-promotion-commits-v1",
+  "created_at": "2026-09-01T10:10:00+08:00",
+  "promotion_class": "internal-formal-archive",
+  "release_ready": false,
+  "commits": {
+    "data_service": {
+      "sha": "c429d16e1b0e92570e65a386bc76433058b972c3",
+      "subject": "Add ub-sim DataProvider integration",
+      "archive": "archives/data-service-c429d16.bundle",
+      "archive_sha256": "03a0a52006c145165ed44dc6940a09853b30439f5792868083058cfb5c63581c",
+      "archive_complete_history": true
+    },
+    "mem_service": {
+      "sha": "546caede8cbfe79c28c38e3659938e02f39bd953",
+      "subject": "Add installable OBMM provider SDK",
+      "archive": "archives/mem_service-546caed.bundle",
+      "archive_sha256": "7a3281b5dc664c417a64e712bc3dd2e06f0e40cb023f8ffd4f9afd536257631a",
+      "archive_complete_history": true
+    },
+    "ub_sim": {
+      "sha": "b624ee4318c082434ede1415e9e4d558ca47abe3",
+      "subject": "Update mem_service for OBMM provider SDK",
+      "mem_service_gitlink": "546caede8cbfe79c28c38e3659938e02f39bd953",
+      "mem_service_lock": "546caede8cbfe79c28c38e3659938e02f39bd953",
+      "archive": "archives/ub_sim-b624ee4.bundle",
+      "archive_sha256": "957d56ed7731d466f98179b2392e55c6cc2040feb16d71fefe44f9b6c1074092",
+      "archive_complete_history": true
+    }
+  },
+  "validation": {
+    "c01_evidence": "c01/",
+    "c02_exact_commit_evidence": "../phasec02_uflow_ub_sim_20260901_real13/",
+    "c01_required_gates": ["U0", "U1", "U2", "U3", "U4"],
+    "c01_status": "last-known-good",
+    "c01_repaired": true,
+    "c01_ready": true,
+    "c02_status": "pass"
+  }
+}

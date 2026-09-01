@@ -1,295 +1,499 @@
-# PhaseC-02：UFlow × ub-sim 功能对接与仿真运行骨架
+# PhaseC-02：UFlow 统一 DataProvider、ub-sim Guest Bridge 与首条跨节点 DDR 验证
 
-> 开发环境统一口径（2026-08-31）：实现、构建和验证固定在 `ssh serving-b` → `openeuler-2403-DS` 内执行；容器用户为 `root`，workspace 根目录为 `/home/sj`。当前内部可行 ub-sim 基线固定为 `/home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`，UFlow 仓库入口为 `/home/sj/git/data-service`。实际开发必须使用 `/home/sj/phasec02_runs/<run_id>/` 隔离候选，不修改 `/home/sj/git/ub_sim.pre_phasec01_20260831` 历史备份，也不覆盖 dirty 的远端 data-service checkout。详见 [Phase0-development-environment.md](Phase0-development-environment.md) 与 [PhaseC-01-ub-sim-upstream-sync-and-selftest.md](PhaseC-01-ub-sim-upstream-sync-and-selftest.md)。
+> 开发环境统一口径（2026-08-31）：实现、构建和验证固定在 `ssh serving-b` → `openeuler-2403-DS` 内执行；容器用户为 `root`，workspace 根目录为 `/home/sj`。当前内部可行 ub-sim 基线固定为 `/home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072`，UFlow 仓库入口为 `/home/sj/git/data-service`。实际运行使用 `/home/sj/phasec02_runs/<run_id>/` 隔离配置、overlay、日志和证据，不修改 canonical ub-sim/mem-service 源码，不覆盖 dirty 的远端 data-service checkout。详见 [Phase0-development-environment.md](Phase0-development-environment.md) 与 [PhaseC-01-ub-sim-upstream-sync-and-selftest.md](PhaseC-01-ub-sim-upstream-sync-and-selftest.md)。
 
-Last reviewed: 2026-08-31
+Last reviewed: 2026-09-01
 
-Status: `ready-for-implementation / code-walk-complete / adapter-absent`
+Status: `closed-internal / provider-framework-ready / ub-sim-cross-node-ddr-validation-ready / formal-archive-promoted`
+
+## 0. 2026-09-01 最终闭环结果
+
+PhaseC-02 已完成实现、三仓独立提交、正式归档、C01 exact-commit 回归和最终双节点验收。权威证据为：
+
+```text
+remote: /home/sj/phasec02_runs/phasec02_uflow_ub_sim_20260901_real13/evidence/
+local:  data-service/results/phasec02_uflow_ub_sim_20260901_real13/
+promotion: data-service/results/phasec02_promotion_20260901/
+host:   serving-b / openeuler-2403-DS / root
+data-service: c429d16e1b0e92570e65a386bc76433058b972c3
+ub_sim:      b624ee4318c082434ede1415e9e4d558ca47abe3
+mem_service: 546caede8cbfe79c28c38e3659938e02f39bd953
+```
+
+三份提交均保存为经过 `git bundle verify` 的 complete-history 正式归档；ub_sim 的 mem_service gitlink 与 guest lock 原子指向 `546caed`。C01 在精确提交上 U0～U4 全部 PASS，状态为 `last-known-good / repaired / ready=true`：`repaired` 表示它是离线 downstream archive 而非 upstream branch tip，不否定内部验收。远端 canonical `/home/sj/git/ub_sim@c68cfb8` 及其 `mem_service@366a335` 全程 clean/unchanged。
+
+本轮已交付：
+
+- UFlow 统一 `DataProvider`、provider registry、typed provider identity/capability/resource/descriptor/access/completion/error 合同；
+- `DataObject / Placement / ResourceBinding / AccessBinding / Handle` 分层，NodeB remote map 只创建 AccessBinding，不创建第二个 Placement；
+- Host `UbSimProvider`、`uflow-sim-bridge-v1`、每 Guest companion、独立 virtio-serial 通道和 run-owned initramfs overlay；
+- public OBMM SDK/library 的安装消费、Guest 内 allocate/seed/publish/import/checksum/revoke/release；
+- Python `uflow.sim("ub_sim")` API、descriptor-only handle、typed 三步 Plan/四 Event、Trace/Monitor 关联和一键编排；
+- bridge/control capture、payload/canary 扫描、external source before/after、精确 PID cleanup 和完整 `SHA256SUMS`。
+
+最终 golden slice 结果：
+
+| 验收项 | real13 结果 |
+|---|---|
+| 固定场景 | 2 logical nodes；NodeA.DDR；NodeB read-only；offset 0；4096 bytes |
+| UFlow identity | object `100`；placement `10000`；resource binding `40000`；access binding `50000` |
+| Placement 语义 | `placement_count=1`；`remote_map_created_placement=false` |
+| 数据正确性 | NodeA seed 与 NodeB observed checksum 均为 `18252992797487244163` |
+| Plan/Event | plan `20000`；3 个 provider steps；4 个 events；parent terminal 恰好 1 个 |
+| 生命周期 | Host 解引用拒绝；revoke 后旧 AccessBinding stale 并拒绝读取 |
+| Trace/Monitor | 21 个 trace events；object/binding/plan/event/provider/session/node/fidelity 均可关联 |
+| payload 扫描 | Host control/bridge `0`；unexpected `0`；ub-sim FM ring `28` 次命中 |
+| 回归 | Rust workspace 22 tests PASS；Monitor/PhaseC Python 16 tests PASS；Trace Python 10 tests PASS |
+| 清理与完整性 | daemon/QEMU 均退出；canonical external source unchanged；SHA256 全量校验 PASS |
+
+payload 扫描中的 28 次命中只位于 ub-sim 的 FM ring，它是 simulator 数据面 backing，等价于仿真设备/链路承载数据；不能把它计入 Host control-plane 旁路，也不能声称整个 run-root 对 payload 全局零命中。真正的关闭条件是 bridge、daemon control 和其他 Host ordinary artifact 为零命中，同时 simulator data-plane 命中被单独分类并留证。
+
+本文 DoD 已按内部正式归档口径关闭，状态升级为 `provider-framework-ready / ub-sim-cross-node-ddr-validation-ready / formal-archive-promoted`。它仍不是 upstream/release-ready；real13 只证明固定 2-node、只读、4 KiB 单 range 的 functional slice，不得据此声明通用 remote DDR、动态 topology-aware routing 或真实 remote HBM 已完成。
 
 ## 1. 任务定位
 
-PhaseC-02 负责建立 UFlow 与 ub-sim 之间第一条可持续演进的功能对接骨架，使 UFlow 能在没有真实 UB/NPU/SSD 硬件时，仍以自己的 `DataObject / Placement / Handle / TransferPlan / TransferEvent` 合同驱动 ub-sim 做语义验证。
+PhaseC-02 建立 UFlow 的统一后端合同和第一条 ub-sim 功能通路。它不是为 simulator 另建一套对象和传输系统，也不在首版覆盖所有 node/device 组合。
 
-本任务不是把 `mem_service` 改名为 UFlow，也不是让 UFlow core 直接调用 QEMU/OBMM ioctl。两者定位不同：
+本任务只要求闭环：
 
-- `mem_service` 是 ub-sim 为内存/对象仿真单独演进的服务，包含自己的 daemon、对象记录、模型适配和 provider；
-- UFlow 是面向 LLM serving 的数据管理控制面，负责 serving 侧对象身份、placement、lease、路由、事件、Trace 和 Monitor；
-- ub-sim 是 UFlow 的一种验证后端，不是 UFlow 的生产依赖，也不能反向决定 UFlow 的业务对象模型；
-- mem-service 中已经验证的中立 provider/OBMM 能力可以作为 guest 数据面执行库复用，但 mem-service 的对象目录和业务 wire API 不成为 UFlow 的第二个 source of truth。
+```text
+4 KiB deterministic DataObject
+  Placement = NodeA.DDR
+  access_kind = remote_map
+  transport_kind = ub_shmem/obmm_gsva
+    -> OBMM publish/export
+    -> NodeB import/map/read
+  checksum + completion + revoke/stale
+```
+
+Phase C 的最终目标仍是验证不同 logical node、不同 semantic device 间的多条数据通路、拓扑选路和故障行为；该完整矩阵在 C04～C08 逐步收齐。C02 首版不要求跨设备完整矩阵，也不以 remote HBM 为关闭条件。
+
+C02 的 validation slice 边界固定为：`2 logical nodes / NodeA 单 producer / NodeB 单只读 importer / 4096 bytes / offset=0 的单一连续 range / 单次 publish-import-read-revoke`。任意大小和多 range、NodeB write、通用 publish/read/write、权限矩阵、一致性策略、多 client/多 importer 生命周期以及真正 copy/replica 均属于 C04；C02 不得提前形成第二套简化语义。
+
+C02 的核心交付是：
+
+1. 把 UFlow 当前 object 与本机 ACL/mmap/file 资源解耦；
+2. 建立 physical、simulated 和未来真实 UB 共用的 `DataProvider` 合同与 registry；
+3. 实现 Host `UbSimProvider`、versioned control bridge 和 per-QEMU-Guest companion；
+4. 用 UFlow SDK、Catalog、Plan、Event、Trace 和 Monitor 驱动一条无 payload 旁路的跨节点 DDR remote-map 通路；
+5. 为 C03 topology/capability、C04 remote DDR、C05 SSD/SSU、C06 routing 和 C07 failure/replan 提供稳定 schema。
 
 一句话目标：
 
-> UFlow 保持唯一对象身份和 serving API，在 host 侧通过可替换 `UbSimProvider` 驱动每个 QEMU guest 内的轻量执行 agent；仿真对象使用有版本、范围、代际和校验信息的 opaque descriptor，不伪造真实硬件指针。
+> 用一条最小但真实的跨节点 DDR/OBMM 数据通路证明 UFlow 的统一对象、provider、descriptor、completion 和可观测合同成立，同时保证后续真实 UB provider 无需重写上层模型。
 
-## 2. 本任务边界
+## 2. 架构决策
 
-### 2.1 C02 必须完成
+### 2.1 DataProvider 是统一扩展点
 
-1. 冻结 provider-neutral 的 topology、capability、placement、resource binding、handle、completion 和 error schema；
-2. 把 UFlow 当前直接绑定 ACL/mmap/file 的实现隔离到 `LocalProvider`，保证既有本机路径不回归；
-3. 建立 `UbSimProvider` host adapter、版本化 bridge 协议和 guest `uflow_sim_agent` 骨架；
-4. 建立 2-node QEMU + 双 agent + 单 UFlow daemon 的可重复启动、ready、shutdown 和证据流程；
-5. 证明模拟对象不会向 host client 暴露伪造的 HBM/GSVA/device pointer；
-6. 通过 mock/local/ub-sim 共用的 provider conformance suite；
-7. 通过一个 4 KiB deterministic seed/checksum 的内部 provider vertical slice，证明 UFlow 确实驱动了 guest 内 OBMM mapping，而不是只解析静态配置或匹配串口日志；
-8. provider 未启用时，现有 HBM/DDR/SSD 创建、传输、Trace 和 Monitor 行为保持不变。
-
-### 2.2 C02 明确不声称完成
-
-- 不把 vertical slice 写成 `remote DDR supported`；完整 publish/import/revoke 生命周期属于 C04；
-- 不实现 UB-attached SSD/SSU 正式数据路径；属于 C05；
-- 不实现 topology-aware cost/routing；属于 C03/C06；
-- 不完成 failure replan、全量 cancel 或 4/8-node acceptance；属于 C07/C08；
-- 不宣称模拟 NPU 等价真实 NPU，也不输出物理 HBM/SSD 性能结论；
-- 不让 host 控制通道承载正式 application payload。
-
-C02 完成后的准确状态应为：
+`UbSimProvider` 是通用 `DataProvider` 的一种实现，不新建与 physical provider 平行的 `SimulationBackend` 世界：
 
 ```text
-UFlow ub-sim integration spine: available
-UFlow provider contract: frozen v1
-2-node control/descriptor/checksum conformance: pass
-remote DDR/SSD/topology-aware routing: not yet supported
-physical hardware fidelity: semantic simulation only
+DataProviderRegistry
+  ├── LocalAclProvider       physical HBM
+  ├── LocalDdrProvider       physical DDR
+  ├── LocalSsdProvider       physical SSD
+  ├── MockProvider           contract test
+  ├── UbSimProvider          simulated UB/DDR/SSD/semantic HBM
+  └── FutureUrmaProvider     physical remote UB
 ```
 
-## 3. 代码走读结论
+故障注入、虚拟 cost profile、virtual time、session reset 等仿真专有操作通过可选 `SimulationControl` 扩展提供。Planner、Catalog、DataObject、TransferPlan 和 TransferEvent 不依赖该扩展。
 
-本次走读绑定：
+### 2.2 同一业务语义，不同 execution realm
 
-```text
-UFlow local:       data-service/main@ea3d37a
-ub-sim canonical: /home/sj/git/ub_sim@c68cfb8ab139312cc9d41fb26f0ebcd3b00c7072
-mem_service:       366a335275d14c277dc44d3a75070f35951a8fb4
-QEMU UB:           3a247cbe1532438f27805efe2e124c4ab882528f
-```
+physical 与 simulated 共享：
 
-### 3.1 UFlow 当前实现
+- DataObject identity、version、consistency；
+- Placement、Lease、Handle；
+- Plan、PlanStep、Event；
+- namespace、role、shape、dtype、range 和 checksum；
+- Trace/Monitor 的对象、路径和事件关联。
 
-| 代码位置 | 当前事实 | 对接缺口 |
-|---|---|---|
-| `crates/uf-core/src/idl.rs` | 已有 `Medium`、`AddressKind`、`DataObject`、`DataPlacement`、`DataHandle`、`TransferPlan/Event` | 没有 provider identity、schema version、topology generation、object version、simulation truth label；`runtime_descriptor` 仍是无类型字符串 |
-| `crates/uf-daemon/src/catalog.rs` | `Object` 同时保存对象身份、唯一 `placement_id` 和 HBM/DDR/SSD 物理字段 | 一个对象只能绑定一个实现；对象身份与 ACL allocation、mmap path、SSD file 耦合，无法表示多节点/多 placement |
-| `crates/uf-daemon/src/main.rs` | daemon 启动时直接创建 `NpuHbmAclBackend` 并做 ACL HBM probe | 无 provider registry；simulation 模式即使没有物理 ACL 也会走硬件探测 |
-| `crates/uf-daemon/src/object_service.rs` | HBM 直接 ACL allocate/export，DDR 直接 memfd/mmap，SSD 直接本地文件 | 没有将 allocation/release 委派给 provider；response 默认返回 client 可映射 pointer/path |
-| `crates/uf-daemon/src/transfer_planner.rs` | 按 `(src.placement, dst.placement)` 静态 match，成本和路径硬编码 | 不读取 topology/capability/provider；无法区分 physical 和 simulated realization |
-| `crates/uf-daemon/src/transfer_executor.rs` | 按 `plan.path` match 后直接操作 `HbmAllocation`、mmap pointer 和 file | 没有 provider completion 映射；remote/sim handle 无执行入口 |
-| `sdk/python/uflow/client.py` | `allocate()` 要求 ACL bridge，并立即 import/map shareable HBM handle | 仿真对象无法也不应返回真实 `device_ptr`；需要 descriptor-first API |
-| `uf-core/src/lib.rs` 与 Python `protocol.py` | client-daemon wire 是未版本化的 `key=value;...` 单行协议 | 现有兼容面可保留，但 provider bridge 必须独立版本化、校验并 fail closed |
-
-核心判断：当前 UFlow 的上层名词已经接近目标，但 daemon 内部仍是“一个对象等于一个本机物理资源”。C02 的首要重构不是增加一个 `if sim`，而是把稳定对象身份、逻辑 placement 和 provider resource binding 分开。
-
-### 3.2 ub-sim 当前实现
-
-| 代码/脚本 | 当前事实 | 对接含义 |
-|---|---|---|
-| `run_ub_dual_node_apps.sh` | QEMU 由 kernel cmdline 选择固定 app，主要依赖 serial log 判定 PASS；QMP 只用于生命周期 | 现有 runner 适合一次性 smoke，不足以承载持久 UFlow provider；需要专用双向 bridge |
-| QEMU 启动参数 | `-nodefaults -nographic`，默认 serial 写文件；没有 host 可连接的业务网络/agent 端口 | C02 不能假设 host 能 TCP 进入 guest；必须显式添加 transport |
-| `mem_service_provider.h` | 已有 v2 provider API：probe、region register、transfer completion、remote mapping、publish/invalidate/wait visible | guest agent 可复用的成熟数据面合同，不应在 UFlow 重写 OBMM ioctl |
-| `mem_service_provider_obmm.*` | OBMM provider 拥有 export/import、mmap、cache maintenance、range visibility | 可作为 `uflow_sim_agent` 内部 backend；opaque descriptor 可经 UFlow 控制面交换 |
-| mem-service daemon wire v1 | 24 个 operation 主要面向对象/KV/artifact；未暴露通用 provider register/map/poll API | 不能直接把现有 mem-service daemon 当作 UFlow provider RPC endpoint |
-| OBMM conformance | 已在两个 guest 中验证 register/export/map/publish/invalidate/wait/unmap/deregister 与 checksum 负例 | C02 vertical slice 应复用同一 provider 调用链，并由 UFlow 发起和归档 |
-| `sim_ub_attached_npu_design.md` | NPU 是语义设备，明确不模拟真实 NPU microarchitecture、DMA/HBM | UFlow 不能把 guest RAM/OBMM backing 说成真实 HBM，也不能报告物理 HBM 带宽 |
-| `sim-topology` YAML 与 QEMU topology INI | Rust scenario 表达 host/domain/service；QEMU INI 表达 node-scoped UB link，当前不是同一运行时 source | C02 manifest 必须同时固定两者和 hash；C03 再建立统一 snapshot/generation |
-
-### 3.3 mem-service 与 UFlow 的复用边界
-
-可以直接复用：
-
-- `mem_service_provider.h` 的 region、mapping、completion 基本语义；
-- OBMM provider 的 `/dev/obmm` 生命周期、descriptor 编解码、mapping 和 range visibility；
-- provider conformance 的 checksum、越界、坏 descriptor、cleanup 断言；
-- ub-sim 已有 guest kernel/QEMU/OBMM/GSVA/NPU/SSD 仿真设备。
-
-不能直接复用为 UFlow source of truth：
-
-- mem-service daemon 的对象 ID、record table、prefix/KV/object wire operation；
-- mem-service 的模型固定 object kind/offset；
-- Qwen3/DeepSeek adapter 和 runtime handoff policy；
-- 串口 PASS 文本或静态 scenario 文件推断出的 provider readiness。
-
-## 4. 架构方案选择
-
-### 4.1 选择：host UFlow daemon + per-guest sim agent
+二者必须显式区分：
 
 ```text
-LLM serving / PyPTO / test client（host）
-  -> UFlow Python/C SDK
-  -> UFlow daemon（唯一 catalog / lease / plan / event / trace）
-       -> LocalProvider（现有 ACL/mmap/file）
-       -> UbSimProvider（host adapter）
-            -> uflow-sim-bridge-v1 control sockets
-                 -> nodeA guest: uflow_sim_agent
-                      -> mem_service neutral provider API
-                      -> OBMM / GSVA / semantic NPU / semantic SSD
-                 -> nodeB guest: uflow_sim_agent
-                      -> mem_service neutral provider API
-                      -> OBMM / GSVA / semantic NPU / semantic SSD
-  <- TransferEvent / Trace v2 / Monitor v2（明确 simulated）
-```
-
-UFlow daemon 保留全局业务语义，guest agent 只负责：
-
-- 拥有 guest 进程内 region/mapping；
-- 调用 mem-service neutral provider；
-- 返回 opaque descriptor、capability、completion 和 checksum；
-- 不创建 UFlow object_id，不决定 placement policy，不解析模型角色。
-
-### 4.2 不采用的方案
-
-#### 每个 guest 内运行完整 UFlow daemon
-
-不采用。它会产生多个 catalog/object_id/lease source，host LLM serving 仍无法直接消费 guest pointer，还会把 Rust/ACL/Python 依赖塞入最小 initramfs。
-
-#### UFlow 直接调用 mem-service daemon 对象 RPC
-
-不采用。现有 wire 没有暴露通用 provider 操作，并且会形成 UFlow catalog 与 mem-service record table 两套对象真相。UFlow 只能复用其 provider library，不复用其业务对象服务作为中间层。
-
-#### 只在 host 使用 `sim-services` Rust stub
-
-只用于 unit/mock conformance，不作为 integrated acceptance。它不经过 QEMU guest、OBMM/SIM_DEC/GSVA，不能证明 UFlow 已在 ub-sim 上运行。
-
-#### 复用 console serial 或解析 guest PASS 日志作为 RPC
-
-不采用。console 输出没有消息边界、并发请求、版本、checksum 和错误恢复；串口日志只能作为辅助证据。
-
-## 5. 没有真实硬件时的 DataObject 处理
-
-### 5.1 对象身份与资源实现必须分层
-
-```text
-DataObject
-  object_id / namespace / name / role / shape / dtype
-  size / consistency / object_version / checksum / state
-
-DataPlacement
-  placement_id / object_id
-  medium=hbm|ddr|ssd|ub_shmem|dfs
-  node_id / device_id / domain
-  execution_mode=physical|simulated
-  fidelity=physical|functional|semantic
-  provider_id / provider_instance
-  topology_generation / state
-
-ResourceBinding（daemon 内部，不是业务对象身份）
-  binding_id / placement_id
-  provider_resource_id / boot_id / generation
-  addressability=local_mapped|provider_only|remote_mapping|block
-  provider_backing / descriptor_version / opaque_descriptor
-  range / access / expiry / state
-
-DataHandle（client 可见的 lease 投影）
-  object_id / placement_id / lease_id
-  object_version / generation / allowed_range / access_mode
-  address_domain / address_kind
-  provider_id / descriptor_version / opaque_descriptor
-```
-
-一个 `DataObject` 可以有多个 `DataPlacement`；一个 placement 在某个 provider 上对应一个 resource binding。对象释放、agent 重启或 topology generation 改变后，旧 handle 必须 stale，不能重新指向新 region。
-
-### 5.2 simulated HBM 的准确语义
-
-ub-sim 的 semantic NPU 明确不模拟真实 HBM。C02 采用以下表达：
-
-```text
-medium=hbm                         # UFlow/serving 的逻辑 tier 意图
-execution_mode=simulated
-fidelity=semantic
-provider_id=ub_sim
-provider_backing=guest_ram_obmm_gsva
-address_kind=provider_handle
-host_dereference=false
-physical_capacity_evidence=false
-```
-
-这表示“按 HBM placement 语义验证对象生命周期、路由和 NPU 可访问性”，不表示“已分配物理 HBM”。Monitor/Trace 必须显示 `HBM (simulated/semantic, guest RAM + OBMM/GSVA backing)`，禁止只显示 `HBM` 或 `physical direct`。
-
-### 5.3 SDK 行为
-
-- 保留现有 `HbmObject/DdrObject/SsdObject` 作为 physical/local convenience view；
-- 新增 descriptor-first `ManagedDataObject`（或等价命名），持有 `DataObject + DataPlacement + DataHandle`；
-- `create_data_object(medium=..., target=...)` 在 physical/simulated 模式使用相同业务参数；
-- simulated placement 不初始化 ACL bridge，不执行 host mmap，不返回 `device_ptr=0` 冒充有效地址；
-- 对 simulated object 调用 `.device_ptr`、`.data_ptr`、`as_memoryview()` 必须抛出稳定 `HandleNotLocallyAddressable`；
-- 初始化/校验仿真 payload 使用 agent 内部 deterministic seed/checksum fixture，不让 JSON、串口、临时文件或 host memcpy 旁路正式 guest 数据面；
-- 后续需要真实 serving tensor pointer 时，只能走 physical provider，或把对应 compute/runtime 移入拥有该 simulated mapping 的 guest 进程；C02 不制造跨 address-domain 裸指针。
-
-## 6. Provider-neutral v1 合同
-
-### 6.1 ProviderIdentity
-
-```text
-provider_api_major / provider_api_minor
-provider_id / provider_instance
-execution_mode
-implementation / revision
-session_id / boot_id
-health / ready / degraded_reason
-```
-
-`boot_id` 每次 agent 启动变化，是 stale resource/handle 的硬边界；provider revision 必须包含 UFlow SHA、ub-sim SHA、mem_service SHA 和 QEMU SHA。
-
-### 6.2 TopologySnapshot 与 CapabilitySnapshot
-
-C02 冻结类型，C03 填充完整动态内容：
-
-```text
-TopologySnapshot:
-  schema_version / snapshot_id / generation / observed_at
-  nodes[] / devices[] / links[] / domains[]
-  source_manifest_hash / qemu_topology_hash
-
-CapabilitySnapshot:
-  schema_version / provider_id / generation
-  operations[] / address_kinds[] / completion_kinds[]
-  remote_mapping / peer_transfer / block_io / checksum
-  publish_invalidate / cancel / max_transfer_bytes / alignment / queue_depth
-  fidelity / limitations[]
-```
-
-能力必须来自 agent handshake/probe 和实际 canary，不能从“文件/脚本存在”推断。OBMM 在 peer canary 前只能 `degraded`，不能 `ready`。
-
-### 6.3 DataPlaneProvider 操作面
-
-```text
-identity()
-probe()
-discover_topology()
-discover_capabilities()
-allocate_resource(request)
-release_resource(binding)
-export_region(binding, range, access)
-import_region(descriptor, range, access)
-revoke_region(binding_or_export)
-submit_transfer(request) -> provider_completion_id
-submit_block_io(request) -> provider_completion_id
-poll_completion(id)
-wait_completion(id, timeout)
-cancel_completion(id)
-read_counters()
-shutdown()
-```
-
-C02 必须实现 identity/probe、allocate/release、descriptor encode/decode 和内部 OBMM mapping vertical slice。未实现的操作必须以 capability=false 且 `ProviderOperationUnsupported` fail closed，不能落入 LocalProvider 或 CPU copy。
-
-### 6.4 Completion 映射
-
-```text
-UFlow event_id (global)
-  -> provider_id + provider_completion_id + provider_boot_id
-  -> submitted | queued | running | complete | failed | canceled
-  -> exactly one terminal outcome
+execution_mode = physical | simulated
+provider_id
+provider_kind = local | remote | simulator
+execution_realm_id
+requested_fidelity
+actual_fidelity = physical | functional | semantic
+addressability
+limitations[]
 ```
 
 规则：
 
-- provider completion 只能更新对应 UFlow event；
-- agent 重启导致 `boot_id` 不一致时事件终止为 `ProviderRestarted`；
-- capability 未声明 cancel 时，`CancelEvent` 不能伪报 canceled；
-- timeout 是明确 terminal failure 或仍在运行的 poll 状态，不能同时出现两个结论；
-- planned/actual path、provider、execution_mode、fidelity 和 topology generation 全部进入 Trace v2 / Monitor v2。
+- `execution_mode` 是 request/placement 约束，不进入 DataObject identity；
+- `medium=hbm|ddr|ssd` 表达 C02 使用的逻辑驻留 tier，不表达硬件保真度；
+- C02 中 `medium=ddr` 表示数据真实驻留在 NodeA DDR；`access_kind=remote_map`、`transport_kind=ub_shmem` 表示 NodeB 的访问方式；
+- 当前 OBMM/GSVA 映射不得另记为 `medium=ub_shmem`。只有未来存在独立、真实驻留的 UB shared-memory pool 时，才可经单独架构审查启用 `UB_SHMEM` medium；
+- 不增加 `sim_hbm`、`fake_ddr` 等平行介质；
+- physical 与 simulated placement 默认属于不同 realm；
+- 没有显式 cross-realm bridge capability 时，不得在两个 realm 之间 plan/transfer，也不得声称数据同步；
+- 同一个 ub-sim run 只有一个 `execution_realm_id=ub_sim:<run_id>`；NodeA/NodeB 位于同一 realm，但分别拥有自己的 `provider_session_id`、`boot_id` 和 `session_generation`；
+- Guest reboot 只使该 node 的 session/binding/access view stale，不会把同一 run 的其他 node 自动划入新 realm；
+- simulated result 必须携带 `simulated/semantic` truth label，禁止外推物理容量、带宽、延迟、DMA 或 cache 行为。
 
-### 6.5 稳定错误码
+### 2.3 UFlow 是唯一业务真相
+
+UFlow 拥有：
+
+- business object_id、placement_id、lease_id；
+- object version、readiness、owner 和 consistency；
+- 路由策略、plan、event、fallback/replan；
+- Trace、Monitor 和验收证据关联。
+
+ub-sim/mem-service 的 object_id、region_handle、mapping_handle、completion_id 只作为 provider resource reference，不得替代或泄漏为 UFlow object identity。
+
+### 2.4 使用平台，不复制平台
+
+C02 默认不对以下 external canonical source 提交修改：
+
+```text
+/home/sj/git/ub_sim
+mem_service source/submodule
+QEMU UB implementation
+guest kernel and existing device models
+```
+
+允许：
+
+- 使用固定 revision 的公开 SDK、header、library、CLI、RPC、descriptor 和官方 launcher；
+- 在 UFlow 仓库实现 Host adapter、Guest companion 和 bridge protocol；
+- 通过 run overlay 将 UFlow-owned companion 注入 Guest；
+- 在隔离 build/run 目录链接 external platform 正式发布的公共 SDK/library；
+- 对外部 capability 做 version check 和 canary；
+- 对缺失能力返回稳定 unsupported/gap。
+
+禁止：
+
+- 把 mem-service/OBMM 私有源码复制或 vendor 到 UFlow；
+- 让 mem-service object daemon 成为第二套 Catalog；
+- 解析 console `PASS` 文本伪造业务 completion；
+- 用 Host memcpy、临时 payload 文件或 control RPC 搬运 application payload；
+- simulated request 自动 fallback 到 LocalProvider；
+- 为通过 C02 而直接修改 canonical ub-sim/mem-service checkout。
+
+如果 external public surface 不足，必须建立独立 upstream enablement 任务。上游变更形成可获取 clean commit、更新 ub-sim gitlink/lock并重新通过 C01 后，C02 才能继续相应 Gate。
+
+## 3. 当前外部接口事实与启动判断
+
+### 3.1 已确认事实
+
+针对 `/home/sj/git/ub_sim@c68cfb8` 的只读审计结论：
+
+- mem-service public daemon wire 提供 object/KV/artifact/admin 等业务操作；
+- public daemon wire 当前没有通用 OBMM region `register/export/import/map/publish/poll/release` 操作；
+- `mem_service_provider.h` 是 Guest/进程内中立 C Provider 合同；
+- OBMM Provider 能力当前主要由 Guest app/conformance 程序按源码构建使用；
+- OBMM Provider 尚未以可直接供 UFlow Guest companion 消费的稳定安装库/SDK 形式交付；
+- QMP 负责 QEMU 生命周期；现有 console/serial log 主要负责 app bootstrap、诊断和测试判定，不是稳定数据管理 RPC；
+- 已有 OBMM conformance 能证明 provider 语义，但不能替代 UFlow 发起的对象、plan、event 和 checksum 闭环。
+
+### 3.2 当前决策
+
+纯 Host-only 黑盒 UbSimAgent 无法完成 C02 数据闭环。当前首选架构固定为：
+
+```text
+Host UFlow daemon
+  -> Host UbSimProvider
+  -> dedicated versioned UFlow bridge
+  -> per-QEMU-Guest UFlow companion
+  -> public mem-service neutral Provider SDK/library
+  -> OBMM/GSVA data plane
+```
+
+Guest companion 不是新的 Catalog daemon。它只：
+
+- 在 Guest address domain 拥有/注册 provider resource；
+- 调用公开中立 Provider API；
+- 返回 opaque descriptor、completion、checksum、health 和 counter；
+- 执行 release/revoke；
+- 不创建 UFlow object_id，不决定 placement policy，不解析 serving/model role。
+
+### 3.3 Provider control surface Gate 与 C02-UP0
+
+C02-M0 已确认当前 external baseline 不具备可直接安装和链接的 OBMM Provider library，因此真实 OBMM 数据路径由独立任务 [PhaseC-02-UP0](PhaseC-02-UP0-obmm-provider-library-enablement.md) 解锁。正式路径冻结为：
+
+1. **唯一首选：公共、可安装的 OBMM Provider SDK/library**
+
+   mem-service 正式安装/发布 neutral provider header、OBMM provider library、version manifest 和 link contract；Guest companion 消费该 artifact，不复制源码。
+
+`C02-UP0` 由执行 C02 的 worker 一并负责，但必须在 external 仓库形成独立 clean commit，不能混入 data-service adapter commit。扩大 mem-service daemon RPC 不是 C02/UP0 的备选方案或默认授权；只有公共 library 经证据证明不可行，并经项目总监单独架构复审后才能另立任务讨论。固定 scenario/test app 只能用于 baseline/canary，不能作为长期 UbSimProvider runtime API。
+
+依赖关系的当前状态为：M1～M9 与真实 OBMM integrated acceptance 已在 exact-commit real13 完成；UP0 public surface、external commits、ub_sim gitlink/lock 和 C01 U0～U4 promotion 均已关闭。
+
+## 4. 目标架构与职责
+
+```mermaid
+flowchart TB
+    C[Serving / PyPTO / Test Client] --> SDK[UFlow SDK]
+    SDK --> D[UFlow daemon<br/>唯一 Catalog / Lease / Planner / Event]
+
+    D --> PR[DataProvider Registry]
+    PR --> LP[Local Providers<br/>ACL / mmap / file]
+    PR --> UP[UbSimProvider<br/>Host adapter]
+    PR -. future .-> RP[Real UB/URMA Provider]
+
+    UP --> BR[uflow-sim-bridge-v1<br/>descriptor / control / completion / checksum]
+
+    subgraph SIM[ub-sim logical nodes]
+        BR --> GA[NodeA Guest companion]
+        BR --> GB[NodeB Guest companion]
+        GA --> PA[Public neutral Provider SDK]
+        GB --> PB[Public neutral Provider SDK]
+        PA --> OA[OBMM / GSVA / semantic devices]
+        PB --> OB[OBMM / GSVA / semantic devices]
+        OA <-->|application payload data plane| OB
+    end
+```
+
+职责：
+
+| 组件 | 权威职责 | 不负责 |
+|---|---|---|
+| UFlow Catalog | object、placement、binding、lease、version、state | QEMU/OBMM 私有资源布局 |
+| Planner/Executor | capability 约束、plan step、event、fallback/replan | simulator 内部设备实现 |
+| DataProvider | 统一资源与 transfer/completion 合同 | 业务对象身份和策略 |
+| UbSimProvider | Host 侧 platform/session/bridge adapter | Guest pointer、业务 placement policy |
+| Guest companion | Guest-local provider resource 和 operation executor | UFlow object identity、全局 route |
+| mem-service Provider SDK | neutral region/mapping/completion 语义 | UFlow Catalog |
+| ub-sim | logical node/link/device、OBMM/GSVA、故障模型 | 生产能力与物理性能声明 |
+
+QMP 只用于 Guest pause/resume/shutdown；console 只用于 bootstrap/诊断。业务 descriptor/completion 使用独立 bridge channel。
+
+## 5. 核心数据合同
+
+### 5.1 DataObject、Placement、ResourceBinding、AccessBinding
+
+必须从当前 daemon `Object` 大结构拆分为：
+
+```text
+DataObjectRecord
+  object_id
+  namespace / name / role
+  size / shape / dtype
+  content_version
+  consistency / owner / state
+
+PlacementRecord
+  placement_id / object_id
+  medium / node_id / device_id / domain
+  provider_id / execution_mode / execution_realm_id
+  requested_fidelity / actual_fidelity
+  addressability
+  topology_generation / capability_generation
+  range / state
+
+ResourceBindingRecord
+  binding_id / placement_id
+  provider_id / provider_session_id
+  provider_resource_id
+  binding_generation
+  opaque_descriptor
+  allowed_range
+  limitations[]
+  state
+
+AccessBindingRecord（ImportedView）
+  access_binding_id
+  placement_id / source_binding_id
+  accessor_node_id / accessor_device_id
+  accessor_provider_session_id
+  source_binding_generation
+  access_kind = remote_map
+  transport_kind = ub_shmem | obmm_gsva
+  addressability = provider_only | remote_mapping
+  access_mode / allowed_range
+  topology_generation / capability_generation
+  state
+```
+
+要求：
+
+- 一个 DataObject 可有多个 Placement；
+- 一个 realized Placement 有明确 ResourceBinding；
+- Placement 只表示数据字节的真实驻留位置或独立副本，不表示“某节点可以远程访问”；
+- NodeB import/map NodeA DDR 后只创建 `AccessBinding/ImportedView`，不得创建 NodeB Placement；
+- Planner 的 replica/nearest-placement 候选只来自 Placement；AccessBinding 只影响指定 accessor 到源 Placement 的可达性、setup cost 和 path state；
+- 只有 provider 真正把完整 range copy/replicate 到 NodeB 独立 resource，并完成 version/checksum/ownership 登记后，才创建 NodeB Placement + ResourceBinding；
+- Local ACL allocation、DDR mmap、SSD extent 与 UbSim resource 都使用同一 binding 分层；
+- provider-specific descriptor 只由 provider 解析；
+- external resource id 不进入 object identity；
+- source/accessor provider session restart 后相关 ResourceBinding 或 AccessBinding 必须 stale；
+- object content_version 与 binding_generation 不混用。
+
+C02 golden slice 结束时的权威状态必须是：
+
+```text
+DataObject X
+  Placement P1 = NodeA.DDR                  # 唯一驻留 placement
+    ResourceBinding R1 = NodeA OBMM region  # 实际资源
+    AccessBinding A1 = NodeB remote view    # 可达性，不是副本
+```
+
+### 5.2 DataHandle
+
+```text
+object_id / placement_id / binding_id / optional access_binding_id / lease_id
+object_version / binding_generation
+allowed_range / access_mode / address_domain
+execution_mode / execution_realm_id
+provider_id / addressability
+access_kind / transport_kind
+opaque_descriptor
+host_dereference
+```
+
+simulated/provider-only handle：
+
+- `device_ptr`、`data_ptr`、`as_memoryview`、Host mmap 稳定返回 `HandleNotLocallyAddressable`；
+- 不返回 `0` 冒充合法 pointer；
+- 不把 Guest VA、GSVA、mapping base 暴露给 Host client；
+- range、permission、version、generation 和 lease 必须可验证。
+
+### 5.3 DataProvider v1
+
+通用合同建议拆为以下操作族：
+
+```text
+identity()
+probe()
+capabilities()
+health()
+
+submit_operation(ProviderOperation) -> ProviderSubmission
+poll_completion(id)
+wait_completion(id, timeout)
+cancel_completion(id)
+read_counters()
+```
+
+`ProviderOperation` 至少包含：
+
+```text
+Allocate / Release
+Publish / Import / Revoke
+Checksum
+Copy / Read / Write（按 capability）
+```
+
+`ProviderSubmission` 必须返回唯一 `provider_completion_id` 和 initial state。即使 external operation 在调用栈内立即完成，也必须通过同一个 completion ID 返回 terminal snapshot；不得同时返回一个同步成功结果、随后再产生第二个 completion。
+
+completion 规则：
+
+- `identity/probe/capabilities/health/read_counters` 是同步只读 query，不创建 TransferEvent；
+- 所有 resource mutation 和 data/access operation 统一走 `submit_operation → poll/wait/cancel`；
+- 一个 UFlow PlanStep 最多绑定一个 provider completion ID；
+- bridge ACK 只表示消息已接收，不是 provider terminal completion；
+- step event 只消费该 completion 的状态，parent event 在全部 required step terminal 后只产生一次 terminal outcome；
+- unsupported cancel 返回 `CancelUnsupported`，不伪造 canceled；
+- `Publish/Import/Revoke` 在 C02 中也遵守这一异步合同，禁止部分实现同步、部分实现另起 event。
+
+provider identity 至少包含：
+
+```text
+provider_api_major / provider_api_minor
+provider_id / provider_kind
+adapter_revision
+external_platform_revision
+external_protocol_revision
+session_id / boot_id
+health / ready / degraded_reason
+fidelity / limitations[]
+```
+
+C02 最小 required capability：
+
+| 操作 | C02 要求 | 说明 |
+|---|---|---|
+| identity/probe/health | required | version/session/readiness 可验证 |
+| DDR allocate | required | NodeA Guest-local owned resource；medium 始终为 DDR |
+| publish/export | required | 产生中立 opaque descriptor |
+| remote import/map | required | NodeB 建立 bounded AccessBinding/ImportedView，不创建 Placement |
+| checksum | required | NodeA seed 与 NodeB view 一致 |
+| revoke/release | required | stale generation 负例 |
+| unified async completion | required | mutation/access operation 全部走 submit_operation；每 step 唯一 completion |
+| cancel | optional | 不支持时返回 `CancelUnsupported` |
+| semantic HBM | optional/validation_only | 不作为 C02 Gate |
+| SSD/SSU block | not required | C05 |
+| full topology discovery | not required | C03；C02 只固定 nodeA/nodeB/session identity |
+
+### 5.4 C02 静态 Topology/Capability Snapshot
+
+C02 冻结 schema，但不实现动态 discovery。每个 run 由受版本管理的 scenario/manifest 生成不可变 snapshot：
+
+```text
+topology_snapshot_id = <scenario_sha256>
+topology_generation = 1
+capability_snapshot_id = <capability_map_sha256>
+capability_generation = 1
+nodes = [nodeA, nodeB]
+execution_realm_id = ub_sim:<run_id>
+```
+
+规则：
+
+- C02 Planner/PlanStep 必须引用上述 generation；
+- C02 run 期间 scenario、node list、capability map 发生变化时 fail closed，不能递增 generation 后继续；
+- provider 只返回自身 identity/session/capability contribution，不承担完整 topology authority；
+- C03 再实现动态 `TopologyProvider/CapabilityProvider`、snapshot refresh、generation rollover 和 stale-plan 处理；
+- C02 不得因为 schema 中已有 generation 字段而声明 dynamic discovery supported。
+
+### 5.5 SimulationControl 扩展
+
+仅 simulator provider 可选实现：
+
+```text
+set_fault_profile
+set_cost_profile
+reset_session
+advance_virtual_time
+read_simulator_counters
+```
+
+这些操作不得出现在通用 DataProvider required surface，也不得被 serving 业务代码直接依赖。
+
+### 5.6 TransferPlan 与 TransferEvent
+
+Phase C 会出现 relay、多 hop、fallback 和 replan，不能继续只依赖自由文本 `path/engine`。C02 必须冻结 typed plan step：
+
+```text
+TransferPlan
+  plan_id / request_id
+  topology_generation / capability_generation
+  execution_realm_id
+  steps[]
+  cost / explanation
+
+PlanStep
+  step_id / dependencies[]
+  provider_id / operation
+  src_placement_id / optional dst_placement_id / optional access_binding_id
+  range
+  expected_completion_kind
+  fallback_policy
+```
+
+Event 至少记录：
+
+```text
+event_id / parent_event_id / attempt_id / step_id
+plan_id / provider_id / provider_session_id
+submitted / queued / running / complete / failed / canceled
+planned_path / actual_path
+fallback_or_replan_reason
+bytes / timestamps / checksum verdict
+topology_generation / capability_generation
+execution_mode / fidelity
+exactly one terminal outcome
+```
+
+C02 可以保留当前 `path/engine` 字符串作为兼容输出，但 Planner/Executor 的新行为不能以解析字符串作为权威决策。
+
+### 5.7 稳定错误
 
 至少冻结：
 
@@ -298,80 +502,210 @@ ProviderUnavailable
 ProviderNotReady
 ProviderVersionMismatch
 ProviderOperationUnsupported
-ProviderRestarted
-TopologyStale
-CapabilityStale
-ResourceNotFound
-ResourceStale
+ProviderSessionRestarted
+ProviderProtocolError
+ProviderResourceNotFound
+ProviderResourceStale
 HandleNotLocallyAddressable
 DescriptorMalformed
-DescriptorVersionMismatch
 AccessDenied
 RangeOutOfBounds
 ChecksumMismatch
 QueueFull
 Timeout
 CancelUnsupported
-InternalProviderError
+CrossRealmTransferUnsupported
+InternalProviderAdapterError
 ```
 
-错误 detail 可以扩展，但 code 不得依赖 QEMU/OBMM 私有日志字符串。
+错误 detail 可以包含 external code 和短摘要；UFlow core 不得依赖 console/log 私有字符串。
 
-## 7. uflow-sim-bridge-v1
+## 6. UbSimProvider 与 Guest Bridge
 
-### 7.1 传输选择
+### 6.1 建议代码归属
 
-首选 dedicated virtio-serial：每个 QEMU node 增加一个独立 chardev Unix socket 和一个命名 virtserialport，例如：
+全部 UFlow-owned source 位于 data-service：
 
 ```text
-host socket: /tmp/uflow-ubsim/<run_id>/nodeA.agent.sock
-guest port:  /dev/virtio-ports/org.uflow.sim.nodeA
+crates/uf-core/src/provider.rs
+crates/uf-core/src/topology.rs
+crates/uf-daemon/src/providers/mod.rs
+crates/uf-daemon/src/providers/registry.rs
+crates/uf-daemon/src/providers/local.rs
+crates/uf-daemon/src/providers/mock.rs
+crates/uf-daemon/src/providers/ub_sim.rs
+crates/uf-ub-sim-agent/
+tools/phasec/run_uflow_ub_sim.sh
+examples/phasec02/uflow_ub_sim_ddr_smoke.py
+tests/phasec02_provider_contract.rs
 ```
 
-QMP 仍只负责 QEMU pause/resume/quit；console serial 仍只负责日志。若当前 guest kernel 缺少 virtio-console/virtio-serial，C02 必须补齐 kernel config/initramfs 驱动并保存 probe 证据，不能退回 console screen scraping 作为 acceptance path。
+不得在 canonical ub-sim/mem-service tree 新增 UFlow-owned source。Guest binary 由 UFlow 构建，并通过当次 run overlay 注入。
 
-### 7.2 Frame
+### 6.2 Bridge v1
 
-bridge 使用独立版本化 frame，不复用 UFlow client-daemon 单行 KV：
+Bridge 的 Guest transport 不在本文预判为某一种实现，但 C02-M0 必须产出唯一选择，不能把选择留给 M4 临场决定。强制输出 `bridge_transport_decision.md/json`，至少冻结：
+
+- transport：`virtio-serial`、`vsock` 或明确受控的 network socket 三选一及选型理由；
+- Host/Guest endpoint 命名、QEMU launcher 参数和权限；
+- Guest device discovery、companion bootstrap 和 readiness 握手；
+- 断线重连、request replay/idempotency、session generation rollover；
+- shutdown、stale endpoint 和 run-owned artifact 清理规则。
+
+bridge 只承载：
 
 ```text
-magic="UFSB"
-major=1 / minor
-header_len / opcode / flags
-request_id
-payload_len
-payload_checksum
-payload=versioned TLV
+identity / probe / capability / health
+allocate / release
+provider descriptor
+publish / import / revoke command
+completion / checksum / counter
+error / session generation
+```
+
+每条消息至少包含：
+
+```text
+magic / protocol_major / protocol_minor
+message_type / flags
+request_id / correlation_id
+execution_realm_id / node_id / boot_id
+provider_session_id / session_generation
+frame_body_length / frame_body_checksum
+status / error_code
 ```
 
 要求：
 
-- 明确 little-endian；
-- header/payload 长度、checksum、required TLV、duplicate TLV 全部校验；
-- major 不兼容、坏 checksum、超长 frame、未知 required field 立即拒绝；
-- opaque provider descriptor 作为 byte string 透传，host adapter 不解析 OBMM 私有布局；
-- 控制面允许传 identity、descriptor、completion 和 checksum，不允许传正式 payload bytes；
-- test-only `FillPattern(seed)` 只在 conformance feature 下启用，并在能力中标记 `validation_only=true`。
+- 独立于 console 和 QMP；
+- required field、length、version、checksum fail closed；
+- 重复 request 有明确 idempotency/replay 语义；
+- 断线或 Guest reboot 后 session generation 变化，旧 binding/completion 全 stale；
+- application payload 不进入 bridge；
+- bridge 不解析 OBMM private descriptor bytes。
 
-### 7.3 Opcode 面
+### 6.3 数据面
+
+4 KiB payload 的生成、发布、映射和校验全部在 Guest/provider 数据面：
 
 ```text
-HELLO / HEALTH / GET_CAPABILITIES / GET_TOPOLOGY
-ALLOCATE_RESOURCE / RELEASE_RESOURCE
-EXPORT_REGION / IMPORT_REGION / REVOKE_REGION
-SUBMIT_TRANSFER / SUBMIT_BLOCK_IO
-POLL / WAIT / CANCEL
-FILL_PATTERN_TEST_ONLY / CHECKSUM_RANGE
-SHUTDOWN
+Guest A companion owns DDR buffer
+  -> deterministic seed
+  -> neutral Provider register/export/publish
+  -> OBMM/GSVA
+  -> Guest B neutral Provider import/map/read
+  -> Guest B checksum
 ```
 
-C02 不要求全部 opcode 实现数据功能，但 schema、capability gating、unsupported 负例和版本兼容测试必须齐全。
+Host UFlow 只获得 descriptor、status、completion、checksum 和 counters，不读取或复制 application bytes。
 
-## 8. 启动与关闭方案
+“payload 不经过 Host”必须可检查，而不是只看实现自述：
 
-### 8.1 统一入口
+- raw 4096 bytes 只能由 Guest A 根据 `seed_id` 生成，并在 Guest B/provider 数据面读取；Host 侧只允许出现 `seed_id`、range、checksum 和 opaque descriptor；
+- raw payload 及从 deterministic payload 派生的唯一 canary chunk，不得出现在 bridge frame capture、UFlow daemon request/response capture、run-root 常规文件或 Host 临时文件；
+- evidence 必须记录扫描范围、capture/file SHA256、canary 定义和命中数，命中数必须为 0；
+- `payload_path_assertion.json` 必须由自动检查生成，不能用人工声明代替；检查器可流式重建 canary，不得先把 raw payload 写入 Host 临时文件。
 
-实施后提供单一 orchestrator：
+## 7. SDK 与请求语义
+
+目标 Python API：
+
+```python
+obj = uflow.create_data_object(
+    name="phasec02-ddr-x",
+    size=4096,
+    medium="ddr",
+    execution_mode="simulated",
+    provider="ub_sim",
+    target={"node_id": "nodeA", "domain": "ub_domain0"},
+)
+```
+
+可以提供 convenience view：
+
+```python
+uflow.sim("ub_sim").create_data_object(...)
+```
+
+进入 daemon wire/catalog 后必须归一化为类型化字段。禁止将 `sim`、`ub-sim`、`fake` 等自由文本写入 `runtime_descriptor` 决定行为。
+
+兼容规则：
+
+- 现有 API 默认 `execution_mode=physical`；
+- simulated request 必须显式 provider；
+- simulated request 不触发 ACL startup probe；
+- provider 不存在、not-ready 或 capability 缺失时明确失败；
+- physical request 不暗中落到 simulation；
+- simulated request 不自动 fallback 到 physical/local；
+- describe/capabilities/Trace/Monitor 返回 provider、revision、session、fidelity 和 limitations。
+
+## 8. C02 首条端到端链路
+
+### 8.1 Golden slice
+
+```text
+X Placement P1@NodeA.DDR
+  -> ResourceBinding R1@NodeA OBMM region
+  -> publish/export descriptor
+  -> AccessBinding A1@NodeB(remote_map over UB_SHMEM/OBMM-GSVA)
+  -> read-only checksum
+  -> revoke/release
+```
+
+执行步骤：
+
+1. Client 只连接 UFlow SDK/daemon，创建 4 KiB simulated DataObject X 和 NodeA placement；
+2. UFlow 选择 `UbSimProvider`，在 NodeA Guest 分配 DDR resource 并建立 ResourceBinding；
+3. NodeA Guest 写入 deterministic seed，并返回 seed checksum；
+4. UFlow 建立 validation plan/step，要求 publish/export；
+5. Host bridge 只转发 opaque descriptor、range、generation 和 command；
+6. NodeB Guest 通过 neutral Provider import/map 建立 bounded remote view；
+7. NodeB 通过 OBMM/GSVA 数据面读取并计算 checksum；
+8. provider completion 映射为 UFlow step event 和唯一 terminal parent event；
+9. Catalog 为 NodeB 增加指向 NodeA Placement/ResourceBinding 的只读 AccessBinding，不创建 NodeB Placement，也不改变 X 的 object identity；
+10. revoke/release 后旧 descriptor、binding 和 handle 必须 stale；
+11. Trace/Monitor 显示 planned/actual path、provider/session、NodeA/NodeB、simulated/semantic 和 checksum verdict。
+
+### 8.2 C02 可以声明
+
+```text
+UFlow unified DataProvider contract: available
+UbSimProvider + Guest bridge: available
+simulated descriptor-only DataObject: available
+2-node 4 KiB NodeA.DDR remote_map validation slice: pass
+payload through Host control plane: no
+fidelity: semantic/functional simulation
+```
+
+### 8.3 C02 不可以声明
+
+```text
+production remote DDR supported
+production remote HBM supported
+topology-aware routing complete
+cross-device path matrix complete
+physical HBM/SSD performance validated
+all serving tensors locally addressable
+```
+
+## 9. Phase C 最终多通路目标
+
+C02 只建立第一条跨节点 DDR 驻留、UB_SHMEM/OBMM remote-map 访问通路。后续任务逐步扩展：
+
+| 通路 | 首要任务 | Phase C 最终要求 |
+|---|---|---|
+| NodeA.DDR Placement → NodeB remote-map AccessBinding | C02/C04 | C02 固定 4 KiB 只读验证；C04 通用 publish/read/write/revoke、权限、一致性和多 client 生命周期 |
+| remote SSD/SSU → local DDR | C05 | block descriptor、async completion、range/checksum |
+| remote SSD/SSU → local semantic HBM via DDR | C05/C08 | relay steps、中间 placement、事件链 |
+| DDR → semantic HBM / semantic HBM → DDR | C08 validation matrix | 功能语义和 truth label 正确，不声明物理性能 |
+| multi-placement nearest route | C06 | topology/cost/capability 改变 placement/path |
+| link/node/device failure path switch | C07/C08 | fallback/replan 或 fail closed、无泄漏 |
+
+Phase C 可以验证 semantic HBM 数据通路；真实 remote HBM direct/relay 的生产 provider、硬件证据和支持声明仍归 Phase D。
+
+## 10. 启动与关闭
+
+### 10.1 统一入口
 
 ```text
 data-service/tools/phasec/run_uflow_ub_sim.sh
@@ -381,69 +715,71 @@ data-service/tools/phasec/run_uflow_ub_sim.sh
 
 ```bash
 tools/phasec/run_uflow_ub_sim.sh \
-  --ub-sim-root /home/sj/phasec02_runs/<run_id>/ub_sim \
+  --ub-sim-root /home/sj/git/ub_sim \
+  --run-root /home/sj/phasec02_runs/<run_id> \
   --nodes 2 \
-  --scenario scenarios/mvp_2host_single_domain.yaml \
-  --topology vendor/ub_topology_two_node_v0.ini \
-  --uflow-socket /tmp/uflow-ubsim/<run_id>/uflow.sock \
+  --provider ub_sim \
   --run-id <run_id> \
-  --smoke contract
+  --smoke cross-node-ddr
 ```
 
-### 8.2 启动顺序
+### 10.2 启动顺序
 
-1. 用 C01 guard 校验 `ub_sim@c68cfb8` 和全部 gitlink/lock；
-2. 记录 UFlow/ub-sim/mem_service/QEMU SHA、scenario/topology hash 和容器环境；
-3. 构建 host `uf-daemon`、cross-build guest `uflow_sim_agent`；
-4. 将 agent 和 bridge contract manifest 打包进 initramfs；
-5. 启动 2 个 QEMU node，建立独立 QMP、console、agent socket；
-6. guest init 通过 `linqu_uflow_sim_agent=1` 启动持久 agent，不运行一次性 PASS 后退出；
-7. orchestrator 等待两个 agent `HELLO`，校验 node_id、boot_id、provider API、revision；
-8. agent 内 OBMM provider 完成 device probe 和 peer canary，ready 前保持 degraded；
-9. 生成只读 `provider_manifest.json`，再启动 UFlow daemon：
+1. C01 guard 校验 ub_sim、mem-service、QEMU revision 和 freshness；
+2. 记录 UFlow SHA、external SHA、provider SDK/bridge version、scenario/topology hash；
+3. 检查 external canonical source before status；
+4. 构建 UFlow daemon、Host UbSimProvider 和 Guest companion；
+5. 在 run-root 生成 Guest overlay、bridge config、socket、pid 和 evidence 目录；
+6. 使用 platform official launcher 启动 2 logical nodes；
+7. QMP 完成生命周期 ready，dedicated bridge 完成 Guest companion identity/probe；
+8. UbSimProvider 完成 provider/session/capability canary；
+9. 启动 UFlow daemon，注册 Local、Mock、UbSim provider；
+10. Client 只连接 UFlow，执行 cross-node DDR golden slice；
+11. 保存 UFlow、bridge、Guest provider、simulator counter 和 checksum 证据；
+12. 检查 external canonical source after status 与 before 一致。
+
+UbSimProvider unavailable 不得阻止不依赖它的 physical/local UFlow 启动；显式 ub_sim request 必须失败，不能 fallback。
+
+### 10.3 关闭顺序
 
 ```text
-uf-daemon
-  --socket <uflow.sock>
-  --provider-config <provider_manifest.json>
-  --startup-probe-bytes 0
+stop accepting new ub_sim requests
+  -> drain/cancel according to capability
+  -> revoke remote mapping/descriptor
+  -> release Guest bindings
+  -> stop Guest companions
+  -> platform official QMP shutdown
+  -> stop UFlow daemon
+  -> remove only run-owned socket/pid/config/overlay
+  -> verify no QEMU/agent/socket residue
+  -> verify external canonical source unchanged
 ```
 
-10. UFlow daemon 注册 `LocalProvider` 和 `UbSimProvider`；simulation 模式禁止 ACL startup probe；
-11. conformance/client 只连接 UFlow socket，不直接连接 guest agent；
-12. Trace/Monitor 显示两个 provider session 和 simulated truth label。
+禁止 broad `pkill`、通配删除其他 run、清理 canonical build cache 或覆盖历史 evidence。
 
-### 8.3 关闭顺序
+## 11. 实施任务拆分
 
-```text
-stop accepting new UFlow requests
-  -> drain/cancel provider events according to capability
-  -> release/revoke UFlow bindings
-  -> request agent shutdown
-  -> QMP quit remaining guests
-  -> remove run-owned sockets/pid files
-  -> verify no qemu/agent/uf-daemon process and no run socket remains
-```
+### C02-M0：Provider control surface 与 capability map
 
-orchestrator 必须只清理 manifest 中属于本次 `run_id` 的资源，禁止 broad `pkill`、通配删除其他 run 或清理 canonical build cache。
+编码前强制完成：
 
-## 9. 实施任务拆分
+- 固定 ub-sim/mem-service/QEMU revision；
+- 记录当前 daemon wire、neutral provider header、OBMM provider build/install、launcher/bridge 能力；
+- 明确 Host-only API 不足的 exact gap；
+- 以 [C02-UP0](PhaseC-02-UP0-obmm-provider-library-enablement.md) 的公共可安装 OBMM Provider library 作为正式路径；不得在本任务扩大 mem-service daemon RPC；
+- 验证 Guest companion 可获得 identity/probe/allocate/export/import/checksum/release；
+- 选择唯一 Guest bridge transport，冻结 endpoint、QEMU/bootstrap、readiness、重连/session rollover 和 cleanup；
+- 输出 `external_interface_inventory.md`、`capability_map.json`、`compatibility_matrix.json`、`bridge_transport_decision.md/json`；
+- 每项状态只能是 `supported`、`unsupported`、`validation_only`；
+- real13 已在三仓 exact commits 上完成 M1～M9 技术验收；本项继续作为未来重跑的前置检查清单。
 
-### C02-M0：基线与走读断言
-
-交付：
-
-- 固定 UFlow SHA 与 `ub_sim@c68cfb8`、mem_service `366a335`、QEMU `3a247cb`；
-- 把本节代码走读结论转成 contract tests/注释，避免实现绕回具体 backend；
-- 验证 virtio-serial guest 驱动能力并保存 probe；
-- 建立 `phasec02_runs/<run_id>` manifest 和 cleanup trap。
-
-### C02-M1：IDL、对象/placement/binding 分层
+### C02-M1：对象与 binding 分层
 
 主要修改：
 
 ```text
 crates/uf-core/src/idl.rs
+crates/uf-core/src/provider.rs
 crates/uf-daemon/src/catalog.rs
 sdk/python/uflow/idl.py
 sdk/python/uflow/objects.py
@@ -451,163 +787,141 @@ sdk/python/uflow/objects.py
 
 要求：
 
-- 增加 schema/provider/execution_mode/fidelity/generation/version/checksum 字段；
-- 引入独立 `PlacementRecord` 与 `ResourceBindingRecord`；
-- 一个对象允许多个 placement；
-- 保留 local v1 response compatibility；
-- 禁止 provider descriptor 进入 object identity 或 placement policy。
+- DataObject、Placement、ResourceBinding、AccessBinding、Handle 分离；
+- 一个对象支持多个 placement；
+- remote import/map 只创建 AccessBinding/ImportedView，只有真实 copy/replica 才创建新 Placement；
+- execution realm、object version、binding generation 类型化；
+- physical/local 默认兼容；
+- 跨 realm 默认 fail closed；
+- migration adapter 保证现有 HBM/DDR/SSD response 不回归。
 
-### C02-M2：Provider trait、registry 与 LocalProvider
-
-建议落点：
+### C02-M2：统一 DataProvider 与 registry
 
 ```text
 crates/uf-daemon/src/providers/mod.rs
 crates/uf-daemon/src/providers/registry.rs
-crates/uf-daemon/src/providers/local.rs
 crates/uf-daemon/src/providers/mock.rs
 ```
 
 要求：
 
-- object service/planner/executor 只依赖中立 provider trait；
-- 现有 ACL/mmap/file 行为迁入 LocalProvider，不改变现有功能与性能默认值；
-- provider disabled/unavailable 不影响不依赖它的 local paths；
-- mock/local 共用 conformance suite。
+- identity/capability/resource/completion/error 合同；
+- provider 通过 ID 注册，Planner 不 hard-code `ub_sim`；
+- MockProvider conformance；
+- optional SimulationControl 不进入 required surface；
+- provider down 不影响无关 provider。
 
-### C02-M3：Bridge schema 与 host UbSimProvider
+### C02-M3：LocalProvider 迁移和回归隔离
 
-建议落点：
+- ACL/mmap/file 逐步进入 LocalAcl/LocalDdr/LocalSsd provider；
+- local resource 也使用 ResourceBinding；
+- 保留现有物理 API 和默认性能路径；
+- simulated-only 启动跳过 ACL startup probe；
+- Phase A/B/E regression 必须通过。
 
-```text
-crates/uf-core/src/provider_contract.rs
-crates/uf-core/src/sim_bridge.rs
-crates/uf-daemon/src/providers/ub_sim.rs
-tests/phasec02_provider_contract.rs
-```
+### C02-M4A：Mock UbSimProvider、Guest companion 与 bridge 骨架
 
-要求：
+- 使用 MockProvider/loopback frame 验证 Host adapter、Guest companion 和 bridge 协议骨架；
+- 固化 transport endpoint/bootstrap/reconnect/session generation 语义；
+- 验证 malformed/version/replay/idempotency/one-terminal completion 负例；
+- 只可声明 `mock-bridge-contract-ready`，不得声明 OBMM 数据路径通过；
+- 不依赖 UP0，可与 M1～M3 并行。
 
-- 实现 v1 frame/TLV、版本/长度/checksum/required-field 负例；
-- per-node connection、request correlation、timeout、reconnect/boot_id 检查；
-- host adapter 不 include/parse QEMU、OBMM、mem-service provider 私有头文件；
-- 连接断开后 bindings stale，禁止透明改走 LocalProvider。
+### C02-M4B：真实 UbSimProvider、Guest companion 与 OBMM bridge
 
-### C02-M4：guest uflow_sim_agent
+- Host platform/session adapter；
+- dedicated versioned bridge；
+- Guest companion identity/probe/allocate/publish/import/revoke/checksum；
+- provider SDK version/ABI check；
+- external resource/session/generation 映射；
+- structured log 和 correlation id；
+- 不把 private provider source vendor 到 UFlow；
+- 不在 canonical external tree 写 UFlow source。
+- 前置条件已满足：C02-UP0 完成、ub-sim gitlink/lock 原子更新并重新通过 C01 U0～U4。
 
-ub-sim 候选中的建议落点：
+### C02-M5：typed Plan/Event 与 executor 接入
 
-```text
-guest-linux/aarch64/apps/uflow_sim_agent/
-guest-linux/aarch64/scripts/build_initramfs.sh
-guest-linux/aarch64/initramfs/run_app
-```
+- PlanStep、topology/capability generation、provider ID；
+- provider completion 映射到 step/parent event；
+- exactly one terminal outcome；
+- string path/engine 仅作为兼容显示；
+- timeout、unsupported、restart 和 stale 错误稳定。
+- 所有 mutation/data/access operation 都经 `submit_operation -> completion`；一次 PlanStep 最多绑定一个 provider completion，bridge ACK 不是 terminal event。
 
-要求：
+### C02-M6：SDK 与 truth label
 
-- agent 是轻量 C 进程，不包含 UFlow catalog/LLM placement policy；
-- 链接 mem_service neutral provider 与 OBMM provider source；
-- 实现 identity/probe、allocate/release、descriptor、checksum 和 test seed；
-- region/mapping 属于 agent 进程，ownership/bounds/checksum fail closed；
-- agent 不调用 mem-service 业务对象 daemon API，不使用模型固定 offsets；
-- 每个资源绑定当前 boot_id，退出时完整 unmap/deregister。
+- 类型化 simulated request 和 `uflow.sim(provider)` convenience；
+- descriptor-only handle；
+- Host 解引用稳定失败；
+- describe/capabilities/Trace/Monitor 展示 provider/session/fidelity/limitations；
+- physical 与 simulated 不静默互相 fallback。
 
-若必须修改 mem_service，改动只能进入 neutral provider 层并单独提交、测试、更新 C01 lock；禁止在 ub-sim 复制 provider 源码形成 fork。
+### C02-M7：统一 orchestrator
 
-### C02-M5：QEMU runner 与 orchestrator
+- 复用 official platform launcher；
+- run-root/overlay/socket/pid/evidence 隔离；
+- QMP、bridge、provider、daemon readiness 分层；
+- 失败只清理本 run；
+- source before/after 不变；
+- console log 只作诊断。
 
-ub-sim：
+### C02-M8：4 KiB cross-node DDR vertical slice
 
-```text
-guest-linux/aarch64/scripts/run_ub_dual_node_apps.sh
-guest-linux/aarch64/scripts/qemu_ub_common.sh
-```
+- UFlow SDK 创建 X 的唯一 Placement P1@NodeA.DDR；
+- deterministic seed、publish/export、NodeB import/map/read；
+- checksum、completion、NodeB AccessBinding/ImportedView；不得创建 NodeB Placement；
+- 固定 2 node、只读、4096 bytes、offset=0 单 range、单 producer/单 importer；
+- payload 不经过 Host bridge/daemon/temp file，并有 frame/file 自动扫描证据；
+- revoke/release 后 stale；
+- Trace/Monitor 和 provider counter 可按 object/plan/event/correlation id 对齐。
 
-UFlow：
+### C02-M9：负例、证据与下游交接
 
-```text
-tools/phasec/run_uflow_ub_sim.sh
-examples/phasec02/uflow_c02_ub_sim_smoke.py
-```
+- version/capability/unsupported/restart/stale/descriptor/checksum/realm 负例；
+- LocalProvider regression；
+- cleanup/source unchanged；
+- 更新 C00、C02、C01 handoff 和项目总控；
+- 输出 C03/C04/C06 可消费 schema、manifest、gap 和 future path matrix。
 
-要求：
-
-- 增加 dedicated virtio-serial agent port 和 per-node socket manifest；
-- agent persistent ready 取代静态 cmdline app PASS 作为对接门禁；
-- QMP/console/agent socket 分离；
-- daemon 只在所有 required agent/canary ready 后启动；
-- 任一步失败都清理本 run 资源并保存 raw log。
-
-### C02-M6：descriptor-first SDK 与 truth label
-
-要求：
-
-- 新增 generic `create/open/describe_data_object` view；
-- physical convenience API 保持兼容；
-- simulated object 本地解引用稳定失败；
-- capabilities 返回 provider、execution_mode、fidelity、limitations；
-- Trace/Monitor 至少增加 provider_id、provider_revision、execution_mode、simulation_fidelity、provider_boot_id、topology_generation。
-
-### C02-M7：conformance 与 vertical slice
-
-统一 conformance 对 mock/local/ub-sim 执行：
-
-1. identity/version/required capability；
-2. allocate/release 与重复释放；
-3. descriptor roundtrip、坏版本、坏 checksum、越界；
-4. agent 内生成 4 KiB deterministic payload；
-5. 通过 OBMM provider export/map/publish/wait/checksum；
-6. descriptor 与 checksum 经 UFlow provider bridge，payload bytes 不经 host 控制面；
-7. UFlow event/trace 关联 provider completion；
-8. revoke/release 后旧 handle stale；
-9. agent 重启 boot_id 改变，旧 binding fail closed；
-10. cleanup 无进程/socket/mapping 泄漏。
-
-vertical slice 只能标记 `provider_conformance`，不能加入正式 supported transfer path 列表。
-
-### C02-M8：证据、文档与下游门禁
-
-交付：
-
-- source/contract/unit/2-node integrated/negative/cleanup 原始证据；
-- 更新 C00、C02 和项目总控；
-- 输出 C03/C04 可直接消费的 schema/manifest；
-- 明确未完成 remote DDR/SSD/routing，不提前升级 Phase C 状态。
-
-## 10. 验收矩阵
+## 12. 验收矩阵
 
 | Gate | 场景 | 必须结果 |
 |---|---|---|
-| C02-G0 | baseline/source | UFlow、ub-sim、8 个 gitlink、scenario/topology hash 可复现 |
-| C02-G1 | IDL/schema | mock/local/ub-sim 使用同一 provider contract；major/minor 与兼容负例通过 |
-| C02-G2 | local regression | provider 未启用时现有 HBM/DDR/SSD 与 Phase E contract tests 全过 |
-| C02-G3 | bridge framing | 坏 magic/version/length/checksum/unknown required TLV fail closed |
-| C02-G4 | 2-node startup | 双 QEMU、双 agent ready；node/boot/revision/capability 一致 |
-| C02-G5 | simulated object | UFlow 创建 descriptor-only simulated placement；无伪 device_ptr/path |
-| C02-G6 | OBMM vertical slice | 4 KiB seed/checksum 经 guest OBMM mapping 验证，payload 不经 control channel |
-| C02-G7 | event/observability | provider completion 映射一个 UFlow terminal event；Trace/Monitor 明示 simulated |
-| C02-G8 | stale/restart | revoke、release、agent restart、boot_id mismatch 全部拒绝旧 handle |
-| C02-G9 | disabled/degraded | UbSimProvider down 不影响 local provider；required sim request 不静默 fallback |
-| C02-G10 | cleanup | 无 uf-daemon/agent/QEMU/run socket 残留，证据 checksum 通过 |
+| C02-G0 | baseline/control surface | external revision 固定；UP0 公共 library 路径、bridge transport/endpoint/bootstrap/reconnect 已冻结；canonical source 未改 |
+| C02-G1 | object model | Object/Placement/ResourceBinding/AccessBinding/Handle 分离；remote map 不生成 Placement；multi-placement/version/generation/realm 测试通过 |
+| C02-G2 | unified provider | Local/Mock/UbSim 使用同一 DataProvider；Planner 不 hard-code simulator |
+| C02-G3 | physical regression | simulation 未启用时现有 HBM/DDR/SSD 与 Phase E 行为通过 |
+| C02-G4 | bridge identity | Host/Guest protocol version、session、node、provider capability canary 通过 |
+| C02-G5 | simulated object | SDK 创建 descriptor-only X@NodeA.DDR；无伪 pointer/path |
+| C02-G6 | cross-node data path | NodeA.DDR publish/export、NodeB AccessBinding import/map/read 经过 OBMM/GSVA；无 NodeB Placement；无 Host payload copy |
+| C02-G7 | completion/checksum | provider completion 映射为唯一 terminal UFlow event；两端 checksum 一致 |
+| C02-G8 | revoke/stale | revoke/release 后 descriptor、binding、handle fail closed |
+| C02-G9 | observability | Trace/Monitor 明示 node/provider/session/path/simulated/semantic/checksum |
+| C02-G10 | isolation | UbSimProvider down 不影响 physical；sim request 不 fallback；cross-realm 默认拒绝 |
+| C02-G11 | cleanup/immutability | 无本 run QEMU/agent/socket/binding 残留；external source before/after 一致 |
 
-## 11. 必测负例
+## 13. 必测负例
 
-- UFlow 请求 simulated HBM 后 SDK 返回/接受 host `device_ptr`；
-- `medium=hbm` 但缺失 `execution_mode/fidelity/provider_backing`；
-- agent 未完成 peer canary 就报告 ready；
-- descriptor 来自旧 boot_id/generation；
-- object range、lease range、provider region range 任一不一致；
-- corrupt descriptor、payload checksum mismatch、重复 required TLV；
-- provider capability=false 但 planner 仍选择该 path；
-- provider 断开后自动改走 CPU memcpy/local file；
-- control bridge 捕获到正式 payload bytes；
-- UFlow event complete 后又被 failed/canceled 覆盖；
-- QMP/console/agent socket 混用；
-- 只根据 scenario/脚本存在就声称 topology/capability ready；
-- 只看 guest log `PASS`，没有 UFlow object/handle/event 证据；
-- 把 simulated latency/bandwidth 写成真实硬件性能。
+- simulated request 缺失 provider；
+- physical request 携带 incompatible simulated-only constraint；
+- provider 未注册、not-ready、version mismatch 或 canary 失败；
+- capability=false 但 Planner 仍生成相关 step；
+- provider session/Guest reboot 后旧 binding/completion 仍可用；
+- malformed/unknown-major/oversized/bad-checksum bridge message；
+- descriptor range、permission、object version 或 binding generation 不一致；
+- simulated handle 返回 Host pointer/mmap；
+- external resource id 覆盖 UFlow object_id；
+- physical↔simulated 跨 realm 在无 bridge capability 时被允许；
+- payload 出现在 Host bridge、daemon request、临时 payload file；
+- console PASS 被当成 provider completion；
+- completion terminal 后再次转为 failed/canceled；
+- checksum mismatch 后仍把 NodeB AccessBinding 标为 Ready，或错误创建 NodeB Placement；
+- revoke 后 remote view 仍可读写；
+- UbSimProvider down 后自动走 LocalProvider；
+- simulated latency/bandwidth 被报告为物理硬件结果；
+- C02 执行后 canonical ub-sim/mem-service source 出现新修改。
 
-## 12. 证据目录
+## 14. 证据目录
 
 ```text
 remote: /home/sj/phasec02_runs/<run_id>/evidence/
@@ -619,54 +933,84 @@ local:  data-service/results/<run_id>/
 ```text
 baseline.json
 environment.txt
-source_manifest.json
+external_source_before.txt
+external_source_after.txt
+external_interface_inventory.md
+capability_map.json
+compatibility_matrix.json
+provider_contract.json
+bridge_manifest.json
+bridge_transport_decision.md
+bridge_transport_decision.json
+bridge_frames.capture
+daemon_control_frames.capture
+host_payload_scan_manifest.json
 scenario.yaml
 scenario.sha256
 qemu_topology.ini
 qemu_topology.sha256
-provider_contract.json
-provider_manifest.json
-agent_nodeA.log
-agent_nodeB.log
-qemu_nodeA.log
-qemu_nodeB.log
+ub_sim_provider.log
+guest_nodeA_agent.log
+guest_nodeB_agent.log
 uflow_daemon.log
-provider_conformance.log
-bridge_negative.log
+plans.json
 events.json
+placements.json
+resource_bindings.json
+access_bindings.json
 trace_events.json
 monitor_snapshot.json
+payload_path_assertion.json
+checksums.json
+negative_tests.log
 cleanup.txt
 SHA256SUMS
 summary.md
 ```
 
-每个 PASS 必须绑定 exit code、开始/结束时间、UFlow event_id、provider completion_id、boot_id、object/placement/binding/handle generation 与 checksum verdict。
+每个 PASS 必须绑定：
 
-## 13. Definition of Done
+- 时间、命令、exit code；
+- UFlow object/placement/resource-binding/access-binding/plan/step/event ID；
+- NodeB AccessBinding 必须引用 NodeA Placement/ResourceBinding，且 catalog 中不存在由 remote map 伪造的 NodeB Placement；
+- provider/bridge session 和 external resource/completion ID；
+- planned/actual path；
+- platform/provider/bridge revision；
+- execution realm、fidelity、limitations；
+- NodeA seed checksum、NodeB observed checksum；
+- payload path assertion，以及 bridge/daemon frame capture、Host run-root/temp-file scan 的范围、hash、canary 和零命中计数；
+- cleanup 和 external source unchanged verdict。
+
+## 15. Definition of Done
 
 C02 关闭必须同时满足：
 
-1. provider-neutral v1 类型和 bridge schema 已进入代码并有兼容测试；
-2. UFlow 对象身份与 provider resource binding 已分离，一个对象可表达多个 placement；
-3. LocalProvider 承接现有物理路径且回归通过；
-4. UbSimProvider 与双 guest agent 能持久 handshake、probe、allocate/release；
-5. simulated HBM 不暴露伪造本地 pointer，并明确 semantic fidelity；
-6. UFlow 发起的 2-node OBMM vertical slice 通过 descriptor/checksum/cleanup；
-7. stale descriptor、agent restart、provider down、坏 frame/越界/checksum 负例 fail closed；
-8. Trace/Monitor 能区分 physical 与 simulated，并关联 provider revision/generation；
-9. unified orchestrator 可一键启动和关闭，且只清理本 run；
-10. 证据 bundle 可复核，状态只升级为 `integration-spine-ready`，不提前声称 remote DDR/SSD/routing supported。
+1. C02-UP0 已交付公共、可安装的 OBMM Provider library，形成独立 external commits 并重跑 C01；不依赖 private source copy 或新增 daemon RPC；
+2. DataObject、Placement、ResourceBinding、AccessBinding、Handle 分层进入代码；remote map 不生成 Placement，真实 copy/replica 才生成新 Placement；
+3. Local/Mock/UbSim 使用统一 DataProvider registry；
+4. Host UbSimProvider、dedicated bridge 和 per-Guest companion 进入 UFlow 代码并有版本合同；
+5. physical 默认行为和 Phase A/B/E 回归不受影响；
+6. simulated handle descriptor-only、Host 不可解引用、跨 realm 默认 fail closed；
+7. UFlow SDK 驱动固定双节点、只读、单 range 的 4 KiB NodeA.DDR Placement → NodeB AccessBinding remote-map validation slice；
+8. payload 只经过 Guest/OBMM 数据面，Host control/bridge/daemon/temp file 不承载 application bytes，并通过 frame/file 字节扫描；
+9. completion/checksum 映射为 typed PlanStep 和唯一 terminal UFlow event；
+10. unsupported、version mismatch、restart、stale、bad descriptor、checksum mismatch 全部 fail closed；
+11. Trace/Monitor 可关联 object/placement/resource-binding/access-binding/plan/event/provider/session/node/fidelity；
+12. 一键启动关闭、只清理本 run、external canonical source unchanged；
+13. 证据 bundle 可复核，状态只升级为 `provider-framework-ready / ub-sim-cross-node-ddr-validation-ready / formal-archive-promoted`。
 
-## 14. C02 之后的接口
+C02 完成后，Phase C 仍不能写 `done-first-version`。多设备、多节点、多通路、topology-aware routing 和 failure/replan 要由 C03～C08 收口。
+
+## 16. 后续任务接口
 
 C02 向后续任务提供：
 
-- C03：`TopologySnapshot/CapabilitySnapshot` schema、agent handshake、provider registry；
-- C04：DataObject/Placement/Binding/Handle、OBMM descriptor 和 publish/import/revoke 操作面；
-- C05：同一 provider/event 合同下的 block descriptor 与 completion；
-- C06：带 provider、topology generation、capability 和真实 feedback 的 planner 输入；
-- C07：provider error/cancel/restart/fallback 状态机；
-- C08：统一 orchestrator、2/4/8-node manifest 与证据格式。
+- C03：provider identity/capability contribution、node/session、topology/capability generation schema；
+- C04：通用 remote DDR publish/read/write、权限、一致性、多 client 生命周期以及真实 copy/replica placement；
+- C05：相同 DataProvider/PlanStep/Event 下的 SSD/SSU block operation；
+- C06：topology generation、capability、cost 和 multi-placement route；
+- C07：provider restart/error/cancel、parent/attempt event、fallback/replan；
+- C08：统一 orchestrator、2/4/8-node 与 cross-device multi-path matrix；
+- Phase D：新增真实 UB/URMA/remote HBM provider，不重写 Object/Placement/ResourceBinding/AccessBinding/Plan/Event。
 
-当前唯一 Next Gate：按 M0→M8 顺序实现并归档 2-node integration spine，先守住对象身份、仿真真实性和 provider 边界；在 C02-G0～G10 全部通过前，不启动 C03/C04 的 supported 状态升级。
+当前 Next Gate 已转入 C03：实现动态 TopologyProvider/CapabilityProvider、generation rollover 与 stale-plan fail-closed。C02 的固定静态 generation=1 slice 作为后续回归基线保留，不再继续扩大 C02 范围。

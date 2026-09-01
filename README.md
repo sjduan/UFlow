@@ -151,14 +151,24 @@ UF_SSD_ROOT=/data/uflow_ssd \
 python3 examples/phaseb01/uflow_b01_ssd_object_smoke.py
 ```
 
-Remote monitor helpers are configured by environment variables rather than hardcoded host details:
+The canonical remote development target is `serving-b` and its `openeuler-2403-DS` container. Connection details are defined in `memory/remote_connection.md` and `plan/Phase0-development-environment.md`.
 
 ```bash
-export UFLOW_HOST1_SSH="<jump-user>@<jump-host>"
-export UFLOW_HOST1_KEY="<local-private-key-path>"
-export UFLOW_HOST2_SSH="<remote-user>@<remote-host>"
-export UFLOW_HOST2_KEY_ON_HOST1="<private-key-path-on-jump-host>"
+export UFLOW_REMOTE_SSH=serving-b
+export UFLOW_REMOTE_CONTAINER=openeuler-2403-DS
+export UFLOW_REMOTE_WORKDIR=/home/sj/git/data-service
+
+ssh "$UFLOW_REMOTE_SSH"
+docker exec -it "$UFLOW_REMOTE_CONTAINER" bash
 ```
+
+The old `UFLOW_HOST1_*` / `UFLOW_HOST2_*` two-hop convention is retired. The `serving-b` SSH alias already carries the ProxyCommand through `serving-a`. A local monitor tunnel should use:
+
+```bash
+ssh -N -L 18082:127.0.0.1:8082 serving-b
+```
+
+As of 2026-08-12, `/home/sj/git/data-service` in the remote container is a dirty `e854fa0` worktree while local `main` is `6179941`. Preserve and reconcile the remote changes before syncing; do not use destructive `rsync --delete`, reset, checkout, or clean commands.
 
 ## Development Notes
 
