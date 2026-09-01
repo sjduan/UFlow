@@ -310,6 +310,7 @@ fn create_ddr_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         ssd_preallocated: false,
     };
     st.objects.insert(object_id, object.clone());
+    st.record_legacy_object(&object);
     let lease = st.make_lease(client_id, &object, 0, size_bytes);
     eprintln!(
         "{{\"event\":\"ddr_object_created\",\"object_id\":{},\"lease_id\":{},\"client_id\":{},\"requested_bytes\":{},\"actual_bytes\":{},\"role\":\"{}\",\"name\":\"{}\",\"target\":\"host:{}\",\"path\":\"{}\"}}",
@@ -445,6 +446,7 @@ fn create_ssd_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         ssd_preallocated: create_info.preallocated,
     };
     st.objects.insert(object_id, object.clone());
+    st.record_legacy_object(&object);
     let lease = st.make_lease(client_id, &object, 0, size_bytes);
     eprintln!(
         "{{\"event\":\"ssd_object_created\",\"object_id\":{},\"lease_id\":{},\"client_id\":{},\"requested_bytes\":{},\"actual_bytes\":{},\"role\":\"{}\",\"name\":\"{}\",\"target\":\"{}\",\"path\":\"{}\",\"preallocated\":{}}}",
@@ -633,6 +635,7 @@ fn create_data_object_impl(req: &Kv, shared: &SharedCatalog) -> Kv {
         ssd_preallocated: false,
     };
     st.objects.insert(object_id, object.clone());
+    st.record_legacy_object(&object);
     let lease = Lease {
         lease_id,
         object_id,
@@ -775,6 +778,7 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             None => return err("object not found"),
         };
         object.state = "Released".to_string();
+        st.mark_object_released(object_id);
         for lease in st
             .leases
             .values_mut()
@@ -870,7 +874,7 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
     } else {
         object.ddr_path.clone()
     };
-    ok(&[
+    let mut response = ok(&[
         ("object_id", object.object_id.to_string()),
         ("placement_id", object.placement_id.to_string()),
         ("namespace", object.model_id.clone()),
@@ -947,7 +951,65 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             }
             .to_string(),
         ),
-    ])
+    ]);
+    if let Some(record) = st.data_objects.get(&object.object_id) {
+        response.insert(
+            "content_version".to_string(),
+            record.content_version.to_string(),
+        );
+        response.insert("owner".to_string(), record.owner.clone());
+    }
+    if let Some(placement) = st.placements.get(&object.placement_id) {
+        response.insert("provider_id".to_string(), placement.provider_id.clone());
+        response.insert(
+            "execution_mode".to_string(),
+            placement.execution_mode.as_str().to_string(),
+        );
+        response.insert(
+            "execution_realm_id".to_string(),
+            placement.execution_realm_id.clone(),
+        );
+        response.insert(
+            "requested_fidelity".to_string(),
+            placement.requested_fidelity.as_str().to_string(),
+        );
+        response.insert(
+            "actual_fidelity".to_string(),
+            placement.actual_fidelity.as_str().to_string(),
+        );
+        response.insert(
+            "addressability".to_string(),
+            placement.addressability.as_str().to_string(),
+        );
+        response.insert(
+            "topology_generation".to_string(),
+            placement.topology_generation.to_string(),
+        );
+        response.insert(
+            "capability_generation".to_string(),
+            placement.capability_generation.to_string(),
+        );
+    }
+    if let Some(binding) = st
+        .resource_bindings
+        .values()
+        .find(|binding| binding.placement_id == object.placement_id)
+    {
+        response.insert("binding_id".to_string(), binding.binding_id.to_string());
+        response.insert(
+            "binding_generation".to_string(),
+            binding.binding_generation.to_string(),
+        );
+        response.insert(
+            "provider_session_id".to_string(),
+            binding.provider_session_id.clone(),
+        );
+        response.insert(
+            "provider_resource_id".to_string(),
+            binding.provider_resource_id.clone(),
+        );
+    }
+    response
 }
 
 pub(crate) fn register_client(req: &Kv, shared: &SharedCatalog) -> Kv {

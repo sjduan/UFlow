@@ -3,6 +3,6 @@ members = [
   "crates/uf-acl-sys",
   "crates/uf-core",
   "crates/uf-daemon",
+  "crates/uf-ub-sim-agent",
 ]
 resolver = "2"
-

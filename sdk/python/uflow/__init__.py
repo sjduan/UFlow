@@ -10,12 +10,14 @@ from .idl import (
     DataHandle,
     DataObject,
     DataPlacement,
+    ResourceBinding,
+    AccessBinding,
     TransferCost,
     TransferEvent,
     TransferPlan,
     TransferRequest,
 )
-from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SsdBuffer, SsdObject
+from .objects import DdrBuffer, DdrObject, HandleNotLocallyAddressable, HbmObject, ManagedBuffer, SimulatedAccessView, SimulatedObject, SsdBuffer, SsdObject
 from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
 from .event_pipeline import (
     AsyncLayerWeightPipeline,
@@ -34,6 +36,8 @@ __all__ = [
     "DataHandle",
     "DataObject",
     "DataPlacement",
+    "ResourceBinding",
+    "AccessBinding",
     "TransferCost",
     "TransferEvent",
     "TransferPlan",
@@ -41,6 +45,9 @@ __all__ = [
     "HbmObject",
     "DdrObject",
     "SsdObject",
+    "SimulatedObject",
+    "SimulatedAccessView",
+    "HandleNotLocallyAddressable",
     "ManagedBuffer",
     "DdrBuffer",
     "SsdBuffer",

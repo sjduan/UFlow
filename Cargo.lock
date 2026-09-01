@@ -23,4 +23,12 @@ dependencies = [
  "libc",
  "uf-acl-sys",
  "uf-core",
+ "uf-ub-sim-agent",
+]
+
+[[package]]
+name = "uf-ub-sim-agent"
+version = "0.1.0"
+dependencies = [
+ "uf-core",
 ]

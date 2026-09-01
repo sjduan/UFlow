@@ -11,3 +11,4 @@ path = "src/main.rs"
 libc = "0.2"
 uf-acl-sys = { path = "../uf-acl-sys" }
 uf-core = { path = "../uf-core" }
+uf-ub-sim-agent = { path = "../uf-ub-sim-agent" }

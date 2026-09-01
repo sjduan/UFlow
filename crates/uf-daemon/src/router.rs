@@ -1,6 +1,7 @@
 use crate::capabilities;
 use crate::catalog::SharedCatalog;
 use crate::object_service;
+use crate::sim_object_service;
 use crate::stats_service;
 use crate::trace::{span, TraceCategory};
 use crate::trace_api;
@@ -29,8 +30,20 @@ pub fn handle_request(req: Kv, shared: &SharedCatalog) -> Kv {
     match op.as_str() {
         "RegisterClient" => object_service::register_client(&req, shared),
         "RegisterModel" => object_service::register_model(&req),
+        "CreateDataObject" if get(&req, "execution_mode") == "simulated" => {
+            sim_object_service::create_data_object(&req, shared)
+        }
         "CreateDataObject" => object_service::create_data_object(&req, shared),
+        "PublishDataObject" => sim_object_service::publish(&req, shared),
+        "ImportDataObject" => sim_object_service::import_read_only(&req, shared),
+        "ChecksumAccessBinding" => sim_object_service::checksum_access(&req, shared),
+        "GetSimulatedValidation" => sim_object_service::get_validation(&req, shared),
+        "RevokeAccessBinding" => sim_object_service::revoke_access(&req, shared),
+        "DereferenceDataHandle" => sim_object_service::dereference_handle(&req, shared),
         "OpenDataObject" => object_service::open_data_object(&req, shared),
+        "ReleaseDataObject" if get(&req, "execution_mode") == "simulated" => {
+            sim_object_service::release_data_object(&req, shared)
+        }
         "ReleaseDataObject" => object_service::release_data_object(&req, shared),
         "CloseLease" => object_service::close_lease(&req, shared),
         "DescribeObject" => object_service::describe_object(&req, shared),
@@ -51,7 +64,7 @@ pub fn handle_request(req: Kv, shared: &SharedCatalog) -> Kv {
         "FlushTrace" => trace_api::flush_trace(),
         "ClearTrace" => trace_api::clear_trace(),
         "ExportTrace" => trace_api::export_trace(&req),
-        "GetCapabilities" => capabilities::get_capabilities(),
+        "GetCapabilities" => capabilities::get_capabilities(shared),
         "ShutdownDaemon" => object_service::shutdown_daemon(shared),
         "CreateBuffer"
         | "OpenBuffer"

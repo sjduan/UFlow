@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
 pub mod idl;
+pub mod bridge;
+pub mod provider;
+pub mod topology;
 
 pub type Kv = BTreeMap<String, String>;
 

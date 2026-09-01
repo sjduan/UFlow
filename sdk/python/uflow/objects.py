@@ -10,6 +10,92 @@ import torch
 from .acl import _UfAclMappedMemory
 
 
+class HandleNotLocallyAddressable(RuntimeError):
+    pass
+
+
+@dataclass
+class SimulatedObject:
+    client: Any
+    object_id: int
+    placement_id: int
+    binding_id: int
+    name: str
+    role: str
+    requested_bytes: int
+    node_id: str
+    domain: str
+    provider_id: str
+    provider_session_id: str
+    execution_realm_id: str
+    fidelity: str
+    addressability: str
+    seed_checksum: int = 0
+    released: bool = False
+
+    @property
+    def placement(self) -> str:
+        return "ddr"
+
+    @property
+    def data_ptr(self) -> int:
+        raise HandleNotLocallyAddressable(
+            "simulated provider-only handle cannot be dereferenced on the Host"
+        )
+
+    def as_memoryview(self) -> memoryview:
+        raise HandleNotLocallyAddressable(
+            "simulated provider-only handle cannot be mapped on the Host"
+        )
+
+    def release(self) -> None:
+        if not self.released:
+            self.client.release_simulated(self)
+            self.released = True
+
+
+@dataclass
+class SimulatedAccessView:
+    client: Any
+    object_id: int
+    placement_id: int
+    source_binding_id: int
+    access_binding_id: int
+    accessor_node_id: str
+    provider_completion_id: str
+    accessor_provider_id: str
+    accessor_provider_session_id: str
+    accessor_resource_id: str
+    placement_count: int
+    remote_map_created_placement: bool
+    plan_id: int
+    parent_event_id: int
+    import_step_event_id: int
+    checksum_step_event_id: int = 0
+    checksum_completion_id: str = ""
+    parent_terminal_count: int = 0
+    access_mode: str = "read"
+    transport_kind: str = "obmm_gsva"
+    state: str = "Ready"
+
+    @property
+    def data_ptr(self) -> int:
+        raise HandleNotLocallyAddressable(
+            "remote AccessBinding is provider-only and cannot be dereferenced on the Host"
+        )
+
+    def checksum(self, *, offset_bytes: int = 0, nbytes: int | None = None) -> int:
+        return self.client.checksum_access(
+            self,
+            offset_bytes=offset_bytes,
+            nbytes=nbytes,
+        )
+
+    def revoke(self) -> None:
+        self.client.revoke_access(self)
+        self.state = "Stale"
+
+
 @dataclass
 class HbmObject:
     client: Any

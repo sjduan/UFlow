@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import mmap
 import os
 import threading
@@ -10,7 +11,7 @@ import torch
 
 from .acl import _AclClient
 from .idl import DataObject, DataPlacement, TransferCost, TransferEvent, TransferPlan, TransferRequest
-from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SsdObject
+from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SimulatedAccessView, SimulatedObject, SsdObject
 from .protocol import SocketClient
 from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
 
@@ -72,6 +73,8 @@ class UFlowClient:
         self._objects: dict[int, HbmObject] = {}
         self._ddr_objects: dict[int, DdrObject] = {}
         self._ssd_objects: dict[int, SsdObject] = {}
+        self._simulated_objects: dict[int, SimulatedObject] = {}
+        self._simulated_accesses: dict[int, SimulatedAccessView] = {}
         self._completion_event_threads: dict[int, threading.Thread] = {}
         self._completion_event_errors: dict[int, BaseException] = {}
         if self.enabled:
@@ -181,6 +184,179 @@ class UFlowClient:
 
     def capabilities(self) -> dict[str, str]:
         return self._request(op="GetCapabilities")
+
+    def flush_trace(self) -> dict[str, str]:
+        return self._request(op="FlushTrace")
+
+    def shutdown_daemon(self) -> dict[str, str]:
+        return self._request(op="ShutdownDaemon")
+
+    def sim(self, provider: str) -> "SimulationClientView":
+        if not provider:
+            raise ValueError("simulation provider is required")
+        return SimulationClientView(self, provider)
+
+    def create_data_object(
+        self,
+        *,
+        name: str,
+        size: int,
+        medium: str,
+        execution_mode: str = "physical",
+        provider: str | None = None,
+        target: dict[str, str] | None = None,
+        role: str = "user",
+        seed_id: int = 0,
+    ) -> SimulatedObject:
+        if execution_mode != "simulated":
+            raise ValueError(
+                "generic create_data_object currently requires execution_mode='simulated'; "
+                "use allocate/allocate_ddr/allocate_ssd for physical objects"
+            )
+        if not provider:
+            raise ValueError("simulated create_data_object requires provider")
+        if medium != "ddr":
+            raise ValueError("PhaseC-02 simulated create_data_object supports medium='ddr' only")
+        target = target or {}
+        node_id = target.get("node_id", "")
+        if not node_id:
+            raise ValueError("simulated target requires node_id")
+        resp = self._request(
+            op="CreateDataObject",
+            client_id=self._client_id,
+            name=name,
+            role=role,
+            size_bytes=int(size),
+            medium=medium,
+            execution_mode=execution_mode,
+            provider=provider,
+            node_id=node_id,
+            domain=target.get("domain", ""),
+            seed_id=int(seed_id),
+        )
+        obj = SimulatedObject(
+            client=self,
+            object_id=int(resp["object_id"]),
+            placement_id=int(resp["placement_id"]),
+            binding_id=int(resp["binding_id"]),
+            name=name,
+            role=role,
+            requested_bytes=int(resp["size_bytes"]),
+            node_id=resp["node_id"],
+            domain=target.get("domain", ""),
+            provider_id=resp["provider_id"],
+            provider_session_id=resp["provider_session_id"],
+            execution_realm_id=resp["execution_realm_id"],
+            fidelity=resp["fidelity"],
+            addressability=resp["addressability"],
+            seed_checksum=int(resp.get("checksum", "0")),
+        )
+        self._simulated_objects[obj.object_id] = obj
+        return obj
+
+    def publish_simulated(
+        self,
+        obj: SimulatedObject,
+        *,
+        offset_bytes: int = 0,
+        nbytes: int | None = None,
+    ) -> dict[str, str]:
+        return self._request(
+            op="PublishDataObject",
+            client_id=self._client_id,
+            object_id=obj.object_id,
+            offset_bytes=int(offset_bytes),
+            nbytes=int(obj.requested_bytes if nbytes is None else nbytes),
+        )
+
+    def import_simulated_read_only(
+        self,
+        obj: SimulatedObject,
+        *,
+        accessor_node_id: str,
+        offset_bytes: int = 0,
+        nbytes: int | None = None,
+    ) -> SimulatedAccessView:
+        resp = self._request(
+            op="ImportDataObject",
+            client_id=self._client_id,
+            object_id=obj.object_id,
+            accessor_node_id=accessor_node_id,
+            offset_bytes=int(offset_bytes),
+            nbytes=int(obj.requested_bytes if nbytes is None else nbytes),
+            access_mode="read",
+        )
+        access = SimulatedAccessView(
+            client=self,
+            object_id=obj.object_id,
+            placement_id=int(resp["placement_id"]),
+            source_binding_id=int(resp["source_binding_id"]),
+            access_binding_id=int(resp["access_binding_id"]),
+            accessor_node_id=resp["accessor_node_id"],
+            provider_completion_id=resp["provider_completion_id"],
+            accessor_provider_id=resp["accessor_provider_id"],
+            accessor_provider_session_id=resp["accessor_provider_session_id"],
+            accessor_resource_id=resp["accessor_resource_id"],
+            placement_count=int(resp["placement_count"]),
+            remote_map_created_placement=resp["remote_map_created_placement"] == "1",
+            plan_id=int(resp["plan_id"]),
+            parent_event_id=int(resp["parent_event_id"]),
+            import_step_event_id=int(resp["step_event_id"]),
+            access_mode=resp["access_mode"],
+            transport_kind=resp["transport_kind"],
+            state=resp["state"],
+        )
+        self._simulated_accesses[access.access_binding_id] = access
+        return access
+
+    def checksum_access(
+        self,
+        access: SimulatedAccessView,
+        *,
+        offset_bytes: int = 0,
+        nbytes: int | None = None,
+    ) -> int:
+        resp = self._request(
+            op="ChecksumAccessBinding",
+            client_id=self._client_id,
+            access_binding_id=access.access_binding_id,
+            offset_bytes=int(offset_bytes),
+            nbytes=0 if nbytes is None else int(nbytes),
+        )
+        access.checksum_step_event_id = int(resp["step_event_id"])
+        access.checksum_completion_id = resp["provider_completion_id"]
+        access.parent_terminal_count = int(resp["parent_terminal_count"])
+        return int(resp["checksum"])
+
+    def get_simulated_validation(self, plan_id: int) -> dict[str, Any]:
+        resp = self._request(
+            op="GetSimulatedValidation",
+            client_id=self._client_id,
+            plan_id=int(plan_id),
+        )
+        return {
+            "plan": json.loads(resp["plan_json"]),
+            "events": json.loads(resp["events_json"]),
+            "monitor": json.loads(resp["monitor_json"]),
+            "parent_terminal_count": int(resp["parent_terminal_count"]),
+        }
+
+    def revoke_access(self, access: SimulatedAccessView) -> None:
+        self._request(
+            op="RevokeAccessBinding",
+            client_id=self._client_id,
+            access_binding_id=access.access_binding_id,
+        )
+        self._simulated_accesses.pop(access.access_binding_id, None)
+
+    def release_simulated(self, obj: SimulatedObject) -> None:
+        self._request(
+            op="ReleaseDataObject",
+            client_id=self._client_id,
+            object_id=obj.object_id,
+            execution_mode="simulated",
+        )
+        self._simulated_objects.pop(obj.object_id, None)
 
     def create_event_handle(self) -> AclEventHandle:
         if self._acl is None:
@@ -871,6 +1047,10 @@ class UFlowClient:
             obj.release(release_object=False)
         for obj in list(self._ssd_objects.values()):
             obj.release(release_object=False)
+        for access in list(self._simulated_accesses.values()):
+            access.revoke()
+        for obj in list(self._simulated_objects.values()):
+            obj.release()
         self._socket = None
         self._acl = None
         self._client_id = None
@@ -880,3 +1060,30 @@ class UFlowClient:
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         self.close()
+
+
+class SimulationClientView:
+    def __init__(self, client: UFlowClient, provider: str) -> None:
+        self.client = client
+        self.provider = provider
+
+    def create_data_object(
+        self,
+        *,
+        name: str,
+        size: int,
+        medium: str = "ddr",
+        target: dict[str, str],
+        role: str = "user",
+        seed_id: int = 0,
+    ) -> SimulatedObject:
+        return self.client.create_data_object(
+            name=name,
+            size=size,
+            medium=medium,
+            execution_mode="simulated",
+            provider=self.provider,
+            target=target,
+            role=role,
+            seed_id=seed_id,
+        )

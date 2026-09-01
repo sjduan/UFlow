@@ -12,6 +12,10 @@ class DataObject:
     role: str
     size_bytes: int
     consistency: str
+    content_version: int
+    owner: str
+    shape: str
+    dtype: str
     state: str
 
     @classmethod
@@ -23,6 +27,10 @@ class DataObject:
             role=resp.get("role", "user"),
             size_bytes=int(resp.get("size_bytes", resp.get("requested_bytes", "0"))),
             consistency=resp.get("consistency", "single_writer"),
+            content_version=int(resp.get("content_version", "1")),
+            owner=resp.get("owner", ""),
+            shape=resp.get("shape", ""),
+            dtype=resp.get("dtype", ""),
             state=resp.get("state", ""),
         )
 
@@ -38,6 +46,15 @@ class DataPlacement:
     offset_bytes: int
     nbytes: int
     state: str
+    node_id: str = ""
+    provider_id: str = ""
+    provider_session_id: str = ""
+    execution_mode: str = "physical"
+    execution_realm_id: str = "physical:local"
+    fidelity: str = "physical"
+    addressability: str = ""
+    topology_generation: int = 1
+    capability_generation: int = 1
 
     @classmethod
     def from_response(cls, resp: dict[str, str]) -> "DataPlacement":
@@ -50,6 +67,67 @@ class DataPlacement:
             address_kind=resp.get("address_kind", ""),
             offset_bytes=int(resp.get("offset_bytes", resp.get("allowed_offset_bytes", "0"))),
             nbytes=int(resp.get("nbytes", resp.get("requested_bytes", "0"))),
+            state=resp.get("state", ""),
+            node_id=resp.get("node_id", ""),
+            provider_id=resp.get("provider_id", ""),
+            provider_session_id=resp.get("provider_session_id", ""),
+            execution_mode=resp.get("execution_mode", "physical"),
+            execution_realm_id=resp.get("execution_realm_id", "physical:local"),
+            fidelity=resp.get("fidelity", "physical"),
+            addressability=resp.get("addressability", ""),
+            topology_generation=int(resp.get("topology_generation", "1")),
+            capability_generation=int(resp.get("capability_generation", "1")),
+        )
+
+
+@dataclass(frozen=True)
+class ResourceBinding:
+    binding_id: int
+    placement_id: int
+    provider_id: str
+    provider_session_id: str
+    provider_resource_id: str
+    binding_generation: int
+    allowed_offset_bytes: int
+    allowed_bytes: int
+    state: str
+
+
+@dataclass(frozen=True)
+class AccessBinding:
+    access_binding_id: int
+    placement_id: int
+    source_binding_id: int
+    accessor_node_id: str
+    accessor_provider_id: str
+    accessor_provider_session_id: str
+    accessor_resource_id: str
+    access_binding_generation: int
+    source_binding_generation: int
+    access_kind: str
+    transport_kind: str
+    access_mode: str
+    allowed_offset_bytes: int
+    allowed_bytes: int
+    state: str
+
+    @classmethod
+    def from_response(cls, resp: dict[str, str]) -> "AccessBinding":
+        return cls(
+            access_binding_id=int(resp["access_binding_id"]),
+            placement_id=int(resp["placement_id"]),
+            source_binding_id=int(resp["source_binding_id"]),
+            accessor_node_id=resp["accessor_node_id"],
+            accessor_provider_id=resp.get("accessor_provider_id", resp.get("provider_id", "")),
+            accessor_provider_session_id=resp.get("accessor_provider_session_id", resp.get("provider_session_id", "")),
+            accessor_resource_id=resp.get("accessor_resource_id", ""),
+            access_binding_generation=int(resp.get("access_binding_generation", "1")),
+            source_binding_generation=int(resp.get("source_binding_generation", "1")),
+            access_kind=resp.get("access_kind", "remote_map"),
+            transport_kind=resp.get("transport_kind", ""),
+            access_mode=resp.get("access_mode", "read"),
+            allowed_offset_bytes=int(resp.get("offset_bytes", "0")),
+            allowed_bytes=int(resp.get("nbytes", "0")),
             state=resp.get("state", ""),
         )
 

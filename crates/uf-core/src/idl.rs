@@ -92,6 +92,10 @@ pub struct DataObject {
     pub role: String,
     pub size_bytes: u64,
     pub consistency: String,
+    pub content_version: u64,
+    pub owner: String,
+    pub shape: String,
+    pub dtype: String,
     pub state: String,
 }
 
@@ -104,20 +108,101 @@ pub struct DataPlacement {
     pub device_id: Option<i32>,
     pub domain: String,
     pub address_kind: String,
+    pub provider_id: String,
+    pub execution_mode: ExecutionMode,
+    pub execution_realm_id: String,
+    pub requested_fidelity: Fidelity,
+    pub actual_fidelity: Fidelity,
+    pub addressability: Addressability,
+    pub topology_generation: u64,
+    pub capability_generation: u64,
     pub offset_bytes: u64,
     pub nbytes: u64,
     pub state: String,
 }
 
 #[derive(Clone, Debug)]
+pub struct ResourceBinding {
+    pub binding_id: u64,
+    pub placement_id: u64,
+    pub provider_id: String,
+    pub provider_session_id: String,
+    pub provider_resource_id: String,
+    pub binding_generation: u64,
+    pub opaque_descriptor: Vec<u8>,
+    pub allowed_offset_bytes: u64,
+    pub allowed_bytes: u64,
+    pub limitations: Vec<String>,
+    pub state: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct AccessBinding {
+    pub access_binding_id: u64,
+    pub placement_id: u64,
+    pub source_binding_id: u64,
+    pub accessor_node_id: String,
+    pub accessor_device_id: Option<String>,
+    pub accessor_provider_id: String,
+    pub accessor_provider_session_id: String,
+    pub accessor_resource_id: String,
+    pub access_binding_generation: u64,
+    pub source_binding_generation: u64,
+    pub access_kind: AccessKind,
+    pub transport_kind: TransportKind,
+    pub addressability: Addressability,
+    pub access_mode: String,
+    pub allowed_offset_bytes: u64,
+    pub allowed_bytes: u64,
+    pub topology_generation: u64,
+    pub capability_generation: u64,
+    pub opaque_token: Vec<u8>,
+    pub state: String,
+}
+
+pub type DataObjectRecord = DataObject;
+pub type PlacementRecord = DataPlacement;
+pub type ResourceBindingRecord = ResourceBinding;
+pub type AccessBindingRecord = AccessBinding;
+
+#[derive(Clone, Debug)]
 pub struct DataHandle {
     pub handle_id: u64,
     pub object_id: u64,
     pub placement_id: u64,
+    pub binding_id: u64,
+    pub access_binding_id: Option<u64>,
     pub lease_id: u64,
+    pub object_version: u64,
+    pub binding_generation: u64,
+    pub access_binding_generation: Option<u64>,
     pub access_mode: String,
     pub address_domain: String,
+    pub execution_mode: ExecutionMode,
+    pub execution_realm_id: String,
+    pub provider_id: String,
+    pub addressability: Addressability,
+    pub access_kind: AccessKind,
+    pub transport_kind: TransportKind,
+    pub host_dereference: bool,
     pub runtime_descriptor: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlanStep {
+    pub step_id: u64,
+    pub dependencies: Vec<u64>,
+    pub provider_id: String,
+    pub operation: String,
+    pub src_placement_id: Option<u64>,
+    pub dst_placement_id: Option<u64>,
+    pub access_binding_id: Option<u64>,
+    pub offset_bytes: u64,
+    pub nbytes: u64,
+    pub expected_completion_kind: String,
+    pub fallback_policy: String,
+    pub provider_completion_id: Option<String>,
+    pub completion_state: ProviderCompletionState,
 }
 
 #[derive(Clone, Debug)]
@@ -152,6 +237,10 @@ pub struct TransferPlan {
     pub path: String,
     pub engine: String,
     pub completion_kind: String,
+    pub topology_generation: u64,
+    pub capability_generation: u64,
+    pub execution_realm_id: String,
+    pub steps: Vec<PlanStep>,
     pub cost: TransferCost,
     pub fallback_used: bool,
     pub fallback_reason: String,
@@ -161,12 +250,27 @@ pub struct TransferPlan {
 pub struct TransferEvent {
     pub event_id: u64,
     pub plan_id: u64,
+    pub parent_event_id: Option<u64>,
+    pub attempt_id: u64,
+    pub step_id: Option<u64>,
+    pub provider_id: String,
+    pub provider_session_id: String,
     pub status: String,
     pub completion_kind: String,
     pub submitted_at_ns: u128,
     pub started_at_ns: u128,
     pub completed_at_ns: u128,
     pub bytes_done: u64,
+    pub checksum_verdict: String,
+    pub planned_path: String,
+    pub actual_path: String,
+    pub topology_generation: u64,
+    pub capability_generation: u64,
+    pub execution_mode: ExecutionMode,
+    pub fidelity: Fidelity,
     pub error_code: String,
     pub error_message: String,
 }
+use crate::provider::{
+    AccessKind, Addressability, ExecutionMode, Fidelity, ProviderCompletionState, TransportKind,
+};

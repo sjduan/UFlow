@@ -6,7 +6,9 @@ mod ddr_backend;
 mod direct_transfer;
 mod object_service;
 mod protocol;
+mod providers;
 mod router;
+mod sim_object_service;
 mod ssd_backend;
 mod ssd_direct;
 mod stats_service;
@@ -23,7 +25,7 @@ use trace::{span, TraceCategory};
 use uf_core::{decode, encode};
 
 use std::env;
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, ErrorKind, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Condvar, Mutex};
@@ -34,6 +36,7 @@ use std::time::Duration;
 struct Args {
     device: i32,
     socket: String,
+    execution_mode: String,
     block_bytes: u64,
     block_count: usize,
     startup_probe_bytes: u64,
@@ -47,6 +50,7 @@ fn parse_args() -> Args {
             .and_then(|value| value.parse().ok())
             .unwrap_or(0),
         socket: "/tmp/uf_phasea03.sock".to_string(),
+        execution_mode: env::var("UF_EXECUTION_MODE").unwrap_or_else(|_| "physical".to_string()),
         block_bytes: 1 << 20,
         block_count: 0,
         startup_probe_bytes: env::var("UF_HBM_STARTUP_PROBE_BYTES")
@@ -68,6 +72,7 @@ fn parse_args() -> Args {
         match key.as_str() {
             "--device" => args.device = value().parse().expect("invalid --device"),
             "--socket" => args.socket = value(),
+            "--execution-mode" => args.execution_mode = value(),
             "--block-bytes" => args.block_bytes = value().parse().expect("invalid --block-bytes"),
             "--block-count" => args.block_count = value().parse().expect("invalid --block-count"),
             "--startup-probe-bytes" => {
@@ -81,6 +86,15 @@ fn parse_args() -> Args {
             }
             _ => panic!("unknown arg: {}", key),
         }
+    }
+    if !matches!(
+        args.execution_mode.as_str(),
+        "physical" | "mixed" | "simulated"
+    ) {
+        panic!(
+            "invalid --execution-mode {}; expected physical, mixed, or simulated",
+            args.execution_mode
+        );
     }
     args
 }
@@ -99,6 +113,14 @@ fn startup_hbm_probe(args: &Args) -> HbmRuntimeStatus {
         probe_bytes: args.startup_probe_bytes,
         ..HbmRuntimeStatus::default()
     };
+    if args.execution_mode == "simulated" {
+        status.probe_attempted = false;
+        eprintln!(
+            "{{\"event\":\"daemon_hbm_probe_skipped\",\"device_id\":{},\"reason\":\"simulated_execution_mode\"}}",
+            args.device
+        );
+        return status;
+    }
     if args.startup_probe_bytes == 0 {
         eprintln!(
             "{{\"event\":\"daemon_hbm_probe_skipped\",\"device_id\":{},\"reason\":\"startup_probe_bytes_is_zero\"}}",
@@ -216,15 +238,32 @@ fn handle_client(stream: UnixStream, shared: SharedCatalog) {
         match reader.read_line(&mut line) {
             Ok(0) => break,
             Ok(_) => {
+                capture_control_frame(b'Q', line.as_bytes());
                 let req = decode(&line);
                 let resp = handle_request(req, &shared);
                 let encoded = encode(&resp);
+                capture_control_frame(b'R', encoded.as_bytes());
                 if writer.write_all(encoded.as_bytes()).is_err() {
                     break;
                 }
             }
             Err(_) => break,
         }
+    }
+}
+
+fn capture_control_frame(direction: u8, payload: &[u8]) {
+    let path = match env::var("UF_DAEMON_CONTROL_CAPTURE") {
+        Ok(path) if !path.is_empty() => path,
+        _ => return,
+    };
+    let mut record = Vec::with_capacity(payload.len() + 12);
+    record.extend_from_slice(b"UFCTL01");
+    record.push(direction);
+    record.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+    record.extend_from_slice(payload);
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+        let _ = file.write_all(&record);
     }
 }
 
