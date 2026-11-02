@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-pub mod idl;
 pub mod bridge;
+pub mod idl;
 pub mod provider;
 pub mod topology;
 

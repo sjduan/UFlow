@@ -112,9 +112,8 @@ fn parse_u64(
     code: ProviderErrorCode,
 ) -> Result<u64, ProviderError> {
     let text = uf_core::get(values, key);
-    text.parse::<u64>().map_err(|_| {
-        ProviderError::new(code, format!("Guest response is missing numeric {}", key))
-    })
+    text.parse::<u64>()
+        .map_err(|_| ProviderError::new(code, format!("Guest response is missing numeric {}", key)))
 }
 
 fn bridge_error(response: &BridgeFrame) -> ProviderError {
@@ -177,10 +176,7 @@ impl UbSimProvider {
         let realm = env::var("UF_UB_SIM_REALM_ID")
             .unwrap_or_else(|_| "simulated:ub_sim:default".to_string());
         let mut guests = HashMap::new();
-        for (node_id, socket_path) in [
-            ("nodeA", node_a.unwrap()),
-            ("nodeB", node_b.unwrap()),
-        ] {
+        for (node_id, socket_path) in [("nodeA", node_a.unwrap()), ("nodeB", node_b.unwrap())] {
             let mut stream = UnixStream::connect(&socket_path).map_err(|error| {
                 ProviderError::new(
                     ProviderErrorCode::ProviderUnavailable,
@@ -367,10 +363,7 @@ impl UbSimProvider {
 
     fn external_resource_body(resource: &RealResource) -> Vec<(&'static str, String)> {
         vec![
-            (
-                "resource_id",
-                resource.external_resource_id.to_string(),
-            ),
+            ("resource_id", resource.external_resource_id.to_string()),
             (
                 "resource_generation",
                 resource.provider_resource.resource_generation.to_string(),
@@ -515,7 +508,10 @@ impl UbSimProvider {
                     access_mode: "read".to_string(),
                     opaque_bytes: hex_decode(uf_core::get(&values, "descriptor"))?,
                 };
-                let stored = state.resources.get_mut(&resource.provider_resource_id).unwrap();
+                let stored = state
+                    .resources
+                    .get_mut(&resource.provider_resource_id)
+                    .unwrap();
                 stored.seed_id = Some(seed_id);
                 stored.checksum = Some(checksum);
                 stored.descriptor = Some(descriptor);
@@ -621,10 +617,7 @@ impl UbSimProvider {
                     BridgeMessageType::Import,
                     body(&[
                         ("descriptor", hex_encode(&descriptor.opaque_bytes)),
-                        (
-                            "source_session_id",
-                            descriptor.provider_session_id.clone(),
-                        ),
+                        ("source_session_id", descriptor.provider_session_id.clone()),
                         (
                             "source_session_generation",
                             state.guests["nodeA"].session_generation.to_string(),
@@ -894,12 +887,17 @@ impl MockBridgeUbSimProvider {
                 format!("bridge decode failed: {:?}", error),
             )
         })?;
-        let response = self.companion.lock().unwrap().handle(decoded).map_err(|error| {
-            ProviderError::new(
-                ProviderErrorCode::ProviderProtocolError,
-                format!("mock companion failed: {:?}", error),
-            )
-        })?;
+        let response = self
+            .companion
+            .lock()
+            .unwrap()
+            .handle(decoded)
+            .map_err(|error| {
+                ProviderError::new(
+                    ProviderErrorCode::ProviderProtocolError,
+                    format!("mock companion failed: {:?}", error),
+                )
+            })?;
         if response.message_type != BridgeMessageType::Accepted || response.status != 0 {
             return Err(ProviderError::new(
                 ProviderErrorCode::ProviderProtocolError,

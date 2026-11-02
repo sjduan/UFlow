@@ -685,6 +685,9 @@ pub(crate) fn open_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(object) => object,
         None => return err("object not found"),
     };
+    if st.external_ddr.contains(object_id) {
+        return err("external DDR must be acquired through the authenticated FD broker");
+    }
     if bytes == 0 {
         bytes = object.requested_bytes.saturating_sub(offset);
     }
@@ -773,6 +776,9 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         let (lock, cv) = &**shared;
         let mut st = lock.lock().unwrap();
         let object_id = get_u64(req, "object_id");
+        if st.external_ddr.contains(object_id) {
+            return err("external DDR must be revoked through the authenticated FD broker");
+        }
         let mut object = match st.objects.remove(&object_id) {
             Some(object) => object,
             None => return err("object not found"),
@@ -952,6 +958,10 @@ pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
             .to_string(),
         ),
     ]);
+    if st.external_ddr.contains(object.object_id) {
+        response.insert("address_kind".to_string(), "scm_rights_fd".to_string());
+        response.insert("domain".to_string(), "process".to_string());
+    }
     if let Some(record) = st.data_objects.get(&object.object_id) {
         response.insert(
             "content_version".to_string(),
@@ -1047,6 +1057,9 @@ pub(crate) fn mark_ready(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (lock, cv) = &**shared;
     let mut st = lock.lock().unwrap();
     let object_id = get_u64(req, "object_id");
+    if st.external_ddr.contains(object_id) {
+        return err("external DDR is immutable after registration");
+    }
     if let Some(object) = st.objects.get_mut(&object_id) {
         object.state = "Ready".to_string();
         record_duration_us(
@@ -1072,6 +1085,9 @@ pub(crate) fn mark_dirty(req: &Kv, shared: &SharedCatalog) -> Kv {
     let object_id = get_u64(req, "object_id");
     let offset = get_u64(req, "modified_offset_bytes");
     let bytes = get_u64(req, "modified_bytes");
+    if st.external_ddr.contains(object_id) {
+        return err("external DDR is immutable after registration");
+    }
     if let Some(object) = st.objects.get_mut(&object_id) {
         if offset.checked_add(bytes).unwrap_or(u64::MAX) > object.requested_bytes {
             return err("modified range out of bounds");
@@ -1104,6 +1120,9 @@ pub(crate) fn close_lease(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (lock, _) = &**shared;
     let mut st = lock.lock().unwrap();
     let lease_id = get_u64(req, "lease_id");
+    if st.external_ddr.owns_lease(lease_id) {
+        return err("external DDR leases must be released through the authenticated FD broker");
+    }
     if let Some(lease) = st.leases.get_mut(&lease_id) {
         lease.state = "Closed".to_string();
         eprintln!("{{\"event\":\"lease_closed\",\"lease_id\":{}}}", lease_id);

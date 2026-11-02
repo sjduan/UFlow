@@ -199,7 +199,11 @@ fn binding_for_object(
     let placement = st
         .placements
         .values()
-        .find(|placement| placement.object_id == object_id && placement.state == "Ready")?
+        .find(|placement| {
+            placement.object_id == object_id
+                && placement.state == "Ready"
+                && placement.execution_mode == ExecutionMode::Simulated
+        })?
         .clone();
     let binding = st
         .resource_bindings
@@ -826,6 +830,9 @@ pub fn checksum_access(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (provider, access) = {
         let (lock, _) = &**shared;
         let st = lock.lock().unwrap();
+        if st.external_ddr.owns_view(access_binding_id) {
+            return err("external DDR views are managed by the authenticated FD broker");
+        }
         let access = match st.access_bindings.get(&access_binding_id) {
             Some(access) if access.state == "Ready" => access.clone(),
             _ => return err("access binding not found or stale"),
@@ -1045,6 +1052,9 @@ pub fn revoke_access(req: &Kv, shared: &SharedCatalog) -> Kv {
     let (provider, access) = {
         let (lock, _) = &**shared;
         let st = lock.lock().unwrap();
+        if st.external_ddr.owns_view(access_binding_id) {
+            return err("external DDR views are managed by the authenticated FD broker");
+        }
         let access = match st.access_bindings.get(&access_binding_id) {
             Some(access) if access.state == "Ready" => access.clone(),
             _ => return err("access binding not found or stale"),

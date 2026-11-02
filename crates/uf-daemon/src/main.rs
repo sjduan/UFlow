@@ -4,6 +4,7 @@ mod catalog;
 mod common;
 mod ddr_backend;
 mod direct_transfer;
+mod external_ddr;
 mod object_service;
 mod protocol;
 mod providers;
@@ -307,6 +308,8 @@ fn main() {
         json_escape(&catalog.hbm.probe_error)
     );
     let shared: SharedCatalog = Arc::new((Mutex::new(catalog), Condvar::new()));
+    let external_broker = external_ddr::start(&args.socket, Arc::clone(&shared))
+        .unwrap_or_else(|e| panic!("external DDR broker startup failed: {}", e));
     loop {
         if shutdown_requested(&shared) {
             eprintln!(
@@ -329,6 +332,7 @@ fn main() {
             }
         }
     }
+    external_broker.stop();
     cleanup_blocks(&shared);
     let _ = fs::remove_file(&args.socket);
     eprintln!("{{\"event\":\"daemon_shutdown_complete\"}}");

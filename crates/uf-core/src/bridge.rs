@@ -216,10 +216,8 @@ impl BridgeFrame {
         }
         let protocol_major = u16::from_be_bytes(take(bytes, &mut cursor)?);
         let protocol_minor = u16::from_be_bytes(take(bytes, &mut cursor)?);
-        let message_type = BridgeMessageType::try_from(u16::from_be_bytes(take(
-            bytes,
-            &mut cursor,
-        )?))?;
+        let message_type =
+            BridgeMessageType::try_from(u16::from_be_bytes(take(bytes, &mut cursor)?))?;
         let flags = u16::from_be_bytes(take(bytes, &mut cursor)?);
         let request_id = u64::from_be_bytes(take(bytes, &mut cursor)?);
         let correlation_id = u64::from_be_bytes(take(bytes, &mut cursor)?);
@@ -363,7 +361,10 @@ mod tests {
     #[test]
     fn roundtrip_keeps_required_identity() {
         let frame = request();
-        assert_eq!(BridgeFrame::decode(&frame.encode().unwrap()).unwrap(), frame);
+        assert_eq!(
+            BridgeFrame::decode(&frame.encode().unwrap()).unwrap(),
+            frame
+        );
     }
 
     #[test]
@@ -371,7 +372,10 @@ mod tests {
         let encoded = request().encode().unwrap();
         let mut bad_magic = encoded.clone();
         bad_magic[0] ^= 1;
-        assert_eq!(BridgeFrame::decode(&bad_magic), Err(BridgeProtocolError::BadMagic));
+        assert_eq!(
+            BridgeFrame::decode(&bad_magic),
+            Err(BridgeProtocolError::BadMagic)
+        );
         let mut bad_version = encoded.clone();
         bad_version[8..10].copy_from_slice(&2u16.to_be_bytes());
         assert_eq!(

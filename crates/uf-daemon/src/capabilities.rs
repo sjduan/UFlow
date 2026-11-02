@@ -41,7 +41,7 @@ pub(crate) fn get_capabilities(shared: &SharedCatalog) -> Kv {
         Err(_) if direct_enabled => "candidate_unavailable",
         Err(_) => "disabled",
     };
-    let (provider_ids, provider_health) = {
+    let (provider_ids, provider_health, external_configured, external_pidfd_observed) = {
         let (lock, _) = &**shared;
         let catalog = lock.lock().unwrap();
         let provider_ids = catalog
@@ -58,7 +58,12 @@ pub(crate) fn get_capabilities(shared: &SharedCatalog) -> Kv {
             .map(|(provider_id, health)| format!("{}:{}", provider_id, health.as_str()))
             .collect::<Vec<_>>()
             .join(",");
-        (provider_ids, provider_health)
+        (
+            provider_ids,
+            provider_health,
+            catalog.external_ddr.configured(),
+            catalog.external_ddr.pidfd_observed(),
+        )
     };
     ok(&[
         ("ops", SOLID_OPS.join(",")),
@@ -104,6 +109,11 @@ pub(crate) fn get_capabilities(shared: &SharedCatalog) -> Kv {
         ("resource_binding", "1".to_string()),
         ("access_binding", "1".to_string()),
         ("execution_realms", "1".to_string()),
+        ("external_ddr_broker_ops", "RegisterExternalBacking,AcquireExternalRead,RetainExternalView,ReleaseExternalView,RevokeExternalBacking,GetExternalDdrSnapshot".to_string()),
+        ("external_ddr_transport", "same_uid_unix_scm_rights".to_string()),
+        ("external_ddr_status", if external_configured { "configured" } else { "identity_unknown" }.to_string()),
+        ("external_ddr_pidfd", if external_pidfd_observed { "observed_this_broker" } else { "unknown" }.to_string()),
+        ("external_ddr_limits", "cooperative_immutable,fd_range_not_os_isolated,numa_unknown,copy_unsupported,bounded_lifetime_metadata".to_string()),
         ("legacy_ops_removed", "CreateBuffer,OpenBuffer,ReleaseBuffer,UploadData,GetDeviceHandle,CompleteTransferEvent,WaitObjectEvent".to_string()),
     ])
 }

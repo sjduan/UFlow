@@ -377,6 +377,9 @@ pub(crate) fn estimate_cost(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(object) => object,
         None => return err("destination object not found"),
     };
+    if st.external_ddr.contains(src.object_id) || st.external_ddr.contains(dst.object_id) {
+        return err("external DDR transfer is not supported by the T1 broker");
+    }
     let mut nbytes = get_u64(req, "nbytes");
     if nbytes == 0 {
         nbytes = src.requested_bytes.min(dst.requested_bytes);
@@ -458,6 +461,9 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(object) => object,
         None => return err("destination object not found"),
     };
+    if st.external_ddr.contains(src.object_id) || st.external_ddr.contains(dst.object_id) {
+        return err("external DDR transfer is not supported by the T1 broker");
+    }
     let mut nbytes = get_u64(req, "nbytes");
     if nbytes == 0 {
         nbytes = src.requested_bytes.min(dst.requested_bytes);

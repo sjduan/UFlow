@@ -17,6 +17,7 @@ from .idl import (
     TransferPlan,
     TransferRequest,
 )
+from .external_ddr import ExternalBackingHandle, ExternalDdrClient, ExternalDdrError, ExternalReadView
 from .objects import DdrBuffer, DdrObject, HandleNotLocallyAddressable, HbmObject, ManagedBuffer, SimulatedAccessView, SimulatedObject, SsdBuffer, SsdObject
 from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
 from .event_pipeline import (
@@ -33,6 +34,10 @@ __all__ = [
     "UFlowClient",
     "env_flag",
     "env_int",
+    "ExternalBackingHandle",
+    "ExternalDdrClient",
+    "ExternalDdrError",
+    "ExternalReadView",
     "DataHandle",
     "DataObject",
     "DataPlacement",

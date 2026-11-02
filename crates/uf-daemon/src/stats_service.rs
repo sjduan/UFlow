@@ -44,6 +44,8 @@ struct StatsSnapshot {
     transfer_plans: usize,
     transfer_events: usize,
     ddr_committed: u64,
+    ddr_total_committed: u64,
+    external_ddr_committed: u64,
     ssd_committed: u64,
     ssd_read_bytes: u64,
     ssd_write_bytes: u64,
@@ -88,6 +90,8 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
             transfer_plans: st.transfer_plans.len(),
             transfer_events: st.transfer_events.len(),
             ddr_committed: ddr_committed_bytes(&st, Some(stats_node)),
+            ddr_total_committed: ddr_committed_bytes(&st, None),
+            external_ddr_committed: st.external_ddr.committed_bytes(),
             ssd_committed: ssd_committed_bytes(&st),
             ssd_read_bytes: st.ssd_read_bytes,
             ssd_write_bytes: st.ssd_write_bytes,
@@ -235,6 +239,14 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
         ("ddr_cgroup_current_bytes", ddr.cgroup_current.to_string()),
         ("ddr_numa_mem_free_bytes", ddr.numa_free.to_string()),
         ("ddr_committed_bytes", ddr.committed.to_string()),
+        (
+            "ddr_total_committed_bytes",
+            snapshot.ddr_total_committed.to_string(),
+        ),
+        (
+            "external_ddr_committed_bytes",
+            snapshot.external_ddr_committed.to_string(),
+        ),
         (
             "ddr_fast_thp_pretouched_count",
             snapshot.ddr_fast_thp_pretouched_count.to_string(),

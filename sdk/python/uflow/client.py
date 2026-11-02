@@ -10,6 +10,7 @@ from typing import Any
 import torch
 
 from .acl import _AclClient
+from .external_ddr import ExternalDdrClient
 from .idl import DataObject, DataPlacement, TransferCost, TransferEvent, TransferPlan, TransferRequest
 from .objects import DdrBuffer, DdrObject, HbmObject, ManagedBuffer, SimulatedAccessView, SimulatedObject, SsdObject
 from .protocol import SocketClient
@@ -184,6 +185,12 @@ class UFlowClient:
 
     def capabilities(self) -> dict[str, str]:
         return self._request(op="GetCapabilities")
+
+    def external_ddr(self) -> ExternalDdrClient:
+        """External owner registration and read-only FD broker facade."""
+        if not self.active:
+            raise RuntimeError("UFlow client is not connected")
+        return ExternalDdrClient(self.socket_path)
 
     def flush_trace(self) -> dict[str, str]:
         return self._request(op="FlushTrace")
