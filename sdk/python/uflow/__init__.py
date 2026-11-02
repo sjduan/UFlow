@@ -1,66 +1,34 @@
-from .client import (
-    MANDATORY_DDR_HINT,
-    MANDATORY_HBM_HINT,
-    MANDATORY_SSD_HINT,
-    UFlowClient,
-    env_flag,
-    env_int,
-)
-from .idl import (
-    DataHandle,
-    DataObject,
-    DataPlacement,
-    ResourceBinding,
-    AccessBinding,
-    TransferCost,
-    TransferEvent,
-    TransferPlan,
-    TransferRequest,
-)
-from .external_ddr import ExternalBackingHandle, ExternalDdrClient, ExternalDdrError, ExternalReadView
-from .objects import DdrBuffer, DdrObject, HandleNotLocallyAddressable, HbmObject, ManagedBuffer, SimulatedAccessView, SimulatedObject, SsdBuffer, SsdObject
-from .transfer import AclEventHandle, AclStreamHandle, TransferCompletionEventHandle
-from .event_pipeline import (
-    AsyncLayerWeightPipeline,
-    DecodeWeightResidency,
-    LayerReloadState,
-    LayerWeightPlacement,
-)
+"""UFlow SDK exports.
 
-__all__ = [
-    "MANDATORY_DDR_HINT",
-    "MANDATORY_HBM_HINT",
-    "MANDATORY_SSD_HINT",
-    "UFlowClient",
-    "env_flag",
-    "env_int",
-    "ExternalBackingHandle",
-    "ExternalDdrClient",
-    "ExternalDdrError",
-    "ExternalReadView",
-    "DataHandle",
-    "DataObject",
-    "DataPlacement",
-    "ResourceBinding",
-    "AccessBinding",
-    "TransferCost",
-    "TransferEvent",
-    "TransferPlan",
-    "TransferRequest",
-    "HbmObject",
-    "DdrObject",
-    "SsdObject",
-    "SimulatedObject",
-    "SimulatedAccessView",
-    "HandleNotLocallyAddressable",
-    "ManagedBuffer",
-    "DdrBuffer",
-    "SsdBuffer",
-    "AclEventHandle",
-    "AclStreamHandle",
-    "TransferCompletionEventHandle",
-    "AsyncLayerWeightPipeline",
-    "DecodeWeightResidency",
-    "LayerReloadState",
-    "LayerWeightPlacement",
-]
+External DDR is a standard-library-only consumer. Tensor/runtime integrations
+are imported on first use, preserving the public names without requiring torch
+merely to connect to the external-memory broker.
+"""
+from importlib import import_module
+
+_EXPORTS = {
+    "client": ("MANDATORY_DDR_HINT", "MANDATORY_HBM_HINT", "MANDATORY_SSD_HINT",
+               "UFlowClient", "env_flag", "env_int"),
+    "idl": ("DataHandle", "DataObject", "DataPlacement", "ResourceBinding", "AccessBinding",
+            "TransferCost", "TransferEvent", "TransferPlan", "TransferRequest"),
+    "external_ddr": ("ExternalBackingHandle", "ExternalDdrClient", "ExternalDdrError", "ExternalReadView"),
+    "objects": ("DdrBuffer", "DdrObject", "HandleNotLocallyAddressable", "HbmObject", "ManagedBuffer",
+                "SimulatedAccessView", "SimulatedObject", "SsdBuffer", "SsdObject"),
+    "transfer": ("AclEventHandle", "AclStreamHandle", "TransferCompletionEventHandle"),
+    "event_pipeline": ("AsyncLayerWeightPipeline", "DecodeWeightResidency", "LayerReloadState", "LayerWeightPlacement"),
+}
+__all__ = [name for names in _EXPORTS.values() for name in names]
+_MODULES = {name: module for module, names in _EXPORTS.items() for name in names}
+
+
+def __getattr__(name):
+    module = _MODULES.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(f".{module}", __name__), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

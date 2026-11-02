@@ -110,10 +110,15 @@ pub(crate) fn get_capabilities(shared: &SharedCatalog) -> Kv {
         ("access_binding", "1".to_string()),
         ("execution_realms", "1".to_string()),
         ("external_ddr_broker_ops", "RegisterExternalBacking,AcquireExternalRead,RetainExternalView,ReleaseExternalView,RevokeExternalBacking,GetExternalDdrSnapshot".to_string()),
+        ("external_ddr_transfer_ops", "RegisterExternalStaging,EstimateCost,PlanTransfer,SubmitTransfer,PollEvent,WaitEvent,CancelEvent,RecordExternalAccess".to_string()),
+        ("external_ddr_copy_status", "requires_write_sealed_source_real_bound_probe_and_atomic_admission".to_string()),
+        ("external_ddr_copy_mode", "explicit_external_copy_no_fallback".to_string()),
+        ("external_ddr_cost_version", "unknown".to_string()),
+        ("external_ddr_automatic_ranking", "disabled".to_string()),
         ("external_ddr_transport", "same_uid_unix_scm_rights".to_string()),
         ("external_ddr_status", if external_configured { "configured" } else { "identity_unknown" }.to_string()),
         ("external_ddr_pidfd", if external_pidfd_observed { "observed_this_broker" } else { "unknown" }.to_string()),
-        ("external_ddr_limits", "cooperative_immutable,fd_range_not_os_isolated,numa_unknown,copy_unsupported,bounded_lifetime_metadata".to_string()),
+        ("external_ddr_limits", "cooperative_immutable,cooperative_exclusive_writer_handoff,fd_range_not_os_isolated,numa_unknown,bounded_lifetime_metadata,no_dirty_recovery".to_string()),
         ("legacy_ops_removed", "CreateBuffer,OpenBuffer,ReleaseBuffer,UploadData,GetDeviceHandle,CompleteTransferEvent,WaitObjectEvent".to_string()),
     ])
 }

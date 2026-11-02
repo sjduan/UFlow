@@ -17,6 +17,14 @@ use crate::transfer_channel::{
 };
 use uf_core::{err, get, get_u64, ok, Kv};
 
+pub(crate) fn external_event(
+    req: &Kv,
+    peer: crate::external_ddr::Peer,
+    shared: &SharedCatalog,
+) -> Kv {
+    crate::external_ddr::transfer::event(req, peer, shared)
+}
+
 use std::ptr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -1692,6 +1700,9 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(plan) => plan,
         None => return err("transfer plan not found"),
     };
+    if plan.external.is_some() {
+        return err("external transfer requires authenticated external DDR endpoint");
+    }
     let src_object = match st.objects.get(&plan.src_object_id).cloned() {
         Some(object) => object,
         None => return err("source object not found"),
@@ -1718,6 +1729,7 @@ pub(crate) fn submit_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
     let now = now_ns();
     let immediate = plan.completion_kind == "immediate";
     let event = TransferEventRecord {
+        external: None,
         event_id,
         plan_id,
         client_id: plan.client_id,
@@ -1893,6 +1905,11 @@ pub(crate) fn wait_event(req: &Kv, shared: &SharedCatalog) -> Kv {
         } else {
             return err("transfer event not found");
         }
+        // Shutdown wakes this condition variable. An outstanding long wait
+        // must finish so the owning control handler can actually be joined.
+        if st.shutdown_requested {
+            return err("daemon shutdown in progress");
+        }
         let now = Instant::now();
         if timeout_ms == 0 || now >= deadline {
             return err("wait timeout");
@@ -1911,6 +1928,9 @@ pub(crate) fn cancel_event(req: &Kv, shared: &SharedCatalog) -> Kv {
         Some(event) => event,
         None => return err("transfer event not found"),
     };
+    if current.external.is_some() {
+        return err("external cancel requires authenticated external DDR endpoint");
+    }
     if matches!(current.status.as_str(), "complete" | "failed" | "cancelled") {
         return ok(&event_payload(&current));
     }
@@ -1976,6 +1996,29 @@ mod monitor_tests {
             actual_engine: engine.to_string(),
             ..TransferEventRecord::default()
         }
+    }
+
+    #[test]
+    fn outstanding_wait_finishes_on_daemon_shutdown() {
+        let shared = shared_catalog();
+        shared.0.lock().unwrap().transfer_events.insert(
+            30_000,
+            event(30_000, 20_000, 1, "running", "ddr_to_hbm", "acl"),
+        );
+        let waiter_shared = Arc::clone(&shared);
+        let waiter = std::thread::spawn(move || {
+            wait_event(
+                &uf_core::kv(&[("event_id", "30000".into()), ("timeout_ms", "30000".into())]),
+                &waiter_shared,
+            )
+        });
+        crate::object_service::shutdown_daemon(&shared);
+        let response = waiter.join().unwrap();
+        assert_eq!(uf_core::get(&response, "status"), "error");
+        assert_eq!(
+            uf_core::get(&response, "detail"),
+            "daemon shutdown in progress"
+        );
     }
 
     #[test]

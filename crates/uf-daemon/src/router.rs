@@ -9,6 +9,19 @@ use crate::transfer_executor;
 use crate::transfer_planner;
 use uf_core::{err, get, get_u64, Kv};
 
+/// SO_PEERCRED is obtained by the existing FD broker, never from wire fields.
+pub(crate) fn handle_external_request(
+    req: &Kv,
+    peer: crate::external_ddr::Peer,
+    shared: &SharedCatalog,
+) -> Kv {
+    match get(req, "op") {
+        "EstimateCost" => transfer_planner::external_plan(req, peer, shared, false),
+        "PlanTransfer" => transfer_planner::external_plan(req, peer, shared, true),
+        _ => transfer_executor::external_event(req, peer, shared),
+    }
+}
+
 fn unsupported_removed_op(op: &str) -> Kv {
     err(format!(
         "unsupported op {}; legacy buffer/client-local transfer API has been removed",

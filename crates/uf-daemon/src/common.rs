@@ -194,7 +194,7 @@ pub(crate) fn address_kind(object: &Object) -> &'static str {
 }
 
 pub(crate) fn transfer_plan_payload(plan: &TransferPlanRecord) -> Vec<(&'static str, String)> {
-    vec![
+    let mut payload = vec![
         ("plan_id", plan.plan_id.to_string()),
         ("request_id", plan.request_id.to_string()),
         ("client_id", plan.client_id.to_string()),
@@ -230,11 +230,15 @@ pub(crate) fn transfer_plan_payload(plan: &TransferPlanRecord) -> Vec<(&'static 
         ),
         ("fallback_reason", plan.fallback_reason.clone()),
         ("explanation", plan.explanation.clone()),
-    ]
+    ];
+    if let Some(external) = &plan.external {
+        payload.extend(external.payload());
+    }
+    payload
 }
 
 pub(crate) fn event_payload(event: &TransferEventRecord) -> Vec<(&'static str, String)> {
-    vec![
+    let mut payload = vec![
         ("event_id", event.event_id.to_string()),
         ("plan_id", event.plan_id.to_string()),
         ("client_id", event.client_id.to_string()),
@@ -378,7 +382,11 @@ pub(crate) fn event_payload(event: &TransferEventRecord) -> Vec<(&'static str, S
         ("fallback_reason", event.fallback_reason.clone()),
         ("error_code", event.error_code.clone()),
         ("error_message", event.error_message.clone()),
-    ]
+    ];
+    if let Some(external) = &event.external {
+        payload.extend(external.payload());
+    }
+    payload
 }
 
 pub(crate) fn trace_outcome_payload(event: &TransferEventRecord) -> Vec<(&'static str, String)> {

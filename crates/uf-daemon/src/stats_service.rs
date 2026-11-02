@@ -45,7 +45,7 @@ struct StatsSnapshot {
     transfer_events: usize,
     ddr_committed: u64,
     ddr_total_committed: u64,
-    external_ddr_committed: u64,
+    external_ddr_committed: Option<u64>,
     ssd_committed: u64,
     ssd_read_bytes: u64,
     ssd_write_bytes: u64,
@@ -91,7 +91,8 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
             transfer_events: st.transfer_events.len(),
             ddr_committed: ddr_committed_bytes(&st, Some(stats_node)),
             ddr_total_committed: ddr_committed_bytes(&st, None),
-            external_ddr_committed: st.external_ddr.committed_bytes(),
+            external_ddr_committed: (!st.external_ddr.commitments_unknown())
+                .then(|| st.external_ddr.committed_bytes()),
             ssd_committed: ssd_committed_bytes(&st),
             ssd_read_bytes: st.ssd_read_bytes,
             ssd_write_bytes: st.ssd_write_bytes,
@@ -169,7 +170,7 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
     let direct_executor = direct_transfer_executor().stats();
     let direct_lanes = direct_lane_manager().stats();
 
-    ok(&[
+    let mut payload = vec![
         ("device_id", snapshot.device.to_string()),
         (
             "hbm_available",
@@ -245,7 +246,9 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
         ),
         (
             "external_ddr_committed_bytes",
-            snapshot.external_ddr_committed.to_string(),
+            snapshot
+                .external_ddr_committed
+                .map_or_else(|| "unknown".to_string(), |bytes| bytes.to_string()),
         ),
         (
             "ddr_fast_thp_pretouched_count",
@@ -401,5 +404,9 @@ pub(crate) fn get_stats(req: &Kv, shared: &SharedCatalog) -> Kv {
             "direct_idle_reaped_lanes",
             direct_lanes.idle_reaped_lanes.to_string(),
         ),
-    ])
+    ];
+    payload.extend(crate::external_ddr::transfer::stats(
+        &shared.0.lock().unwrap(),
+    ));
+    ok(&payload)
 }

@@ -102,6 +102,7 @@ pub struct Lease {
 
 #[derive(Clone, Debug, Default)]
 pub struct TransferPlanRecord {
+    pub external: Option<crate::external_ddr::transfer::ExternalPlan>,
     pub plan_id: u64,
     pub request_id: u64,
     pub client_id: u64,
@@ -132,6 +133,7 @@ pub struct TransferPlanRecord {
 
 #[derive(Clone, Debug, Default)]
 pub struct TransferEventRecord {
+    pub external: Option<crate::external_ddr::transfer::ExternalEvent>,
     pub event_id: u64,
     pub plan_id: u64,
     pub client_id: u64,

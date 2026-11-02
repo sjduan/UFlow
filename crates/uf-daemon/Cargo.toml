@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 libc = "0.2"
+serde_json = "=1.0.149"
 uf-acl-sys = { path = "../uf-acl-sys" }
 uf-core = { path = "../uf-core" }
 uf-ub-sim-agent = { path = "../uf-ub-sim-agent" }

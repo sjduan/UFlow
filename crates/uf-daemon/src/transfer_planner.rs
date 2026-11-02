@@ -9,6 +9,15 @@ use crate::trace::{
 };
 use uf_core::{err, get, get_u64, ok, Kv};
 
+pub(crate) fn external_plan(
+    req: &Kv,
+    peer: crate::external_ddr::Peer,
+    shared: &SharedCatalog,
+    save: bool,
+) -> Kv {
+    crate::external_ddr::transfer::plan(req, peer, shared, save)
+}
+
 struct TransferClassification {
     path: String,
     engine: String,
@@ -509,6 +518,7 @@ pub(crate) fn plan_transfer(req: &Kv, shared: &SharedCatalog) -> Kv {
         return err(format!("unsupported SSD transfer mode {}", mode));
     }
     let plan = TransferPlanRecord {
+        external: None,
         plan_id,
         request_id,
         client_id,

@@ -10,7 +10,7 @@ import json
 import mmap
 import os
 import socket
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 
@@ -32,6 +32,7 @@ class ExternalBackingHandle:
     binding_id: int
     owner_lease_id: int
     size_bytes: int
+    purpose: str = "immutable"
 
     @classmethod
     def from_response(cls, fields: dict[str, str]) -> "ExternalBackingHandle":
@@ -42,6 +43,7 @@ class ExternalBackingHandle:
             resource_generation=int(fields["resource_generation"]), object_id=int(fields["object_id"]),
             placement_id=int(fields["placement_id"]), binding_id=int(fields["binding_id"]),
             owner_lease_id=int(fields["owner_lease_id"]), size_bytes=int(fields["size_bytes"]),
+            purpose=fields.get("purpose", "immutable"),
         )
 
     def identity_fields(self) -> dict[str, Any]:
@@ -51,6 +53,10 @@ class ExternalBackingHandle:
             "pool_generation": self.pool_generation, "resource_generation": self.resource_generation,
             "object_id": self.object_id,
         }
+
+    def copy_descriptor(self) -> dict[str, str]:
+        """Complete immutable Plan tuple, not an object-number shortcut."""
+        return {"status": "ok", **{key: str(value) for key, value in asdict(self).items()}}
 
 
 @dataclass(frozen=True)
@@ -84,6 +90,10 @@ class ExternalReadView:
         self.source_address_domain = fields["source_address_domain"]
         self.accessor_address_domain = fields["accessor_address_domain"]
         self._release_confirmed = False
+        self.event_id = int(fields.get("event_id", "0"))
+        self.event_token = fields.get("event_token", "")
+        self.accessed_bytes = 0
+        self.telemetry_error: str | None = None
 
     def read(self, offset_bytes: int = 0, nbytes: int | None = None) -> bytes:
         if self._mapping.closed:
@@ -93,7 +103,19 @@ class ExternalReadView:
         if offset < 0 or size < 0 or offset + size > self.allowed_bytes:
             raise ValueError("read range out of bounds")
         start = self.allowed_offset_bytes + offset
-        return self._mapping[start:start + size]
+        data = self._mapping[start:start + size]
+        self.accessed_bytes += len(data)
+        # Informational cooperative telemetry only; not capability evidence,
+        # not a readiness transition and never part of data-read correctness.
+        if self.event_id:
+            try:
+                self._client._request("RecordExternalAccess", event_id=self.event_id,
+                                      event_token=self.event_token,
+                                      accessed_bytes=self.accessed_bytes)
+            except (ExternalDdrError, OSError) as error:
+                # A broker outage/quarantine must not revoke a legal old mmap.
+                self.telemetry_error = str(error)
+        return data
 
     def retain(self, offset_bytes: int = 0, nbytes: int | None = None) -> "ExternalReadView":
         if self._mapping.closed:
@@ -218,7 +240,7 @@ class ExternalDdrClient:
                 # if the broker is unreachable the caller must treat it as unknown.
                 if provisional and response and response.get("status") == "ok":
                     try:
-                        if op == "RegisterExternalBacking":
+                        if op in ("RegisterExternalBacking", "RegisterExternalStaging"):
                             self._request("RevokeExternalBacking", **ExternalBackingHandle.from_response(response).identity_fields())
                         elif "view_id" in response:
                             self._request("ReleaseExternalView", **_ViewIdentity.from_response(response).identity_fields())
@@ -238,6 +260,45 @@ class ExternalDdrClient:
             name=name, owner_name=owner_name, size_bytes=int(size_bytes),
         )
         return ExternalBackingHandle.from_response(fields)
+
+    def stage(self, fd: int, *, name: str, owner_name: str, size_bytes: int) -> ExternalBackingHandle:
+        """Cooperative exclusive writer handoff. Unmap all writable mappings
+        before Submit; do not write the FD until work has actually drained.
+        An active immutable registration anchors this owner's DDR pool.
+        """
+        fields, _ = self._exchange(
+            "RegisterExternalStaging", send_fd=fd, provisional=True,
+            name=name, owner_name=owner_name, size_bytes=int(size_bytes),
+        )
+        return ExternalBackingHandle.from_response(fields)
+
+    def _copy_request(self, op: str, source: ExternalBackingHandle, target: ExternalBackingHandle,
+                      *, src_offset_bytes: int, dst_offset_bytes: int, nbytes: int,
+                      mode: str = "external_copy") -> dict[str, str]:
+        return self._request(op, source_json=json.dumps(source.copy_descriptor()),
+                             target_json=json.dumps(target.copy_descriptor()), operation="copy", mode=mode,
+                             src_offset_bytes=int(src_offset_bytes), dst_offset_bytes=int(dst_offset_bytes),
+                             nbytes=int(nbytes))
+
+    def estimate(self, source: ExternalBackingHandle, target: ExternalBackingHandle, **ranges: Any) -> dict[str, str]:
+        return self._copy_request("EstimateCost", source, target, **ranges)
+
+    def plan(self, source: ExternalBackingHandle, target: ExternalBackingHandle, **ranges: Any) -> dict[str, str]:
+        """Explicit probe and fixed-version plan. A stale Submit requires a new Plan."""
+        return self._copy_request("PlanTransfer", source, target, **ranges)
+
+    def submit(self, plan_id: int, *, plan_token: str) -> dict[str, str]:
+        return self._request("SubmitTransfer", plan_id=int(plan_id), plan_token=plan_token)
+
+    def poll(self, event_id: int, *, event_token: str) -> dict[str, str]:
+        return self._request("PollEvent", event_id=int(event_id), event_token=event_token)
+
+    def wait(self, event_id: int, *, event_token: str, timeout_ms: int = 4000) -> dict[str, str]:
+        return self._request("WaitEvent", event_id=int(event_id), event_token=event_token, timeout_ms=int(timeout_ms))
+
+    def cancel(self, event_id: int, *, event_token: str) -> dict[str, str]:
+        """Request cancellation; only a drained terminal event permits reclamation."""
+        return self._request("CancelEvent", event_id=int(event_id), event_token=event_token)
 
     def _view_request(self, op: str, **values: Any) -> ExternalReadView:
         fields, mapping = self._exchange(op, expect_fd=True, provisional=True, **values)

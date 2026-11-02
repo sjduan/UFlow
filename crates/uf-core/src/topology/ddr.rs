@@ -11,6 +11,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+#[path = "ddr_diagnostic.rs"]
+pub mod diagnostic;
+
 const SCHEMA: &str = "uflow-external-ddr-snapshot-v1";
 const MAX_FRAME: usize = 1_048_576;
 
@@ -188,17 +191,30 @@ impl DdrDiscovery {
     /// broker observation changes, or online NUMA inventory changes while
     /// sampling, fail closed rather than produce a torn snapshot.
     pub fn snapshot(&mut self) -> Result<DdrSnapshot, String> {
+        let _span = diagnostic::span("snapshot");
         let start = Instant::now();
         let wall_start = unix_ns()?;
-        let first = query_broker(&self.config.control_socket)?;
+        let first = {
+            let _span = diagnostic::span("snapshot.first-query");
+            query_broker(&self.config.control_socket)?
+        };
         let physical_a = observe_physical();
         let capacity_a = observe_available();
         let physical_b = observe_physical();
         let capacity_b = observe_available();
-        let second = query_broker(&self.config.control_socket)?;
+        let second = {
+            let _span = diagnostic::span("snapshot.second-query");
+            query_broker(&self.config.control_socket)?
+        };
         let wall_end = unix_ns()?;
         let elapsed = start.elapsed();
+        diagnostic::note(format!(
+            "snapshot wall_start={wall_start} wall_end={wall_end} elapsed_ns={} max_age_ns={}",
+            elapsed.as_nanos(),
+            self.config.max_age.as_nanos()
+        ));
         if wall_end < wall_start || elapsed > self.config.max_age {
+            diagnostic::note("snapshot.reject=freshness".into());
             return Err("clock changed or observation exceeded freshness limit".into());
         }
         if first.observed_at_ns < wall_start
@@ -528,21 +544,37 @@ fn query_broker(control: &Path) -> Result<Projection, String> {
     use std::os::unix::net::UnixStream;
     let mut path = control.as_os_str().to_os_string();
     path.push(".external-ddr");
-    let mut stream = UnixStream::connect(path).map_err(|e| format!("broker connect: {e}"))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .map_err(|e| e.to_string())?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|e| e.to_string())?;
-    stream
-        .write_all(b"op=GetExternalDdrSnapshot\n")
-        .map_err(|e| e.to_string())?;
+    let mut stream = {
+        let _span = diagnostic::span("broker.connect");
+        UnixStream::connect(path).map_err(|e| diagnostic::io_error("broker.connect", e))?
+    };
+    {
+        let _span = diagnostic::span("broker.set-read-timeout");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| diagnostic::io_error("broker.set-read-timeout", e))?;
+    }
+    {
+        let _span = diagnostic::span("broker.set-write-timeout");
+        stream
+            .set_write_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| diagnostic::io_error("broker.set-write-timeout", e))?;
+    }
+    {
+        let _span = diagnostic::span("broker.write-request");
+        stream
+            .write_all(b"op=GetExternalDdrSnapshot\n")
+            .map_err(|e| diagnostic::io_error("broker.write-request", e))?;
+    }
     let mut buf = Vec::new();
-    BufReader::new(stream)
-        .take((MAX_FRAME + 1) as u64)
-        .read_until(b'\n', &mut buf)
-        .map_err(|e| e.to_string())?;
+    {
+        let _span = diagnostic::span("broker.read-response");
+        BufReader::new(stream)
+            .take((MAX_FRAME + 1) as u64)
+            .read_until(b'\n', &mut buf)
+            .map_err(|e| diagnostic::io_error("broker.read-response", e))?;
+    }
+    let _span = diagnostic::span("broker.parse");
     if buf.len() > MAX_FRAME || !buf.ends_with(b"\n") {
         return Err("invalid or oversized broker response".into());
     }
@@ -554,7 +586,9 @@ fn query_broker(control: &Path) -> Result<Projection, String> {
             return Err("duplicate/empty broker field".into());
         }
     }
-    parse_projection(&fields)
+    let result = parse_projection(&fields);
+    diagnostic::note(format!("broker.parse ok={}", result.is_ok()));
+    result
 }
 #[cfg(not(unix))]
 fn query_broker(_: &Path) -> Result<Projection, String> {
@@ -713,6 +747,84 @@ fn capabilities(backings: &[Backing]) -> Vec<DirectedCapability> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    fn socket_fixture(
+        action: impl FnOnce(std::os::unix::net::UnixStream) + Send + 'static,
+    ) -> (PathBuf, std::thread::JoinHandle<()>, PathBuf) {
+        use std::os::unix::net::UnixListener;
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        let base = std::env::var_os("CARGO_TARGET_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target"));
+        fs::create_dir_all(&base).unwrap();
+        let root = base.parent().unwrap().join(format!(
+            "cq-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
+        fs::create_dir(&root).unwrap();
+        let control = root.join("u");
+        let socket = root.join("u.external-ddr");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let worker = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            action(stream);
+        });
+        (control, worker, root)
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn broker_read_timeout_keeps_original_five_second_boundary_and_errno_context() {
+        use std::io::{BufRead, BufReader};
+        let (control, worker, root) = socket_fixture(|stream| {
+            let mut line = String::new();
+            BufReader::new(&stream).read_line(&mut line).unwrap();
+            assert_eq!(line, "op=GetExternalDdrSnapshot\n");
+            // Controlled same-mechanism socket timeout, not physical I/O or
+            // proof of which syscall produced the historical run130 failure.
+            std::thread::sleep(Duration::from_millis(5500));
+        });
+        let start = Instant::now();
+        let error = query_broker(&control).unwrap_err();
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_secs(5) && elapsed < Duration::from_secs(7),
+            "{elapsed:?}"
+        );
+        assert!(
+            error.contains("broker.read-response")
+                && error.contains("kind=WouldBlock")
+                && error.contains("raw_os_error=Some(11)"),
+            "{error}"
+        );
+        worker.join().unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn broker_unavailable_and_malformed_responses_remain_rejections() {
+        use std::io::Write;
+        for response in [
+            "status=error;detail=do-not-forward\n",
+            "status=ok;status=ok\n",
+            "status=ok\n",
+            "bad-frame\n",
+            "status=ok",
+        ] {
+            let (control, worker, root) = socket_fixture(move |mut stream| {
+                stream.write_all(response.as_bytes()).unwrap();
+            });
+            assert!(query_broker(&control).is_err());
+            worker.join().unwrap();
+            fs::remove_dir_all(root).unwrap();
+            assert!(query_broker(&control)
+                .unwrap_err()
+                .contains("broker.connect"));
+        }
+    }
 
     fn fields(rows: &str, committed: u64) -> BTreeMap<String, String> {
         let projection = format!(
