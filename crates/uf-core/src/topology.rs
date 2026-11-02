@@ -1,6 +1,9 @@
 use crate::provider::{Addressability, Fidelity, ProviderOperationKind};
 use std::collections::BTreeSet;
 
+pub mod ddr;
+mod json;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TopologyNode {
     pub node_id: String,
