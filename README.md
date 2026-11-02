@@ -36,6 +36,9 @@ UFlow currently supports:
 - Monitor API and lightweight static web monitor.
 - Trace and benchmark utilities for transfer-stage analysis.
 
+For cooperative external-owner DDR registration, read-only sharing and
+explicit DDR copies, see the [external DDR usage guide](examples/ddr_v0/README.md).
+
 Performance artifacts and validation summaries are kept under `results/`.
 
 The current SSD direct path is logical direct at the UFlow object layer. It still traverses Linux file-backed host memory/page cache and is not physical NVMe/SSU-to-NPU DMA. `io_uring`, `O_DIRECT` pipelines, NVMe P2P, AICPU filesystem access, and SSU/LBA descriptor paths remain future work.
