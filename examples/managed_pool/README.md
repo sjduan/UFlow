@@ -1,5 +1,17 @@
 # UFlow managed DDR pool (host mode)
 
+The host validation fence blocks all 79 selected UF/ACL entries, including the
+real backend finalizer. It is test-only and is never a global serving setting.
+The frozen vendor shim loader opens exactly three manager controls (235:0) and
+one hdc control (509:0) in the daemon without an application initialization call.
+The daemon guard verifies this complete role, type, count and inheritance
+baseline. Providers, clients and their children must have no Ascend device FDs.
+Do not interpret this as zero vendor driver interaction. Provider startup marks
+bounded parent-observed nonstdio FDs CLOEXEC in the child before exec; it keeps
+the parent's flags unchanged. Only async-signal-safe fcntl calls run after fork.
+Inventories are saved before judging and record exe, loaded libraries, fence,
+flags and LD_PRELOAD at startup, while resources are held and before cleanup.
+
 UFlow owns a physical pool allocated by the frozen Simpler
 `create_host_shared_buffer` factory. The provider process holds the actual Buffer;
 the Rust Catalog owns resource identity, the single DDR budget and creation

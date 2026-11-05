@@ -11,6 +11,7 @@ import time
 import uuid
 
 from client_peer import read_line
+from host_guard import BUFFER_SHA, binding_proof, save_guard
 from uflow.managed_pool import (ManagedPoolError, ManagedPoolUnknown, create_pool,
                                 destroy_pool, query_pool_operation, shutdown_pool_service)
 
@@ -27,6 +28,10 @@ class Probe:
         assert len(self.endpoint.encode()) < 108
         self.event_file = (self.root / 'events.jsonl').open('x')
         self.daemon_log = (self.root / 'daemon.log').open('xb')
+        self.inventory_root = self.root / 'inventories'
+        self.inventory_root.mkdir(mode=0o700)
+        os.environ['UFLOW_POOL_TEST_INVENTORY_ROOT'] = str(self.inventory_root)
+        self.record('controller-fence-bindings', binding_proof())
         env = dict(os.environ)
         if args.case == 'release-fault':
             env['UFLOW_POOL_TEST_HOLD_RELEASE_ONCE'] = '1'
@@ -46,22 +51,26 @@ class Probe:
         self.token = (self.state / 'admin.token').read_text()
         state = json.loads((self.state / 'state.json').read_text())
         self.owned = {self.daemon.pid, state['provider_loaded']['pid']}
-        provider_pid = state['provider_loaded']['pid']
-        # The provider's optional Python resource-tracker is also task owned.
-        children = Path('/proc') / str(provider_pid) / 'task' / str(provider_pid) / 'children'
-        self.owned.update(int(pid) for pid in children.read_text().split())
-        observations = {}
-        for pid in self.owned:
-            fds = {}
-            for fd in (Path('/proc') / str(pid) / 'fd').iterdir():
-                try:
-                    target = os.readlink(fd)
-                except FileNotFoundError:
-                    continue
-                assert not target.startswith(('/dev/davinci', '/dev/devmm', '/dev/hisi_hdc'))
-                fds[fd.name] = target
-            observations[str(pid)] = fds
-        self.record('initial-owned-host-process-fds', observations)
+        self.provider_pid = state['provider_loaded']['pid']
+        assert state['provider_loaded']['simpler_sha256'] == BUFFER_SHA
+        assert len(state['provider_loaded']['test_fence_bindings']) == 79
+        assert len(state['provider_loaded']['test_daemon_fence_bindings']) == 79
+        self.check_processes('initial')
+
+    def check_processes(self, phase):
+        roles = {self.daemon.pid: 'daemon', self.provider_pid: 'provider'}
+        for name, process, _ in self.peers:
+            if process.poll() is None:
+                roles[process.pid] = 'client'
+        for parent in list(roles):
+            path = Path('/proc') / str(parent) / 'task' / str(parent) / 'children'
+            for pid in map(int, path.read_text().split()):
+                roles.setdefault(pid, 'tracker' if parent == self.provider_pid else 'child')
+        for pid, role in roles.items():
+            self.owned.add(pid)
+            proof = self.record('process-guard-' + phase, save_guard(pid, role, phase))
+            if role == 'daemon':
+                assert proof['exe_sha256'] == hashlib.sha256(Path(self.args.daemon).read_bytes()).hexdigest()
 
     def record(self, name, value):
         event = {'index': len(self.events), 'monotonic_ns': time.monotonic_ns(), 'event': name, 'value': value}
@@ -80,6 +89,7 @@ class Probe:
         ready = self.record(name + '-ready', read_line(process.stdout))
         assert ready['ready'] is True and ready['dev'] == descriptor['canonical']['dev']
         assert ready['inode'] == descriptor['canonical']['inode']
+        self.check_processes('ready-' + name)
         return name, process, log
 
     def call(self, peer, op, *, error=None, **values):
@@ -92,6 +102,9 @@ class Probe:
             assert not result['ok'] and result['error_type'] in error, result
             return result
         assert result['ok'], result
+        if op == 'child':
+            self.owned.add(result['result']['birth']['pid'])
+            self.check_processes('held-child-' + name)
         return result['result']
 
     def reject(self, name, action, unknown=False):
@@ -104,6 +117,7 @@ class Probe:
 
     def snapshot(self, peer, name, charge):
         snapshot = self.call(peer, 'snapshot')
+        self.check_processes('snapshot-' + name)
         assert snapshot['charged_bytes'] == charge and snapshot['creation_reserved_bytes'] == 0
         assert snapshot['native_jobs_executed'] == 0 and snapshot['payload_rpc_bytes'] == 0
         self.record(name, snapshot)
@@ -278,11 +292,13 @@ class Probe:
         self.exit_peer(peer)
 
     def finish(self, pool):
+        self.check_processes('before-destroy')
         self.record('real-primary-resource-destroy', destroy_pool(self.endpoint, pool, admin_token=self.token))
         state = json.loads((self.state / 'state.json').read_text())
         assert state['charged_bytes'] == state['creation_reserved_bytes'] == 0
         loaded = state['provider_loaded']
         self.record('provider-loaded', loaded)
+        self.check_processes('before-shutdown')
         self.record('shutdown-control', shutdown_pool_service(self.endpoint, admin_token=self.token))
         assert self.daemon.wait(timeout=30) == 0
         self.daemon_log.close()
@@ -301,6 +317,9 @@ class Probe:
         while any((Path('/proc') / str(pid)).exists() for pid in self.owned) and time.monotonic() < deadline:
             time.sleep(0.05)
         assert not any((Path('/proc') / str(pid)).exists() for pid in self.owned)
+        logs = [self.root / 'daemon.log', self.state / 'provider.stderr',
+                *self.root.glob('*.stderr')]
+        assert not any(b'UFLOW_P1_FORBIDDEN_API:' in path.read_bytes() for path in logs)
         self.record('normal-postcheck', {'daemon_exit': 0, 'provider_exited': True,
                                        'client_exits': {name: process.returncode for name, process, _ in self.peers},
                                        'lock_free': True, 'sockets_absent': True, 'charged_bytes': 0,

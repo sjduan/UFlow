@@ -42,6 +42,10 @@ def serve(endpoint, parent_pid, provider_session, log_path):
               'task_interface_module': str(Path(sys.modules['_task_interface'].__file__).resolve()),
               'task_interface_sha256': hashlib.sha256(Path(sys.modules['_task_interface'].__file__).read_bytes()).hexdigest(),
               'adapter': 'simpler508-cpython-owner-fd-v1', 'test_hold_release_once': hold_once}
+    if os.environ.get('UFLOW_POOL_TEST_FENCE'):
+        from host_guard import binding_proof, save_guard
+        loaded['test_fence_bindings'] = binding_proof()
+        loaded['test_process_guard'] = save_guard(os.getpid(), 'provider', 'provider-self-start')
     def event(value):
         with Path(log_path).open('a') as stream:
             stream.write(json.dumps(value, sort_keys=True)+'\n')

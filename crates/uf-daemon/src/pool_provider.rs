@@ -1,11 +1,14 @@
 //! Real owner executor adapter; calls occur outside the Catalog mutex.
 use crate::pool_wire;
 use serde_json::{json, Value};
+use std::ffi::{CStr, CString};
 use std::fs::{File, OpenOptions};
+use std::io;
 use std::mem;
 use std::os::fd::{AsRawFd, FromRawFd};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::net::UnixStream;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -23,6 +26,43 @@ pub fn opaque_id() -> Result<String, String> {
     Ok(id.to_owned())
 }
 
+fn test_fence_bindings() -> Result<Option<Value>, String> {
+    let Ok(path) = std::env::var("UFLOW_POOL_TEST_FENCE") else {
+        return Ok(None);
+    };
+    let expected = std::fs::canonicalize(path).map_err(|e| e.to_string())?;
+    let symbols = std::env::var("UFLOW_POOL_TEST_SYMBOLS").map_err(|e| e.to_string())?;
+    let names: Vec<String> =
+        serde_json::from_slice(&std::fs::read(symbols).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    if names.len() != 79 || !names.iter().any(|name| name == "uf_acl_backend_finalize") {
+        return Err("complete test fence symbol table required".into());
+    }
+    let mut bindings = serde_json::Map::new();
+    for name in names {
+        let symbol = CString::new(name.clone()).map_err(|e| e.to_string())?;
+        let mut info: libc::Dl_info = unsafe { mem::zeroed() };
+        let address = unsafe { libc::dlsym(libc::RTLD_DEFAULT, symbol.as_ptr()) };
+        if address.is_null()
+            || unsafe { libc::dladdr(address, &mut info) } == 0
+            || info.dli_fname.is_null()
+        {
+            return Err(format!("test fence binding absent: {name}"));
+        }
+        let file = unsafe { CStr::from_ptr(info.dli_fname) }
+            .to_str()
+            .map_err(|e| e.to_string())?;
+        let actual = std::fs::canonicalize(file).map_err(|e| e.to_string())?;
+        if actual != expected {
+            return Err(format!("test fence binding bypass: {name}"));
+        }
+        if bindings.insert(name, json!(actual)).is_some() {
+            return Err("duplicate test fence symbol".into());
+        }
+    }
+    Ok(Some(Value::Object(bindings))) // Never expose an address or call a UF/ACL entry.
+}
+
 pub struct Provider {
     pub child: Child,
     pub session: String,
@@ -33,6 +73,7 @@ pub struct Provider {
 
 impl Provider {
     pub fn start(root: &Path, python: &str) -> Result<Self, String> {
+        let test_bindings = test_fence_bindings()?;
         let session = opaque_id()?;
         let endpoint = root.join("provider.sock");
         let log = OpenOptions::new()
@@ -40,7 +81,27 @@ impl Provider {
             .write(true)
             .open(root.join("provider.stderr"))
             .map_err(|e| e.to_string())?;
-        let child = Command::new(python)
+        // Enumerate in the parent: never allocate, lock or walk /proc after fork.
+        // The vendor loader can leave a non-CLOEXEC control FD in this process.
+        // Mark only the child's copies; the daemon's original flags stay intact.
+        let mut inherited_fds = Vec::new();
+        for entry in std::fs::read_dir("/proc/self/fd").map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let fd: i32 = entry
+                .file_name()
+                .to_str()
+                .ok_or("non-UTF8 FD entry")?
+                .parse()
+                .map_err(|_| "invalid FD entry")?;
+            if fd > 2 {
+                inherited_fds.push(fd);
+            }
+            if inherited_fds.len() > 4096 {
+                return Err("provider startup FD inventory exceeds bound".into());
+            }
+        }
+        let mut command = Command::new(python);
+        command
             .args(["-u", "-m", "uflow.pool_provider"])
             .arg(&endpoint)
             .arg(std::process::id().to_string())
@@ -50,7 +111,30 @@ impl Provider {
             .env("PYTHONDONTWRITEBYTECODE", "1")
             .stdin(Stdio::null())
             .stdout(Stdio::from(log.try_clone().map_err(|e| e.to_string())?))
-            .stderr(Stdio::from(log))
+            .stderr(Stdio::from(log));
+        unsafe {
+            command.pre_exec(move || {
+                for &fd in &inherited_fds {
+                    let flags = libc::fcntl(fd, libc::F_GETFD);
+                    if flags < 0 {
+                        let error = io::Error::last_os_error();
+                        if error.raw_os_error() == Some(libc::EBADF) {
+                            continue;
+                        }
+                        return Err(error);
+                    }
+                    if libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC) < 0 {
+                        let error = io::Error::last_os_error();
+                        if error.raw_os_error() == Some(libc::EBADF) {
+                            continue;
+                        }
+                        return Err(error);
+                    }
+                }
+                Ok(())
+            });
+        }
+        let child = command
             .spawn()
             .map_err(|e| format!("start actual Simpler provider: {e}"))?;
         let identity = ProviderIdentity {
@@ -108,6 +192,9 @@ impl Provider {
             return Err("provider loaded identity mismatch".into());
         }
         provider.loaded = loaded;
+        if let Some(bindings) = test_bindings {
+            provider.loaded["test_daemon_fence_bindings"] = bindings;
+        }
         Ok(provider)
     }
 

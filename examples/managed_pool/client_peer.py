@@ -51,8 +51,10 @@ def read_line(stream, timeout=15):
 def child_main(fd, nbytes):
     actual = os.fstat(fd)
     view = mmap.mmap(fd, nbytes, flags=mmap.MAP_SHARED, prot=mmap.PROT_READ | mmap.PROT_WRITE)
+    from host_guard import save_guard
+    guard = save_guard(os.getpid(), 'child', 'child-self-mapped')
     emit({'birth': process_birth(os.getpid()), 'dev': actual.st_dev, 'inode': actual.st_ino,
-          'nbytes': actual.st_size, 'mapped': True})
+          'nbytes': actual.st_size, 'mapped': True, 'guard': guard})
     command = read_line(sys.stdin, 120)
     assert command == {'close': True}
     view.close()
@@ -64,8 +66,10 @@ def main(args):
     client = ManagedPoolClient.register(args.endpoint, args.pool_id, args.epoch, args.access)
     leases, exported, child, child_birth = {}, None, None, None
     actual = os.fstat(client.view.fileno())
+    from host_guard import save_guard
+    guard = save_guard(os.getpid(), 'client', 'client-self-mapped')
     emit({'ready': True, 'birth': process_birth(os.getpid()), 'descriptor': client.view.descriptor,
-          'dev': actual.st_dev, 'inode': actual.st_ino})
+          'dev': actual.st_dev, 'inode': actual.st_ino, 'guard': guard})
     for line in sys.stdin:
         request = json.loads(line)
         op = request['op']
