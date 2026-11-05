@@ -1159,6 +1159,7 @@ impl ExternalDdrState {
                 }
             }
             self.backings.get_mut(&id).unwrap().charged = false;
+            st.ddr_resources.release_confirmed(id);
             st.objects.remove(&id);
             st.mark_object_released(id);
             self.epoch += 1;
@@ -1402,6 +1403,12 @@ impl ExternalDdrState {
         let generation = self.generation();
         let object_id = st.take_next_object_id();
         let placement_id = st.take_next_placement_id();
+        st.ddr_resources.admit_existing(
+            object_id,
+            stat.st_dev as u64,
+            stat.st_ino as u64,
+            bytes,
+        )?;
         let owner = &self.sessions[&client_id];
         let object = Object {
             object_id,

@@ -51,7 +51,7 @@ pub struct Client {
     pub device_id: i32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Object {
     pub object_id: u64,
     pub placement_id: u64,
@@ -208,6 +208,8 @@ pub struct Catalog {
     pub resource_bindings: HashMap<u64, ResourceBindingRecord>,
     pub access_bindings: HashMap<u64, AccessBindingRecord>,
     pub external_ddr: crate::external_ddr::ExternalDdrState,
+    pub ddr_resources: crate::ddr_resources::DdrResources,
+    pub managed_pools: crate::managed_pool::State,
     pub providers: ProviderRegistry,
     pub leases: HashMap<u64, Lease>,
     pub transfer_plans: HashMap<u64, TransferPlanRecord>,
@@ -302,6 +304,8 @@ impl Catalog {
             resource_bindings: HashMap::new(),
             access_bindings: HashMap::new(),
             external_ddr: crate::external_ddr::ExternalDdrState::new(),
+            ddr_resources: crate::ddr_resources::DdrResources::default(),
+            managed_pools: crate::managed_pool::State::default(),
             providers,
             leases: HashMap::new(),
             transfer_plans: HashMap::new(),
