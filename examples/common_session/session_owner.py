@@ -116,7 +116,7 @@ class Owner:
             pending.extend(value['children'])
         if any(v is None or k in self.owners and self.owners[k] != v for k, v in current.items()):
             raise ValueError('host owner process birth changed')
-        if self.owners and set(current) != set(self.owners):
+        if hasattr(self, 'original_daemon_pid') and set(current) != set(self.owners):
             raise ValueError('original host owner tree changed')
         self.owners = current
         bindings = self.loaded['test_fence_bindings']

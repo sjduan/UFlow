@@ -86,6 +86,67 @@ def adoption_fixture():
             yield SimpleNamespace(public=public, manifest=manifest, capsule=capsule, system=system, run=run, path=path)
 
 
+class OwnerTreeTests(unittest.TestCase):
+    """Recorded original bootstrap ancestry, never actual UF service creation."""
+
+    @contextmanager
+    def tree(self, *, adopted=False, tracker=True):
+        daemon, provider, helper = 927616, 927677, 928450
+        births = {daemon: 1296287235, provider: 1296287237, helper: 1296287255}
+        rows = {daemon: {'children': [provider], 'exe_sha256': session_owner.DAEMON_SHA},
+                provider: {'children': [helper] if tracker else [], 'exe_sha256': session_owner.PYTHON_SHA},
+                helper: {'children': [], 'exe_sha256': session_owner.PYTHON_SHA}}
+        owner = Owner.__new__(Owner)
+        if adopted:
+            owner.original_daemon_pid = daemon
+            owner.owners = dict(births)
+        else:
+            owner.daemon = SimpleNamespace(pid=daemon)
+            owner.owners = {}
+        owner.evidence = lambda *args: None
+        fake_guard = ModuleType('host_guard')
+        fake_guard.inventory = lambda pid: copy.deepcopy(rows[pid])
+        fake_guard.judge = lambda value, role: None
+        with tempfile.TemporaryDirectory(prefix='uflow-owner-tree-') as temp:
+            symbols = Path(temp) / 'symbols.json'
+            names = [f'synthetic_fence_symbol_{n}' for n in range(79)]
+            symbols.write_text(json.dumps(names))
+            owner.loaded = {'pid': provider, 'test_fence_bindings': {n: 'synthetic-fence' for n in names}}
+            with patch.dict(sys.modules, {'host_guard': fake_guard}), \
+                    patch.dict(os.environ, {'UFLOW_POOL_TEST_SYMBOLS': str(symbols), 'UFLOW_POOL_TEST_FENCE': 'synthetic-fence'}), \
+                    patch.object(session_owner, 'birth', side_effect=lambda pid: births.get(pid)):
+                yield owner, rows, births
+
+    def test_original_bootstrap_allows_recorded_two_to_three_and_keeps_existing_birth_pins(self):
+        with self.tree(tracker=False) as (owner, rows, births):
+            owner.verify_owners('before-create-recorded')
+            self.assertEqual(owner.owners, {927616: 1296287235, 927677: 1296287237})
+            rows[927677]['children'] = [928450]
+            owner.verify_owners('allocated-recorded')
+            self.assertEqual(owner.owners, births)
+            births[927677] += 1
+            with self.assertRaisesRegex(ValueError, 'birth changed'):
+                owner.verify_owners('existing-birth-drift')
+
+    def test_adopted_original_three_cannot_add_remove_or_change_birth(self):
+        for case in ('unchanged', 'added', 'missing', 'birth-drift'):
+            with self.subTest(case=case), self.tree(adopted=True) as (owner, rows, births):
+                original = dict(owner.owners)
+                if case == 'added':
+                    rows[927616]['children'].append(999001)
+                    rows[999001] = {'children': [], 'exe_sha256': session_owner.PYTHON_SHA}
+                    births[999001] = 999002
+                elif case == 'missing':
+                    rows[927677]['children'] = []
+                elif case == 'birth-drift':
+                    births[928450] += 1
+                if case == 'unchanged':
+                    owner.verify_owners('adopted-recorded')
+                else:
+                    with self.assertRaises(ValueError): owner.verify_owners('adopted-drift')
+                self.assertEqual(owner.owners, original)
+
+
 class AdoptionTests(unittest.TestCase):
     def test_adopt_preserves_all_histories_and_forbids_constructor_bootstrap_and_Popen(self):
         with adoption_fixture() as f, patch.object(Owner, '__init__', side_effect=AssertionError('constructor')), \
