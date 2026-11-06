@@ -55,12 +55,15 @@ class Owner:
         self.descriptor = None
         self.owners = {}
         self.inputs = json.loads(args.inputs.read_text())
+        inventory_root = Path(os.environ['UFLOW_POOL_TEST_INVENTORY_ROOT'])
+        inventory_root.mkdir(parents=True, exist_ok=True)
         self.log = (self.root / 'daemon.log').open('xb')
         argv = [str(self.daemon_path), '--host-pool', '--socket', self.endpoint,
                 '--pool-state-root', str(self.state), '--pool-provider-python', sys.executable,
                 '--pool-budget-bytes', str(POOL_BYTES)]
         save(self.root / 'command.json', {'argv': argv, 'admin_in_argv_env': False})
         self.daemon = subprocess.Popen(argv, stdout=self.log, stderr=subprocess.STDOUT)
+        save(self.root / 'daemon-birth.json', {'pid': self.daemon.pid, 'starttime_ticks': birth(self.daemon.pid)})
         deadline = time.monotonic() + 45
         while not (self.state / 'state.json').exists() or not Path(self.endpoint).exists():
             if self.daemon.poll() is not None or time.monotonic() >= deadline:
