@@ -99,7 +99,8 @@ class Owner:
 
     def verify_owners(self, label):
         from host_guard import inventory, judge
-        pending = [self.daemon.pid]
+        daemon_pid = self.original_daemon_pid if hasattr(self, 'original_daemon_pid') else self.daemon.pid
+        pending = [daemon_pid]
         current = {}
         while pending:
             pid = pending.pop()
@@ -107,7 +108,7 @@ class Owner:
                 raise ValueError('unexpected host owner tree')
             value = inventory(pid)
             self.evidence(f'{label}-inventory-{pid}', value)
-            role = 'daemon' if pid == self.daemon.pid else 'provider' if pid == self.loaded['pid'] else 'tracker'
+            role = 'daemon' if pid == daemon_pid else 'provider' if pid == self.loaded['pid'] else 'tracker'
             judge(value, role)
             if value['exe_sha256'] != (DAEMON_SHA if role == 'daemon' else PYTHON_SHA):
                 raise ValueError('host executable identity changed')
@@ -115,6 +116,8 @@ class Owner:
             pending.extend(value['children'])
         if any(v is None or k in self.owners and self.owners[k] != v for k, v in current.items()):
             raise ValueError('host owner process birth changed')
+        if self.owners and set(current) != set(self.owners):
+            raise ValueError('original host owner tree changed')
         self.owners = current
         bindings = self.loaded['test_fence_bindings']
         symbols = json.loads(Path(os.environ['UFLOW_POOL_TEST_SYMBOLS']).read_text())
@@ -250,8 +253,8 @@ class Owner:
     def reserve(self, line, entries):
         if type(entries) is not list or len(entries) > (1 if line == 'O1' else 4):
             raise ValueError('device reservation count exceeds line bound')
-        path = self.public / 'reservations.json'
-        current = json.loads(path.read_text())
+        registry_path = self.public / 'reservations.json'
+        current = json.loads(registry_path.read_text())
         others = [r for r in current['reservations'] if r['line'] != line]
         occupied = {r['physical_device'] for r in others}
         domains = {r['execution_domain'] for r in others}
@@ -272,10 +275,10 @@ class Owner:
             # metadata only, and never substitutes for its flock/FD/health check.
             wanted = Path(row['lock_path']).stat()
             held = False
-            for path in Path('/proc', str(row['lock_holder_pid']), 'fd').iterdir():
+            for fd_path in Path('/proc', str(row['lock_holder_pid']), 'fd').iterdir():
                 try:
-                    actual = path.stat()
-                    details = Path('/proc', str(row['lock_holder_pid']), 'fdinfo', path.name).read_text()
+                    actual = fd_path.stat()
+                    details = Path('/proc', str(row['lock_holder_pid']), 'fdinfo', fd_path.name).read_text()
                 except FileNotFoundError:
                     continue
                 if (actual.st_ino, actual.st_dev) == (wanted.st_ino, wanted.st_dev) and any(
@@ -287,7 +290,7 @@ class Owner:
             ids.add(device)
             domains.add(row['execution_domain'])
         other = [r for r in current['reservations'] if r['line'] != line]
-        save(path, {**current, 'reservations': other + [{'line': line, **r} for r in entries]}, exclusive=False)
+        save(registry_path, {**current, 'reservations': other + [{'line': line, **r} for r in entries]}, exclusive=False)
 
     def finalize(self):
         from uflow.managed_pool import destroy_pool, shutdown_pool_service
@@ -325,12 +328,15 @@ class Owner:
              'original_owner_births_gone': self.owners, 'backing_absent': name,
              'B_charged_bytes': 0, 'A_retained_historical_bytes': POOL_BYTES, 'A_queried': False})
 
-    def serve(self):
+    def serve(self, *, publish=None):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
             server.bind(self.control)
             os.chmod(self.control, 0o600)
             server.listen(8)
+            bound_identity = Path(self.control).stat()
             server.settimeout(1)
+            if publish is not None:
+                publish()
             while True:
                 if (self.root / 'finalize.request').exists():
                     self.finalize()
@@ -351,6 +357,9 @@ class Owner:
                         value = {'status': 'error', 'detail': repr(error)}
                         self.evidence('control-error', value)
                     connection.sendall(json.dumps(value).encode() + b'\n')
+        current_identity = Path(self.control).lstat()
+        if (current_identity.st_dev, current_identity.st_ino) != (bound_identity.st_dev, bound_identity.st_ino):
+            raise RuntimeError('metadata socket identity changed; retain original path')
         Path(self.control).unlink()
 
 

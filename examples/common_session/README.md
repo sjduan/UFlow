@@ -56,3 +56,48 @@ FD disappearance, normal UF shutdown and owner birth exit precede
 `finalized.json`. Until then B remains charged128MiB and A's historical128MiB
 remains conservatively charged and untouched. Errors preserve the original domain
 and evidence; process exit/timeout alone never discharges native responsibility.
+
+## Sealed metadata continuation
+
+`session_adopt.py` is a separate, explicitly approved `adopt-existing` mode.
+It never calls `Owner.__init__`, bootstrap, pool creation/allocation, or service
+startup. It must not be run as an automatic response to a failed claim.
+The reserve bug fix keeps the registry path separate from each inspected FD;
+real holder birth, FLOCK and physical/execution-domain exclusion remain required.
+
+Before a future handover, the manager seals a bounded capsule containing the
+original public manifest hash, all three UF process births, old controller birth
+and socket inode/UID/type, all17 actual registered clients and complete line
+histories, exact original snapshot/counter312, empty reservations, explicitly
+closed failed-task births, new helper Git commit/file hashes, and parent-safety
+proof. The latter binds the frozen original host-pool source and the actual
+four-process ancestry/FD topology. The separate host-pool daemon loop does not
+watch the metadata parent; provider authentication names the unchanged daemon,
+and the tracker belongs to the unchanged provider. No controller pipe may be a
+UF owner's lifetime dependency. This source/topology proof does not test stopping
+the live owner and must precede any separately approved stop.
+
+After the manager separately dispatches handover, the old metadata birth must
+already be absent, the three original UF births and backing must still match,
+all known task/coordination locks must be free, and the exact original Catalog
+snapshot must remain unchanged. Only the same-UID, exact stale `control.sock`
+inode is archived to the fresh metadata root. `u.sock` is never renamed/removed.
+The new server binds the original control address before exclusively publishing
+`manifest-v2.json`; actual `describe` returns that new manifest. All24 top-level
+fields remain; only manifest version, metadata root/helper identity, controller
+birth and a sealed `frozen_inputs.metadata_handover` are updated. The original
+`manifest.json`, bootstrap state, UF endpoint/births, descriptor/backing, capacity,
+allocation/partition data and both unretired histories remain intact.
+
+The capability is read internally from the original private state file, never
+from a capsule, argument or environment and never serialized. The SDK and Python
+import closure is checked against the original frozen files. Finalization of
+this adopted controller still requires real line/native/UF closure, validated
+Destroy ACK, original backing unlink and FD/VMA absence, real Shutdown ACK, all
+original UF births gone and the original normal `clean.json`. Its daemon exit
+code is explicitly unavailable because it is not a Popen child; no fake wait0.
+Both the normal UF cost2 and A's untouched128MiB historical charge remain.
+
+Host tests may exercise this mode against synthetic/recorded metadata and owned
+CPU sockets/FLOCK/memfd mappings. They do not authorize live adoption, a new
+runtime decision, campaign retry, retire, Destroy or integration.
