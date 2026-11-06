@@ -36,10 +36,61 @@ def sample_snapshot(manifest):
     lines = {'O1': {'clients': [], 'retired': False},
              'M1': {'clients': [f'old-{i}' for i in range(16)], 'retired': False}}
     pool = {**manifest['pool_descriptor'], 'state': 'Allocated', 'frozen': False,
-            'clients': [{'client_session': s, 'state': 'Unmapped', 'children': []}
-                        for s in ['bootstrap', *lines['M1']['clients']]], 'ranges': {'leases': []}}
+            'clients': [{'client_session': s, 'state': 'Unmapped', 'children': [],
+                         'birth': {'pid': 1000 + i, 'starttime_ticks': 2000 + i, 'uid': 0}}
+                        for i, s in enumerate(['bootstrap', *lines['M1']['clients']])],
+            'ranges': {'leases': [], 'allocations': [{'block_id': 1, 'generation': 1, 'offset': 0,
+                'nbytes': 22 << 20, 'segments': [{'offset': 0, 'nbytes': 2 << 20,
+                    'state': 'Committed', 'content_version': 1, 'content_id': 'synthetic-guard'}]}]}}
     return {'budget_bytes': POOL_BYTES, 'charged_bytes': POOL_BYTES, 'creation_reserved_bytes': 0,
-            'operation_records': 312, 'pools': [pool]}, lines
+            'operation_records': 312, 'pools': [pool], 'schema': 1,
+            'scope': 'this managed daemon incarnation; no inherited-domain recovery',
+            'revision': 1521, 'native_jobs_executed': 0, 'payload_rpc_bytes': 0,
+            'control_counts': {'AckPoolMapping': 17, 'AckPoolUnmapped': 17, 'AcquirePoolRange': 120,
+                'AllocatePoolRange': 5, 'BeginPoolUnregister': 17, 'CommitPoolWrite': 24,
+                'CreateManagedPool': 2, 'DescribeManagedPool': 21, 'GetManagedPoolSnapshot': 419,
+                'QueryPoolOperation': 15, 'RegisterPoolClient': 17, 'ReleasePoolLease': 93}}, lines
+
+
+def query_drift_cases(before):
+    """Only focused snapshot/query/resource drift; no unrelated runtime matrix."""
+    return {
+        'replay-last-observation': lambda v: (v.clear(), v.update(copy.deepcopy(before))),
+        'query-rollback': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=before['control_counts']['GetManagedPoolSnapshot'] - 1),
+        'revision-only': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=before['control_counts']['GetManagedPoolSnapshot']),
+        'revision-mismatch': lambda v: v.update(revision=v['revision'] + 1),
+        'revision-rollback': lambda v: v.update(revision=before['revision'] - 2),
+        'revision-bool': lambda v: v.update(revision=True),
+        'revision-float': lambda v: v.update(revision=float(v['revision'])),
+        'revision-overflow': lambda v: v.update(revision=1 << 64),
+        'query-bool': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=True),
+        'query-float': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=float(v['control_counts']['GetManagedPoolSnapshot'])),
+        'query-negative': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=-1),
+        'query-overflow': lambda v: v['control_counts'].update(GetManagedPoolSnapshot=1 << 64),
+        'other-control-increase': lambda v: v['control_counts'].update(DescribeManagedPool=22),
+        'other-control-decrease': lambda v: v['control_counts'].update(DescribeManagedPool=20),
+        'other-control-float': lambda v: v['control_counts'].update(DescribeManagedPool=21.0),
+        'other-control-missing': lambda v: v['control_counts'].pop('DescribeManagedPool'),
+        'other-control-added': lambda v: v['control_counts'].update(ForeignOperation=0),
+        'cached-record': lambda v: v.update(operation_records=313),
+        'cached-record-float': lambda v: v.update(operation_records=312.0),
+        'charge': lambda v: v.update(charged_bytes=POOL_BYTES - 1),
+        'reserved': lambda v: v.update(creation_reserved_bytes=1),
+        'payload-rpc': lambda v: v.update(payload_rpc_bytes=1),
+        'native-jobs': lambda v: v.update(native_jobs_executed=1),
+        'native-bool': lambda v: v.update(native_jobs_executed=False),
+        'schema-bool': lambda v: v.update(schema=True),
+        'charge-float': lambda v: v.update(charged_bytes=float(POOL_BYTES)),
+        'pool-frozen': lambda v: v['pools'][0].update(frozen=True),
+        'pool-epoch': lambda v: v['pools'][0].update(pool_epoch='other'),
+        'client-unknown': lambda v: v['pools'][0]['clients'][0].update(state='Unknown'),
+        'client-birth': lambda v: v['pools'][0]['clients'][0]['birth'].update(starttime_ticks=1),
+        'client-bool-versus-int': lambda v: v['pools'][0]['clients'][0]['birth'].update(uid=False),
+        'content-version-float': lambda v: v['pools'][0]['ranges']['allocations'][0]['segments'][0].update(content_version=1.0),
+        'content-id': lambda v: v['pools'][0]['ranges']['allocations'][0]['segments'][0].update(content_id='changed'),
+        'extra-field': lambda v: v.update(foreign=0),
+        'missing-field': lambda v: v.pop('payload_rpc_bytes'),
+    }
 
 
 @contextmanager
@@ -70,12 +121,17 @@ def adoption_fixture():
             def __init__(self):
                 self.calls = []
                 self.value = copy.deepcopy(snapshot)
+                self.after_get = None
 
             def verify(self, *args):
                 self.calls.append('verify')
 
             def snapshot(self, *args):
                 self.calls.append('GetManagedPoolSnapshot')
+                self.value['control_counts']['GetManagedPoolSnapshot'] += 1
+                self.value['revision'] += 2
+                if self.after_get is not None:
+                    self.after_get(self.value)
                 return copy.deepcopy(self.value)
 
         system = RecordedSystem()
@@ -148,6 +204,57 @@ class OwnerTreeTests(unittest.TestCase):
 
 
 class AdoptionTests(unittest.TestCase):
+    def test_query_only_progress_preserves_every_resource_and_strict_numeric_type(self):
+        before, _ = sample_snapshot(sample_manifest())
+        after = copy.deepcopy(before)
+        after['control_counts']['GetManagedPoolSnapshot'] += 1
+        after['revision'] += 2
+        self.assertEqual(set(before), adopt.SNAPSHOT_KEYS)
+        self.assertEqual(adopt.same_resource_snapshot(before, after), {'snapshot_query_delta': 1, 'revision_delta': 2})
+        for name, mutate in query_drift_cases(before).items():
+            value = copy.deepcopy(after)
+            mutate(value)
+            with self.subTest(case=name), self.assertRaises(ValueError):
+                adopt.same_resource_snapshot(before, value)
+        later = copy.deepcopy(before)
+        later['control_counts']['GetManagedPoolSnapshot'] += 13
+        later['revision'] += 26
+        self.assertEqual(adopt.same_resource_snapshot(before, later), {'snapshot_query_delta': 13, 'revision_delta': 26})
+        end = copy.deepcopy(before)
+        end['revision'] = adopt.U64_MAX - 2
+        end['control_counts']['GetManagedPoolSnapshot'] = adopt.U64_MAX - 1
+        final = copy.deepcopy(end)
+        final['revision'] += 2
+        final['control_counts']['GetManagedPoolSnapshot'] += 1
+        self.assertEqual(adopt.same_resource_snapshot(end, final), {'snapshot_query_delta': 1, 'revision_delta': 2})
+
+    def test_adopt_snapshot_gate_rejects_unexplained_progress_before_private_root(self):
+        names = list(query_drift_cases(sample_snapshot(sample_manifest())[0]))
+        for name in names:
+            with self.subTest(case=name), adoption_fixture() as f:
+                original = copy.deepcopy(f.capsule['original_snapshot'])
+                f.system.after_get = query_drift_cases(original)[name]
+                with self.assertRaises(ValueError): f.run()
+                self.assertFalse(Path(f.capsule['new_owner_root']).exists())
+                self.assertEqual(f.capsule['original_snapshot'], original)
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux metadata handover lock required')
+    def test_publication_gate_compares_last_verified_snapshot_not_capsule(self):
+        names = list(query_drift_cases(sample_snapshot(sample_manifest())[0]))
+        for name in names:
+            with self.subTest(case=name), adoption_fixture() as f:
+                owner = f.run()
+                first = copy.deepcopy(owner._previous_snapshot)
+                self.assertEqual(first['control_counts']['GetManagedPoolSnapshot'], 420)
+                f.system.after_get = query_drift_cases(first)[name]
+                with patch.object(owner, 'serve', side_effect=AssertionError('must reject before serve')) as serve:
+                    with self.assertRaises(ValueError): owner.publish_and_serve()
+                    serve.assert_not_called()
+                self.assertEqual(owner._previous_snapshot, first)
+                self.assertEqual(owner.capsule['original_snapshot']['control_counts']['GetManagedPoolSnapshot'], 419)
+                self.assertFalse((f.public / 'manifest-v2.json').exists())
+                self.assertFalse((owner.root / 'previous-control.sock').exists())
+
     def test_adopt_preserves_all_histories_and_forbids_constructor_bootstrap_and_Popen(self):
         with adoption_fixture() as f, patch.object(Owner, '__init__', side_effect=AssertionError('constructor')), \
                 patch.object(Owner, 'bootstrap', side_effect=AssertionError('bootstrap')), \
@@ -155,6 +262,8 @@ class AdoptionTests(unittest.TestCase):
             original = (f.public / 'manifest.json').read_bytes()
             owner = f.run()
             self.assertEqual(f.system.calls, ['verify', 'GetManagedPoolSnapshot'])
+            self.assertEqual(owner._previous_snapshot['revision'], 1523)
+            self.assertEqual(owner.capsule['original_snapshot']['revision'], 1521)
             self.assertEqual(owner.lines, f.capsule['lines'])
             self.assertEqual(owner.owners, {101: 1001, 102: 1002, 103: 1003})
             self.assertFalse(hasattr(owner, 'daemon'))
@@ -263,7 +372,10 @@ class AdoptionTests(unittest.TestCase):
                                                        'uid': info.st_uid, 'mode': info.st_mode}
                 owner = f.run()
                 owner.control = 'control.sock'  # Short relative name in this synthetic TMPDIR.
-                owner.snapshot = lambda _: (f.system.value, f.system.value['pools'][0])
+                def snapshot(_):
+                    value = f.system.snapshot(owner.manifest)
+                    return value, value['pools'][0]
+                owner.snapshot = snapshot
                 owner.finalize = lambda: None
                 errors = []
                 def run():
@@ -282,6 +394,9 @@ class AdoptionTests(unittest.TestCase):
                     self.assertEqual(adopt.read_json(f.public / 'manifest.json'), f.manifest)
                     self.assertEqual(adopt.read_json(f.public / 'manifest-v2.json'), owner.manifest)
                     self.assertEqual(set(result['manifest']), adopt.MANIFEST_KEYS)
+                    self.assertEqual(owner._previous_snapshot['control_counts']['GetManagedPoolSnapshot'], 421)
+                    self.assertEqual(f.system.value['control_counts']['GetManagedPoolSnapshot'], 422)
+                    self.assertEqual(owner.capsule['original_snapshot']['control_counts']['GetManagedPoolSnapshot'], 419)
                 finally:
                     (owner.root / 'finalize.request').touch()
                     worker.join(3)

@@ -80,7 +80,7 @@ the live owner and must precede any separately approved stop.
 After the manager separately dispatches handover, the old metadata birth must
 already be absent, the three original UF births and backing must still match,
 all known task/coordination locks must be free, and the exact original Catalog
-snapshot must remain unchanged. Only the same-UID, exact stale `control.sock`
+resource state must remain unchanged. Only the same-UID, exact stale `control.sock`
 inode is archived to the fresh metadata root. `u.sock` is never renamed/removed.
 The new server binds the original control address before exclusively publishing
 `manifest-v2.json`; actual `describe` returns that new manifest. All24 top-level
@@ -97,6 +97,15 @@ Destroy ACK, original backing unlink and FD/VMA absence, real Shutdown ACK, all
 original UF births gone and the original normal `clean.json`. Its daemon exit
 code is explicitly unavailable because it is not a Popen child; no fake wait0.
 Both the normal UF cost2 and A's untouched128MiB historical charge remain.
+
+Snapshot observations use the frozen11-field schema. A successful read itself
+advances `GetManagedPoolSnapshot` by N and revision by exactly2N (N>=1), without
+adding cached operations. Adoption permits only that strict uint64/non-bool
+progress; every other counter/key and the full typed resource JSON remain
+exact. It preserves the capsule's original snapshot and independently retains
+the first verified observation. Publication must positively advance from that
+last observation, rejecting replay/rollback even when a query would still be
+newer than the capsule. Other control or resource changes stop the handover.
 
 Host tests may exercise this mode against synthetic/recorded metadata and owned
 CPU sockets/FLOCK/memfd mappings. They do not authorize live adoption, a new

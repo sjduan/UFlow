@@ -31,6 +31,42 @@ SDK_PINS = {
     '_managed_pool_wire.py': 'c61fdf8f9c19261b9386ae5c64e1ac8e2b81cf41238ee9c8f3c24c7cab59015e',
     '__init__.py': 'bb529fe27ed36eb0a4e5ced2e739411e270bcf13383001b601ca517064f6f328',
 }
+SNAPSHOT_KEYS = set(('schema scope revision charged_bytes creation_reserved_bytes budget_bytes '
+    'operation_records control_counts native_jobs_executed payload_rpc_bytes pools').split())
+U64_MAX = (1 << 64) - 1
+
+
+def same_resource_snapshot(expected, observed):
+    """Allow only completed snapshot-query bookkeeping; every resource stays exact."""
+    for value in (expected, observed):
+        if type(value) is not dict or set(value) != SNAPSHOT_KEYS:
+            raise ValueError('exact frozen11-field snapshot required')
+        for key in SNAPSHOT_KEYS - {'scope', 'control_counts', 'pools'}:
+            if type(value[key]) is not int or not 0 <= value[key] <= U64_MAX:
+                raise ValueError('strict uint64 snapshot counters required')
+        if value['schema'] != 1 or type(value['scope']) is not str or type(value['pools']) is not list:
+            raise ValueError('frozen snapshot resource types changed')
+        counts = value['control_counts']
+        if type(counts) is not dict or 'GetManagedPoolSnapshot' not in counts or any(
+                type(k) is not str or type(n) is not int or not 0 <= n <= U64_MAX for k, n in counts.items()):
+            raise ValueError('strict uint64 control counters required')
+    prior, current = expected['control_counts'], observed['control_counts']
+    if set(prior) != set(current) or any(current[k] != prior[k] for k in prior if k != 'GetManagedPoolSnapshot'):
+        raise ValueError('non-snapshot UF control or counter shape changed')
+    delta = current['GetManagedPoolSnapshot'] - prior['GetManagedPoolSnapshot']
+    if delta < 1 or observed['revision'] - expected['revision'] != 2 * delta:
+        raise ValueError('snapshot query progress/revision is not fully explained')
+    # JSON bytes preserve nested bool/int/float distinctions which Python ==
+    # collapses. Object key order is immaterial; array order remains exact.
+    def resource_bytes(value):
+        try:
+            return json.dumps({k: value[k] for k in SNAPSHOT_KEYS - {'revision', 'control_counts'}},
+                              sort_keys=True, separators=(',', ':'), allow_nan=False)
+        except (ValueError, TypeError) as error:
+            raise ValueError('invalid frozen resource JSON') from error
+    if resource_bytes(expected) != resource_bytes(observed):
+        raise ValueError('original full resource state changed')
+    return {'snapshot_query_delta': delta, 'revision_delta': observed['revision'] - expected['revision']}
 
 
 def sha(path):
@@ -288,8 +324,7 @@ class AdoptedOwner(Owner):
         system.verify(capsule, manifest)
         observed = system.snapshot(manifest)
         check_closed(observed, capsule['lines'], manifest)
-        if observed != capsule['original_snapshot']:
-            raise ValueError('original full Catalog state changed; no handover')
+        same_resource_snapshot(capsule['original_snapshot'], observed)
         owner = cls.__new__(cls)
         owner.root, owner.public = root, PUBLIC
         owner.endpoint, owner.control = manifest['endpoint'], manifest['control_endpoint']
@@ -303,6 +338,7 @@ class AdoptedOwner(Owner):
         owner.counter = 0
         owner.original_manifest, owner.capsule, owner.capsule_sha256 = manifest, capsule, capsule_sha256
         owner.system = system
+        owner._previous_snapshot = copy.deepcopy(observed)
         # This same-host capability never enters a manifest/evidence/env/argv.
         secret_path = owner.state / 'admin.token'
         secret_stat = secret_path.lstat()
@@ -326,8 +362,10 @@ class AdoptedOwner(Owner):
         with (self.public / 'metadata-handover.lock').open('a+') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.system.verify(self.capsule, self.original_manifest)
-            if self.system.snapshot(self.original_manifest) != self.capsule['original_snapshot']:
-                raise ValueError('Catalog changed before metadata publication')
+            observed = self.system.snapshot(self.original_manifest)
+            check_closed(observed, self.lines, self.original_manifest)
+            same_resource_snapshot(self._previous_snapshot, observed)
+            self._previous_snapshot = copy.deepcopy(observed)
             control = Path(self.control)
             info = control.lstat()
             expected = self.capsule['old_control_identity']
