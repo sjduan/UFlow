@@ -110,3 +110,31 @@ newer than the capsule. Other control or resource changes stop the handover.
 Host tests may exercise this mode against synthetic/recorded metadata and owned
 CPU sockets/FLOCK/memfd mappings. They do not authorize live adoption, a new
 runtime decision, campaign retry, retire, Destroy or integration.
+
+## Finalization-only v2 continuation
+
+The separate explicit `--mode finalize-existing-v2` accepts only the sealed
+f4→cd76 lineage, the current32 complete Unmapped histories at R1362, M1 already
+retired and O1 still unretired, its unchanged physical10 reservation, and the
+original O1 same-operation SDK close receipt. The older17/R312 mode is unchanged.
+The capsule binds the old dead metadata birth/socket, original UF three births,
+host/namespaces, fixed SDK/Python, exact source/archive closure and new helper
+commit, full typed resource snapshot, budget and fresh publication paths.
+
+The daemon state comes from the immutable v1 owner root, cross-checked against
+the actual original daemon argv; it is not under the v2 metadata root. The
+original capability remains internal to the same-host owner. This mode starts
+only metadata, never a UF service, client, allocation or pool. Under the original
+handover lock it archives only the exact stale control socket and publishes a
+fresh `manifest-finalization-*.json` without replacing either old manifest.
+
+Only describe, original O1 empty reservation ACK and exact O1 retirement are
+accepted. A legitimate peer check sends a complete request and reads its reply
+on the same connection. Peer EOF/reset/reply timeout is recorded as unconfirmed
+delivery; it does not kill the metadata server, rerun a body or invent an ACK.
+Other reply I/O errors remain errors. Finalization rechecks the unchanged
+R1362 resource state, both actual retirements and all32 obligations before the
+existing real Destroy/FD-VMA-close/Shutdown/clean-zero guards. The finalizer costs
+two records, retains terminal256 and4096/8192 limits, and leaves A's historical
+128MiB untouched. Only actual ACKs, clean state and kernel closure establish
+completion; non-child UF process exit codes are unavailable.

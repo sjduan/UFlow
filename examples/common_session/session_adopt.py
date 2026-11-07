@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import stat
 import sys
@@ -409,12 +410,327 @@ class AdoptedOwner(Owner):
             'B_charged_bytes': 0, 'A_retained_historical_bytes': POOL_BYTES, 'A_queried': False})
 
 
+CURRENT_MANIFEST_SHA = 'cd76b0e88c33d25a43df44ac4487f3ce761ebc88d5351e2c5c0ed466b7a74c78'
+FINAL_MODE = 'finalize-existing-v2'
+O1_SESSION = '06f1879e-8532-4461-89ca-053a4b9cfb93'
+O1_UNMAP = '08557172e85b4ea6a1ec0a6c7aaffa78'
+FINAL_CLOSED_TASKS = [{'pid': p, 'birth': b} for p, b in (
+    (3295917, 1299094309), (3285540, 1299093916), (3276350, 1299093567),
+    (3332878, 1299095738), (3332902, 1299095739))]
+
+
+def typed_equal(left, right):
+    """Compare sealed JSON without Python's bool/int/float equivalence."""
+    return json.dumps(left, sort_keys=True, allow_nan=False, separators=(',', ':')) == json.dumps(
+        right, sort_keys=True, allow_nan=False, separators=(',', ':'))
+
+
+def check_finalization_closed(snapshot, lines, manifest):
+    if type(lines) is not dict or set(lines) != set(PARTITIONS):
+        raise ValueError('exact finalization line histories required')
+    for line, retired, count in (('O1', False, 1), ('M1', True, 30)):
+        exact(lines[line], 'clients retired')
+        clients = lines[line]['clients']
+        if (lines[line]['retired'] is not retired or type(clients) is not list or len(clients) != count
+                or any(type(s) is not str or not s for s in clients)):
+            raise ValueError('current32 history/retirement flags changed')
+    if lines['O1']['clients'] != [O1_SESSION]:
+        raise ValueError('original O1 session changed')
+    sessions = [manifest['bootstrap_client'], *lines['O1']['clients'], *lines['M1']['clients']]
+    if len(set(sessions)) != 32:
+        raise ValueError('distinct bootstrap and32 sessions required')
+    pool = pool_record(snapshot, manifest['pool_descriptor'])
+    if not typed_equal({k: pool[k] for k in manifest['pool_descriptor']}, manifest['pool_descriptor']):
+        raise ValueError('typed pool identity changed')
+    if (pool['frozen'] is not False or len(pool['clients']) != 32
+            or set(sessions) != {c['client_session'] for c in pool['clients']}):
+        raise ValueError('full32 actual client rows required')
+    for client in pool['clients']:
+        exact(client, 'access access_generation birth children client_session closing state')
+        exact(client['birth'], 'gid pid pid_namespace_dev pid_namespace_ino starttime_ticks uid')
+        if (client['state'] != 'Unmapped' or client['children'] != [] or client['closing'] is not True
+                or client['access'] not in ('r', 'rw') or type(client['access_generation']) is not int
+                or client['access_generation'] <= 0
+                or any(type(n) is not int or n < 0 for n in client['birth'].values())
+                or any(client['birth'][k] <= 0 for k in ('pid', 'pid_namespace_dev', 'pid_namespace_ino', 'starttime_ticks'))):
+            raise ValueError('typed Unmapped client/birth/children changed')
+    check_retired(pool, sessions)
+    if pool['ranges']['leases'] or type(snapshot['operation_records']) is not int or snapshot['operation_records'] != 1362:
+        raise ValueError('finalization requires closed original R1362 Catalog')
+    # Exercise the existing full typed11-field validation, without a UF call.
+    advanced = copy.deepcopy(snapshot)
+    advanced['control_counts']['GetManagedPoolSnapshot'] += 1
+    advanced['revision'] += 2
+    same_resource_snapshot(snapshot, advanced)
+
+
+def validate_finalization_capsule(capsule, origin, current):
+    exact(capsule, 'schema group mode decision_id origin_manifest_sha256 current_manifest_sha256 '
+          'old_controller_birth old_control_identity original_owner_births original_snapshot lines '
+          'reservations new_owner_root new_manifest_path helper_commit helper_files parent_safety '
+          'closed_tasks history_evidence O1_close_evidence origin_source_proof new_source_proof state_root budget')
+    if (type(capsule['schema']) is not int or capsule['schema'] != 1 or capsule['group'] != GROUP
+            or capsule['mode'] != FINAL_MODE or type(capsule['decision_id']) is not str or not capsule['decision_id']
+            or capsule['origin_manifest_sha256'] != OLD_MANIFEST_SHA
+            or capsule['current_manifest_sha256'] != CURRENT_MANIFEST_SHA):
+        raise ValueError('explicit current-v2 finalization capsule required')
+    for manifest, version in ((origin, 1), (current, 2)):
+        if (type(manifest) is not dict or set(manifest) != MANIFEST_KEYS
+                or type(manifest['schema']) is not int or manifest['schema'] != 1
+                or type(manifest['manifest_version']) is not int or manifest['manifest_version'] != version):
+            raise ValueError('exact24-field v1/v2 lineage required')
+    mutable = {'manifest_version', 'owner_root', 'helper_root', 'controller_birth', 'frozen_inputs'}
+    if (not typed_equal({k: origin[k] for k in MANIFEST_KEYS - mutable},
+                        {k: current[k] for k in MANIFEST_KEYS - mutable})
+            or not typed_equal({k: v for k, v in current['frozen_inputs'].items() if k != 'metadata_handover'}, origin['frozen_inputs'])
+            or current['frozen_inputs']['metadata_handover']['predecessor_manifest_sha256'] != OLD_MANIFEST_SHA
+            or not typed_equal(current['controller_birth'], {'pid': 98781, 'starttime_ticks': 1298738805})
+            or not typed_equal(capsule['old_controller_birth'], current['controller_birth'])
+            or not typed_equal(capsule['original_owner_births'], origin['owner_births'])
+            or origin['host_alias'] != 'serving-b-sj' or origin['container'] != 'openeuler-2403-DS'
+            or origin['state'] != 'ready' or not typed_equal(origin['partitions'], PARTITIONS)):
+        raise ValueError('original lineage/host/owner/immutable manifest changed')
+    if (capsule['state_root'] != str(Path(origin['owner_root']) / 'state')
+            or capsule['state_root'] == str(Path(current['owner_root']) / 'state')
+            or Path(origin['owner_root']).parent != PUBLIC
+            or current['owner_root'] != str(PUBLIC / 'metadata-v2-001')
+            or current['endpoint'] != str(PUBLIC / 'u.sock') or current['control_endpoint'] != str(PUBLIC / 'control.sock')):
+        raise ValueError('state must come from sealed v1 daemon root, not v2 metadata root')
+    if (not re.fullmatch(r'[0-9a-f]{40}', capsule['helper_commit'])
+            or set(capsule['helper_files']) != set(HELPER_FILES)
+            or any(type(v) is not str or not re.fullmatch(r'[0-9a-f]{64}', v) for v in capsule['helper_files'].values())
+            or not typed_equal(capsule['closed_tasks'], FINAL_CLOSED_TASKS)):
+        raise ValueError('exact new source and original closed-task seals required')
+    for field, prefix, suffix in (('new_owner_root', 'metadata-finalize-', ''),
+                                  ('new_manifest_path', 'manifest-finalization-', '.json')):
+        path = Path(capsule[field])
+        pattern = re.escape(prefix) + r'[a-zA-Z0-9-]+' + re.escape(suffix)
+        if path.parent != PUBLIC or not re.fullmatch(pattern, path.name):
+            raise ValueError('fresh bounded finalization paths required')
+    exact(capsule['old_control_identity'], 'dev inode uid mode')
+    identity = capsule['old_control_identity']
+    if (any(type(n) is not int or n < 0 for n in identity.values())
+            or identity['uid'] != os.geteuid() or not stat.S_ISSOCK(identity['mode'])):
+        raise ValueError('exact same-UID stale socket identity required')
+    for field in ('history_evidence', 'O1_close_evidence', 'origin_source_proof', 'new_source_proof'):
+        exact(capsule[field], 'path sha256')
+        if type(capsule[field]['path']) is not str or not re.fullmatch(r'[0-9a-f]{64}', capsule[field]['sha256']):
+            raise ValueError('exact bounded evidence seal required')
+    expected_budget = {'anchor': 1362, 'finalizer_records': 2, 'terminal_records': 256,
+                       'admission_limit': 4096, 'cleanup_limit': 8192}
+    if not typed_equal(capsule['budget'], expected_budget):
+        raise ValueError('original cost/finalizer/terminal limits changed')
+    reservations = capsule['reservations']
+    exact(reservations, 'schema group reservations')
+    if (type(reservations['schema']) is not int or reservations['schema'] != 1 or reservations['group'] != GROUP
+            or type(reservations['reservations']) is not list or len(reservations['reservations']) != 1):
+        raise ValueError('old O1 reservation must be preserved until actual ACK')
+    row = reservations['reservations'][0]
+    exact(row, 'line physical_device board chip bdf execution_domain lock_path lock_holder_pid lock_holder_birth evidence_path')
+    if (row['line'] != 'O1' or any(type(row[k]) is not int for k in ('physical_device', 'board', 'chip', 'lock_holder_pid', 'lock_holder_birth'))
+            or (row['physical_device'], row['board'], row['chip'], row['lock_holder_pid'], row['lock_holder_birth']) != (10, 5, 0, 3285540, 1299093916)
+            or row['bdf'] != '0000:89:00.0' or row['execution_domain'] != 'B/0000:89:00.0/physical-10'
+            or row['lock_path'] != '/workspace/uflow/locks/run02-npu-10.lock'
+            or row['evidence_path'] != '/workspace/uflow/runs/phasef-parallel-20261106/o1/campaign002/calibration002/resource-before.json'):
+        raise ValueError('exact original O1 reservation changed')
+    check_finalization_closed(capsule['original_snapshot'], capsule['lines'], current)
+
+
+def check_finalization_state(capsule, origin, daemon):
+    """Only the sealed v1 state named by the actual original daemon is usable."""
+    args = daemon['argv']
+    if (capsule['state_root'] != str(Path(origin['owner_root']) / 'state')
+            or daemon['pid'] != origin['provider_loaded']['parent_pid']
+            or daemon['birth'] != origin['owner_births'][str(daemon['pid'])]
+            or daemon['exe_sha256'] != DAEMON_SHA or args.count('--pool-state-root') != 1
+            or args.index('--pool-state-root') + 1 >= len(args)
+            or args[args.index('--pool-state-root') + 1] != capsule['state_root']):
+        raise ValueError('real original daemon does not name sealed v1 state')
+
+
+def check_finalization_close(close):
+    if (close['operation_id'] != O1_UNMAP or close['ACK']['unmapped'] is not True
+            or close['ACK']['unknown_content_invalid_not_committed'] is not False
+            or close['actual_native_close_complete'] is not True or close['actual_SDK_view_closed'] is not True
+            or not typed_equal(close['pool_no_VMA_FD'], {'pid': 3295917, 'fds': [], 'maps': []})
+            or type(close['pid']) is not int or close['pid'] != 3295917
+            or type(close['birth']) is not int or close['birth'] != 1299094309):
+        raise ValueError('original real O1 close/Unmapped evidence changed')
+
+
+class FinalizationSystem(ExistingSystem):
+    """Read-only validation for the explicit, finalization-only current32 mode."""
+    def verify(self, capsule, manifest):
+        origin = read_json(PUBLIC / 'manifest.json')
+        if sha(PUBLIC / 'manifest.json') != OLD_MANIFEST_SHA or sha(PUBLIC / 'manifest-v2.json') != CURRENT_MANIFEST_SHA:
+            raise ValueError('sealed v1/v2 lineage changed')
+        if current_host() != manifest['host'] or birth(98781) is not None:
+            raise ValueError('host changed or original metadata PID is occupied')
+        for row in capsule['closed_tasks']:
+            if birth(row['pid']) == row['birth']:
+                raise ValueError('original O1 task still alive')
+        from importlib.machinery import PathFinder
+        sdk = Path(origin['helper_root']).parents[1] / 'sdk/python/uflow'
+        spec = PathFinder.find_spec('uflow', sys.path)
+        if (spec is None or list(spec.submodule_search_locations or []) != [str(sdk)]
+                or any(sha(sdk / name) != expected for name, expected in SDK_PINS.items())
+                or sha('/proc/self/exe') != PYTHON_SHA):
+            raise ValueError('original SDK/Python loader closure changed')
+        for name in ('uflow', 'uflow.managed_pool', 'uflow._managed_pool_wire'):
+            module = sys.modules.get(name)
+            if module is not None and Path(module.__file__).resolve().parent != sdk:
+                raise ValueError('already loaded SDK comes from another source')
+        check_parent_safety(capsule['parent_safety'], origin)
+        daemon = proc(origin['provider_loaded']['parent_pid'])
+        check_finalization_state(capsule, origin, daemon)
+        state = Path(capsule['state_root'])
+        if state.is_symlink() or not state.is_dir() or state.stat().st_uid != os.geteuid():
+            raise ValueError('original state directory identity invalid')
+        for pid, born in origin['owner_births'].items():
+            status = Path('/proc', pid, 'status').read_text().splitlines()
+            if birth(int(pid)) != born or next(v for v in status if v.startswith('Uid:')).split()[1:] != [str(os.geteuid())] * 4:
+                raise ValueError('original UF birth/UID changed')
+        for field in ('history_evidence', 'O1_close_evidence', 'origin_source_proof', 'new_source_proof'):
+            row = capsule[field]
+            if sha(row['path']) != row['sha256']:
+                raise ValueError('actual evidence/source seal changed')
+        history = capsule['history_evidence']
+        if (Path(history['path']) != Path(manifest['owner_root']) / '0114-line-state.json'
+                or not typed_equal(read_json(history['path']), capsule['lines'])):
+            raise ValueError('last actually persisted exact histories changed')
+        close_path = PUBLIC.parent / 'o1/campaign002/calibration002/consumer/cooperative-close/close-success.json'
+        close = read_json(capsule['O1_close_evidence']['path'])
+        if Path(capsule['O1_close_evidence']['path']) != close_path:
+            raise ValueError('original O1 close receipt path changed')
+        check_finalization_close(close)
+        old_proof = capsule['origin_source_proof']
+        if (old_proof['path'] != str(PUBLIC.parent / 'o1/reserve-recovery-final003/git-deployment.json')
+                or old_proof['sha256'] != '38238c4db4292597df12d5abe97a98c4d63c8c57f5224ac3c4c88e2326784d51'):
+            raise ValueError('accepted original task source closure changed')
+        proof = read_json(capsule['new_source_proof']['path'])
+        base = Path(__file__).resolve().parents[2]
+        if proof['commit'] != capsule['helper_commit'] or proof['root'] != str(base):
+            raise ValueError('new helper source commit/root mismatch')
+        for name, row in proof['files'].items():
+            path = base / name
+            if Path(name).is_absolute() or '..' in Path(name).parts:
+                raise ValueError('source path escapes bounded tree')
+            data = os.readlink(path).encode() if row['mode'] == '120000' else path.read_bytes()
+            if (len(data) != row['bytes'] or hashlib.sha256(data).hexdigest() != row['sha256']
+                    or (row['mode'] != '120000' and bool(path.stat().st_mode & 0o111) != (row['mode'] == '100755'))):
+                raise ValueError('new actual Git source content/mode drift')
+        if read_json(PUBLIC / 'reservations.json') != capsule['reservations']:
+            raise ValueError('original reservation registry changed')
+        import fcntl
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            paths = [Path(manifest['coordination_root']) / n for n in ('host-job-0.lock', 'host-job-1.lock', 'measurement.lock')]
+            paths += [Path(f'/workspace/uflow/locks/run02-npu-{d}.lock') for d in (10, 12, 14, 8, 9)]
+            for path in paths:
+                handle = stack.enter_context(path.open('r+'))
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        canonical = manifest['pool_descriptor']['canonical']
+        name = bytes.fromhex(canonical['body_hex']).decode()
+        if Path(name).name != name:
+            raise ValueError('unsafe backing name')
+        info = Path('/dev/shm', name).stat()
+        if (info.st_dev, info.st_ino, info.st_size) != (canonical['dev'], canonical['inode'], POOL_BYTES):
+            raise ValueError('original physical backing changed')
+
+
+class FinalizationOwner(AdoptedOwner):
+    @classmethod
+    def adopt_finalization(cls, capsule_path, capsule_sha256, *, system=None):
+        if sha(capsule_path) != capsule_sha256:
+            raise ValueError('finalization capsule seal mismatch')
+        capsule = read_json(capsule_path)
+        if sha(PUBLIC / 'manifest.json') != OLD_MANIFEST_SHA or sha(PUBLIC / 'manifest-v2.json') != CURRENT_MANIFEST_SHA:
+            raise ValueError('actual sealed v1/v2 manifest mismatch')
+        origin, current = read_json(PUBLIC / 'manifest.json'), read_json(PUBLIC / 'manifest-v2.json')
+        validate_finalization_capsule(capsule, origin, current)
+        helper = Path(__file__).resolve().parent
+        if {n: sha(helper / n) for n in HELPER_FILES} != capsule['helper_files']:
+            raise ValueError('new runtime helper source differs')
+        root, publication = Path(capsule['new_owner_root']), Path(capsule['new_manifest_path'])
+        if root.exists() or publication.exists() or (PUBLIC / 'finalized.json').exists():
+            raise ValueError('new finalization root/publication must be unused')
+        system = FinalizationSystem() if system is None else system
+        system.verify(capsule, current)
+        observed = system.snapshot(current)
+        check_finalization_closed(observed, capsule['lines'], current)
+        same_resource_snapshot(capsule['original_snapshot'], observed)
+        owner = cls.__new__(cls)
+        owner.root, owner.public = root, PUBLIC
+        owner.endpoint, owner.control = current['endpoint'], current['control_endpoint']
+        owner.state = Path(capsule['state_root'])
+        owner.lines, owner.descriptor = copy.deepcopy(capsule['lines']), current['pool_descriptor']
+        owner.loaded, owner.inputs = current['provider_loaded'], current['frozen_inputs']
+        owner.original_daemon_pid = owner.loaded['parent_pid']
+        owner.bootstrap_client = current['bootstrap_client']
+        owner.owners, owner.counter = {int(k): v for k, v in current['owner_births'].items()}, 0
+        owner.original_manifest, owner.capsule, owner.capsule_sha256 = current, capsule, capsule_sha256
+        owner.system, owner._previous_snapshot = system, copy.deepcopy(observed)
+        secret = owner.state / 'admin.token'
+        info = secret.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600 or not 0 < info.st_size <= 256:
+            raise ValueError('original private capability identity invalid')
+        owner._admin = secret.read_text()  # Internal same-B owner use only; never evidence/env/argv.
+        root.mkdir(mode=0o700)
+        owner.manifest = copy.deepcopy(current)
+        owner.manifest.update(owner_root=str(root), helper_root=str(helper),
+                              controller_birth={'pid': os.getpid(), 'starttime_ticks': birth(os.getpid())})
+        owner.manifest['frozen_inputs']['metadata_finalization'] = {
+            'schema': 1, 'mode': FINAL_MODE, 'data_service_commit': capsule['helper_commit'],
+            'helper_files': capsule['helper_files'], 'origin_manifest_sha256': OLD_MANIFEST_SHA,
+            'predecessor_manifest_sha256': CURRENT_MANIFEST_SHA, 'capsule_sha256': capsule_sha256,
+            'old_controller_birth': current['controller_birth']}
+        owner.publication = publication
+        return owner
+
+    def handle(self, body):
+        if body.get('op') == 'register-client' or (body.get('op') != 'describe' and (
+                body.get('line') != 'O1' or body.get('op') == 'reserve-devices' and body.get('reservations') != [])):
+            raise ValueError('finalization-only owner permits no new client/reservation/M1 mutation')
+        return super().handle(body)
+
+    def finalize(self):
+        observed, _ = self.snapshot('finalization-budget-and-resource-check')
+        same_resource_snapshot(self._previous_snapshot, observed)
+        if (observed['operation_records'] != 1362 or observed['operation_records'] + 2 >= 4096
+                or observed['operation_records'] + 2 + 256 >= 8192):
+            raise ValueError('original R1362/finalizer2/terminal256 limits no longer hold')
+        super().finalize()
+
+    def publish_and_serve(self):
+        import fcntl
+        with (self.public / 'metadata-handover.lock').open('a+') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.system.verify(self.capsule, self.original_manifest)
+            observed = self.system.snapshot(self.original_manifest)
+            check_finalization_closed(observed, self.lines, self.original_manifest)
+            same_resource_snapshot(self._previous_snapshot, observed)
+            self._previous_snapshot = copy.deepcopy(observed)
+            info = Path(self.control).lstat()
+            if not typed_equal({'dev': info.st_dev, 'inode': info.st_ino, 'uid': info.st_uid, 'mode': info.st_mode},
+                               self.capsule['old_control_identity']):
+                raise ValueError('only exact stale original control socket may be archived')
+            archived = self.root / 'previous-control.sock'
+            if archived.exists():
+                raise ValueError('stale socket archive already exists')
+            Path(self.control).rename(archived)
+            self.serve(publish=lambda: save(self.publication, self.manifest))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--capsule', type=Path, required=True)
     parser.add_argument('--capsule-sha256', required=True)
+    parser.add_argument('--mode', choices=('adopt-existing', FINAL_MODE), default='adopt-existing')
     args = parser.parse_args()
-    AdoptedOwner.adopt(args.capsule, args.capsule_sha256).publish_and_serve()
+    if args.mode == FINAL_MODE:
+        FinalizationOwner.adopt_finalization(args.capsule, args.capsule_sha256).publish_and_serve()
+    else:
+        AdoptedOwner.adopt(args.capsule, args.capsule_sha256).publish_and_serve()
 
 
 if __name__ == '__main__':

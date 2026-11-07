@@ -356,7 +356,15 @@ class Owner:
                     except Exception as error:
                         value = {'status': 'error', 'detail': repr(error)}
                         self.evidence('control-error', value)
-                    connection.sendall(json.dumps(value).encode() + b'\n')
+                    encoded = json.dumps(value).encode() + b'\n'
+                    try:
+                        connection.sendall(encoded)
+                    except (BrokenPipeError, ConnectionResetError, TimeoutError) as error:
+                        # The body may already have committed a mutation. Record
+                        # failed delivery; never repeat handle or invent an ACK.
+                        self.evidence('control-reply-disconnected', {
+                            'error': repr(error), 'reply_status': value['status'],
+                            'delivery_confirmed': False, 'body_reexecuted': False})
         current_identity = Path(self.control).lstat()
         if (current_identity.st_dev, current_identity.st_ino) != (bound_identity.st_dev, bound_identity.st_ino):
             raise RuntimeError('metadata socket identity changed; retain original path')
