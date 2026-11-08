@@ -129,7 +129,7 @@ def build(root, source, name):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     short=root/('x'+out.name.removeprefix('build-host'));short.mkdir(exist_ok=False)
-    e10_env={**env,'CARGO_TARGET_DIR':str(short/'target')}
+    e10_env={**env,'CARGO_TARGET_DIR':str(short)}
     test_manifest=out/'test-artifacts.jsonl'
     with test_manifest.open('xb') as f:
         run([cargo,'test','--locked','--no-run','--message-format=json','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],
