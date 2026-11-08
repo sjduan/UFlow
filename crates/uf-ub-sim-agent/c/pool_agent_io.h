@@ -5,6 +5,7 @@
 int pool_output_init(int fd);
 int pool_emit(const char *format, ...);
 int pool_output_flush(uint64_t now_ms);
+int pool_output_pending(void);
 uint64_t pool_now_ms(void);
 int pool_birth(int pid, uint64_t *birth);
 #endif

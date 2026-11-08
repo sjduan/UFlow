@@ -25,7 +25,11 @@ int main(int argc,char **argv) {
     setvbuf(stdout,NULL,_IONBF,0);setvbuf(stderr,NULL,_IONBF,0);
     printf("fixture stdout pid=%u mode=%s\n",(unsigned)getpid(),mode);
     fprintf(stderr,"fixture stderr pid=%u mode=%s\n",(unsigned)getpid(),mode);
-    if(!strcmp(mode,"exit"))return 7;
+    if(!strcmp(mode,"exit")) {
+        char tail[2048];memset(tail,'E',sizeof(tail));
+        if(write(2,tail,sizeof(tail))!=(ssize_t)sizeof(tail))return 9;
+        fputs("\nfixture stderr final tail\n",stderr);return 7;
+    }
     if(!strcmp(mode,"burst")){char bytes[4096];memset(bytes,'L',sizeof(bytes));for(unsigned i=0;i<80;i++)if(write(1,bytes,sizeof(bytes))<0)return 9;}
     signal(SIGTERM,stopping);signal(SIGINT,stopping);
     struct mem_service_client client;

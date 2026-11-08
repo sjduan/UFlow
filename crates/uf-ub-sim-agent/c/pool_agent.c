@@ -161,18 +161,24 @@ int main(int argc,char **argv) {
     snprintf(connect_to,sizeof(connect_to),"unix:%s",lower_path);
     int listener=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);struct sockaddr_un address={.sun_family=AF_UNIX};strcpy(address.sun_path,lower_path);
     if(listener<0||bind(listener,(void*)&address,sizeof(address))||chmod(lower_path,0600)||listen(listener,32))return fail("private lower relay");
-    char input[12000];size_t input_used=0;bool quitting=false,drained=false;uint64_t quit_deadline=0,worker_stop_deadline=0;
+    char input[12000];size_t input_used=0;bool quitting=false,drained=false,worker_failed=false;
+    uint64_t quit_deadline=0,worker_stop_deadline=0,worker_failure_deadline=0;
     if(identity())return fail("identity output bound");
     for(;;) {
         if(pool_output_flush(pool_now_ms()))return fail("bounded output queue");
         int changed=pool_worker_poll(&worker);
-        if(changed<0 || (changed==1 && (!worker.stopping||!WIFEXITED(worker.status)||WEXITSTATUS(worker.status)))) {
+        if(!worker_failed && (changed<0 || (changed==1 && (!worker.stopping||!WIFEXITED(worker.status)||WEXITSTATUS(worker.status))))) {
             (void)pool_emit("UFPOOL_FAILURE_NOTICE\n");
             (void)pool_emit("UFPOOL_WORKER_EXIT %u %" PRIu64 " %u %u\n",(unsigned)worker.pid,worker.birth,
                 WIFEXITED(worker.status)?(unsigned)WEXITSTATUS(worker.status):0,WIFSIGNALED(worker.status)?(unsigned)WTERMSIG(worker.status):0);
-            (void)pool_worker_logs(&worker);return fail("worker exited or birth changed");
+            worker_failed=true;worker_failure_deadline=pool_now_ms()+200;
         }
         if(pool_worker_logs(&worker))return fail("worker log budget/read failure");
+        /* Notice is already on the wire. Drain readable pipe tails and the
+         * nonblocking UART queue for at most 200ms, never extending supervisor
+         * cleanup. No new control admission is allowed during this boundary. */
+        if(worker_failed && ((worker.logs[0]<0 && worker.logs[1]<0 && !pool_output_pending()) ||
+            pool_now_ms()>=worker_failure_deadline))return fail("worker exited or birth changed; bounded tail collection ended");
         if(worker.started&&!worker.exited&&!worker.stopping &&
            ((!worker.refresh_count && pool_now_ms()-worker.started_ms>5000)||
             (worker.refresh_count&&!pool_worker_fresh(&worker,pool_now_ms()))))return fail("missing or expired worker refresh");
@@ -275,6 +281,7 @@ int main(int argc,char **argv) {
                 continue;
             }
             if(!strncmp(input,"v2 ",3)) {
+                if(worker_failed)return fail("worker failure forbids new admission");
                 char hex[8192],json[4096];size_t count;
                 if(active!=-1||quitting||sscanf(input,"v2 %" SCNu64 " %" SCNu64 " %8191s",&request_id,&correlation,hex)!=3||!request_id||!correlation||
                    pool_unhex(hex,(unsigned char*)json,sizeof(json)-1,&count))return fail("v2 syntax");json[count]=0;

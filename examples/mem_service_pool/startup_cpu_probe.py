@@ -190,6 +190,11 @@ def run_case(h,kind):
             first=next(i for i,e in enumerate(h.events) if e['event']=='first-notice')
             diagnostic=next(i for i,e in enumerate(h.events) if e['event']=='worker-exit')
             assert first<diagnostic
+            until=time.monotonic()+1
+            while any(n.thread.is_alive() for n in h.nodes.values()) and time.monotonic()<until:time.sleep(.01)
+            for name in h.nodes:
+                raw=(h.output/(name+'.stderr.log')).read_bytes()
+                assert b'E'*2048+b'\nfixture stderr final tail\n' in raw
         rejected(startup.check_once);return
     if kind=='no-refresh':
         rejected(startup.check_once)

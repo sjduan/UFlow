@@ -206,6 +206,8 @@ class GuestNode:
                         'stream':stream,'bytes':len(data),'hex':encoded})
                 elif line.startswith('UFPOOL_WORKER_EXIT '):
                     self.notify()
+                    self.failure=RuntimeError('actual worker exited; original context retained')
+                    for item in self.pending.values():item['ready'].set()
                     self.event({'event':'worker-exit','node':self.identity['node'],'raw':line})
                 elif line.startswith('UFPOOL_REPLY '):
                     _, request, correlation, encoded = line.split(' ', 3)

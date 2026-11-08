@@ -35,6 +35,7 @@ int pool_output_flush(uint64_t now) {
     if(sent==used){used=sent=0;queued_at=0;}
     return 0;
 }
+int pool_output_pending(void) {return sent<used;}
 int pool_emit(const char *format, ...) {
     char frame[20000]; va_list args; va_start(args,format);
     int n=vsnprintf(frame,sizeof(frame),format,args); va_end(args);
