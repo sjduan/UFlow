@@ -751,12 +751,10 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
                             .and_then(Value::as_str)
                             .unwrap_or("invalid-frame");
                         let response = owned.handle(&peer, &request).unwrap_or_else(|e| {
+                            let mut error=envelope(id,Err(e),owned.durability_unknown.load(Ordering::Acquire));
+                            if owned.remote.is_some() && request["schema"]==2 {error["schema"]=json!(2);}
                             (
-                                envelope(
-                                    id,
-                                    Err(e),
-                                    owned.durability_unknown.load(Ordering::Acquire),
-                                ),
+                                error,
                                 None,
                             )
                         });

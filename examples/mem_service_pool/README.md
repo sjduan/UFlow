@@ -27,16 +27,18 @@ the official ready gate. Root readiness cannot certify another endpoint.
 
 The two exports carry 4 MiB of infrastructure responsibility, charged once in
 the same Catalog DDR ledger before admitting business allocations. The matrix
-uses 64 MiB business + 4 MiB canaries = 68 MiB within the B 128 MiB cap; A's
+uses 64 MiB business + 4 MiB current canaries + 4 MiB retained original canaries
+=72 MiB within the B 128 MiB cap; A's
 historical 128 MiB remains unqueried. Temporary verification views and each
-application mapping add no physical backing charge. A failed pre-Catalog
+application mapping add no physical backing charge. A failed current
 bootstrap is recorded as reserved/owned responsibility and fails the job;
 no replacement pool or endpoint is created to hide an uncertain outcome.
 
 Application owners unmap/release before their endpoint checked-close. After
-business retire, the Catalog still charges the 4 MiB canary baseline. Shutdown
+business retire, the Catalog still charges the 8 MiB current/retained canary baseline. Shutdown
 checked-closes both root endpoints and releases each charge only after its real
-receipt, then requires zero contexts and zero ledger. The official checked-close
+receipt, then requires zero current contexts and active/reserved capacity, while
+the two original UnknownCanaryClose entries retain 4 MiB. The official checked-close
 also owns canary export cleanup; a failure retains the original endpoint and
 charge. Shared FM files are retained and audited, never unlinked as private SHM.
 

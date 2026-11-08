@@ -129,6 +129,11 @@ impl MemServicePoolProvider {
     }
 
     pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
+        let old=&st.managed_pools.reconciliation;
+        if !old.is_null() && (old["identity"]["provider_session"]==self.session ||
+            old["retained_canaries"][0]["backing"]["realm"]==self.realm) {
+            return Err("current runtime must not reuse original provider session or realm".into());
+        }
         // Real, already-live canary exports share the one physical capacity ledger.
         // No charges for temporary peer verification views or application endpoints.
         for (node,identity) in &self.nodes {
@@ -316,6 +321,9 @@ impl MemServicePoolProvider {
             let id=opaque_id()?; let epoch=opaque_id()?;
             let reservation=format!("{}:{}",peer.actor(),text(req,"operation_id")?);
             service.catalog(|state,st| {
+                if state.reconciliation["identity"]["pool_id"]==id || state.reconciliation["identity"]["pool_epoch"]==epoch {
+                    return Err("generated pool identity collides with terminal original history".into());
+                }
                 if state.pools.values().any(|p|p.state!="Released") || st.shutdown_requested || service.stop.load(Ordering::Acquire) {
                     return Err("one backing only; original obligation prevents replacement pool".into());
                 }
