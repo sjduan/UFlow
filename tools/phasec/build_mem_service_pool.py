@@ -13,10 +13,17 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import traceback
 
 PIN = '546985e26bce60798fa3f88329c3fbed8350c798'
 OBMM = '53011eed10716b422d2ac29199f68b55f7c5bdc5'
 SUPERVISOR_ROOT = '/workspace/uflow/runs/mem-service-shared-pool-20261108'
+
+
+def failure_notice():
+    if 'UFLOW_ENV_CLOSE_FD' in os.environ:
+        try:os.write(int(os.environ['UFLOW_ENV_CLOSE_FD']),b'!')
+        except BlockingIOError:pass
 
 
 def digest(path):
@@ -42,7 +49,17 @@ def build(root, source, name):
         if not path.resolve().is_relative_to(source) or path.is_symlink() or digest(path)!=row['sha256']:
             raise RuntimeError('exact delivered source mismatch: '+rel)
     def run(argv, **kwargs):
-        subprocess.run(list(map(str, argv)), check=True, timeout=kwargs.pop('timeout', 120), **kwargs)
+        argv=list(map(str,argv))
+        with (out/'build-steps.jsonl').open('a') as log:
+            log.write(json.dumps({'phase':'start','argv':argv})+'\n')
+        try:
+            result=subprocess.run(argv, check=True, timeout=kwargs.pop('timeout', 120), **kwargs)
+        except BaseException:
+            failure_notice()  # Before diagnostics; the runner may stop draining stdout on notice.
+            (out/'failure.json').write_text(json.dumps({'argv':argv,'traceback':traceback.format_exc()},indent=2))
+            raise
+        with (out/'build-steps.jsonl').open('a') as log:
+            log.write(json.dumps({'phase':'completed','argv':argv,'exit':result.returncode})+'\n')
     def git(path, *argv):
         return subprocess.check_output(['git', '-C', str(path), *argv]).decode().strip()
     if git(lower, 'rev-parse', 'HEAD') != PIN or git(lower, 'status', '--porcelain', '-uno'):
@@ -78,13 +95,16 @@ def build(root, source, name):
         raise RuntimeError('actual aarch64 ELF required')
     shim = out/'fence';shim.mkdir()
     run(['/usr/bin/gcc','-shared','-fPIC',source/'examples/managed_pool/api_fence.c','-o',shim/'libuf_acl_shim.so'])
-    env = {**os.environ,'CARGO_BUILD_JOBS':'4','UF_ACL_SHIM_LIB_DIR':str(shim),
+    cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo'
+    if not Path(cargo).is_file():raise RuntimeError('existing Cargo toolchain not found; no implicit install')
+    env = {**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),
+           'CARGO_BUILD_JOBS':'4','UF_ACL_SHIM_LIB_DIR':str(shim),
            'LD_LIBRARY_PATH':str(shim),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(source/'sdk/python')}
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
-    run(['cargo','build','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=1800)
-    run(['cargo','test','--locked','-p','uf-core','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=300)
+    run([cargo,'build','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=1800)
+    run([cargo,'test','--locked','-p','uf-core','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=300)
     for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests'):
-        run(['cargo','test','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4',group],cwd=source,env=env,timeout=300)
+        run([cargo,'test','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4',group],cwd=source,env=env,timeout=300)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_*.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/managed_pool','-p','test_sdk.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/common_session','-p','test_*.py'],env=env)
@@ -130,7 +150,8 @@ if __name__=='__main__':
     a=p.parse_args()
     try:build(a.root.resolve(),a.source.resolve(),a.output)
     except BaseException:
-        if 'UFLOW_ENV_CLOSE_FD' in os.environ:
-            try:os.write(int(os.environ['UFLOW_ENV_CLOSE_FD']),b'!')
-            except BlockingIOError:pass
+        failure_notice()
+        failure=a.root/'implementation'/a.output/'failure.json'
+        if failure.parent.is_dir() and not failure.exists():
+            failure.write_text(json.dumps({'traceback':traceback.format_exc()},indent=2))
         raise
