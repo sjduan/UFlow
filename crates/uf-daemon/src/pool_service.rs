@@ -28,6 +28,7 @@ pub(crate) struct Service {
     pub(crate) stop: AtomicBool,
     drop_reply_once: AtomicBool,
     durability_unknown: AtomicBool,
+    _responsibility_authority: Option<File>,
 }
 
 fn envelope(id: &str, result: Result<Value, String>, unknown: bool) -> Value {
@@ -666,9 +667,16 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
     if remote.is_some() && budget > 128 * 1024 * 1024 {
         return Err("mem_service B pool budget is at most 128MiB".into());
     }
+    if remote.as_ref().is_some_and(|p|p.reconciliation.is_none()) &&
+        Path::new("/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/state/state.json").exists() {
+        return Err("original c013 responsibility must enter this authority before new remote bootstrap/business".into());
+    }
     let provider = if remote.is_none() { Some(Provider::start(root, python)?) } else { None };
     let mut catalog = Catalog::new(-1, Vec::new());
     catalog.ddr_resources.limit = budget;
+    let responsibility=if let Some(config)=remote.as_ref().and_then(|p|p.reconciliation.as_ref()) {
+        Some(crate::pool_reconciliation::restore(&mut catalog,config,root)?)
+    } else {None};
     if let Some(p)=&mut remote {p.admit_bootstrap(&mut catalog)?;}
     let (provider_session, provider_loaded) = if let Some(p) = &provider {
         (p.session.clone(), p.loaded.clone())
@@ -685,6 +693,7 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
         stop: AtomicBool::new(false),
         drop_reply_once: AtomicBool::new(false),
         durability_unknown: AtomicBool::new(false),
+        _responsibility_authority: responsibility,
     });
     service.catalog(|_, _| Ok(()))?;
     let listener = UnixListener::bind(endpoint).map_err(|e| e.to_string())?;

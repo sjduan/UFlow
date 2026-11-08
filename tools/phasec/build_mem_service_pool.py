@@ -93,6 +93,8 @@ def build(root, source, name):
     compiler = ['/usr/local/bin/aarch64-linux-gnu-gcc','-O2','-Wall','-Wextra','-static','-pthread','-D__EXPORTED_HEADERS__']
     command = compiler + ['-I'+str(p) for p in includes] + [str(p) for p in agent_inputs+inputs] + ['-o',str(out/'pool-agent')]
     run(command)
+    from build_pool_worker import build_worker
+    official_worker,worker_receipt=build_worker(root,out,run)
     binary = (out/'pool-agent').read_bytes()
     if binary[:4] != b'\x7fELF' or int.from_bytes(binary[18:20],'little') != 183:
         raise RuntimeError('actual aarch64 ELF required')
@@ -123,8 +125,24 @@ def build(root, source, name):
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
-    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests'):
+    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests'):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
+    # Real Catalog/memfd/independent owner closure regressions, no driver query.
+    short=root/('x'+out.name.removeprefix('build-host'));short.mkdir(exist_ok=False)
+    e10_env={**env,'CARGO_TARGET_DIR':str(short/'target')}
+    test_manifest=out/'test-artifacts.jsonl'
+    with test_manifest.open('xb') as f:
+        run([cargo,'test','--locked','--no-run','--message-format=json','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],
+            cwd=source,env=env,stdout=f,timeout=120)
+    test_bins=[Path(row['executable']) for row in (json.loads(line) for line in test_manifest.read_text().splitlines())
+               if row.get('reason')=='compiler-artifact' and row.get('target',{}).get('name')=='uf-daemon' and
+               row.get('profile',{}).get('test') and row.get('executable')]
+    if len(test_bins)!=1:raise RuntimeError('exact compiled Rust test executable required')
+    for case in ('managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness',
+                 'independent_owner_processes_compete_for_one_catalog_budget','t1_registration_and_clean_drain_use_the_fixture_authority'):
+        run([test_bins[0],'--exact','external_ddr::managed_tests::'+case,
+             '--nocapture','--test-threads=1'],cwd=source,env=e10_env,timeout=120)
+    run([sys.executable,'-B',fixture/'original_reconciliation_cpu.py'],env=env,timeout=120)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_*.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/managed_pool','-p','test_sdk.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/common_session','-p','test_*.py'],env=env)
@@ -134,7 +152,8 @@ def build(root, source, name):
     with gzip.open(base,'rb') as archive:
         run(['cpio','-idm','--quiet','--no-absolute-filenames'],cwd=stage,input=archive.read())
     for name,p in {'bin/run_app':root/'env/guest-kit004/uflow_env_guest_entry.sh',
-                   'bin/uflow_env_payload':out/'pool-agent'}.items():
+                   'bin/uflow_env_payload':out/'pool-agent',
+                   'bin/linqu_mem_service_provider_obmm':official_worker}.items():
         shutil.copy2(p,stage/name);(stage/name).chmod(0o755)
     # Keep standard linqu_init --resume and existing official managed worker.
     if not (stage/'bin/linqu_mem_service_provider_obmm').is_file():
@@ -161,6 +180,7 @@ def build(root, source, name):
              'fence_shim':str(shim/'libuf_acl_shim.so'),'fence_shim_sha256':digest(shim/'libuf_acl_shim.so'),
              'daemon':str(daemon),'daemon_sha256':digest(daemon),'installed_sdk_manifest':sdk_before,
              'source':str(source),'no_business_runtime_executed':True,
+             'official_worker':{**worker_receipt,'image_member_sha256':digest(stage/'bin/linqu_mem_service_provider_obmm')},
              'sdk53_unchanged':sdk_before=={str(p.relative_to(sdk)):digest(p) for p in sdk.rglob('*') if p.is_file()},
              'frozen_mem_service_unchanged':not git(lower,'status','--porcelain','-uno')}
     if not receipt['sdk53_unchanged'] or not receipt['frozen_mem_service_unchanged']:

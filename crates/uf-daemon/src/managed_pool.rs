@@ -229,6 +229,7 @@ pub struct State {
     pub operations: BTreeMap<String, Operation>,
     pub revision: u64,
     pub counts: BTreeMap<String, u64>,
+    pub reconciliation: Value,
 }
 impl State {
     pub fn owns_object(&self, id: u64) -> bool {
@@ -267,9 +268,19 @@ impl State {
         self.sync_leases(st);
     }
     pub fn snapshot(&self, st: &Catalog) -> Value {
-        json!({"schema":1,"scope":"this managed daemon incarnation; no inherited-domain recovery",
+        let mut reconciliation=self.reconciliation.clone();
+        if let Some(value)=reconciliation.as_object_mut() {
+            // Full evidence lives in the fsynced responsibility result. Keep
+            // public bounded control frames below the existing SDK limits.
+            if let Some(proof)=value.remove("verified_proof") {
+                value.insert("evidence_file_count".into(),json!(proof["evidence_sha256"].as_object().map(|v|v.len()).unwrap_or(0)));
+            }
+        }
+        json!({"schema":1,"scope":"current authority; only verified c013 uncreated reservation import supported",
             "revision":self.revision,"charged_bytes":st.ddr_resources.charged_bytes(),
             "creation_reserved_bytes":st.ddr_resources.reserved_bytes(),"budget_bytes":st.ddr_resources.limit,
+            "resource_ledger":st.ddr_resources.snapshot(),"retained_bytes":st.ddr_resources.retained_bytes(),
+            "active_bytes":st.ddr_resources.charged_bytes()-st.ddr_resources.retained_bytes(),"reconciliation":reconciliation,
             "operation_records":self.operations.len(),"control_counts":self.counts,"native_jobs_executed":0,"payload_rpc_bytes":0,
             "catalog_range_leases":self.pools.values().flat_map(|p|p.ranges.leases.values().map(|l|json!({
                 "lease_id":l.catalog_id,"client_session":l.client,"state":st.leases.get(&l.catalog_id).map(|r|r.state.as_str())}))).collect::<Vec<_>>(),

@@ -94,7 +94,7 @@ Startup is ordered: both root prepare/peer verify, then public SDK directory
 registration with the actual boot-bound incarnation/generation/capabilities,
 then worker fork and real SDK refresh. The bridge binds refresh to SO_PEERCRED
 PID/birth and retains full bounded public metadata requests and replies. Catalog
-is created only after both directory entries and both fresh workers are proven.
+admits business only after both directory entries and both fresh workers are proven.
 Every new business admission rechecks the live directory/worker evidence;
 cleanup remains possible without reopening admission. Normal shutdown requires
 actual worker exit zero and SDK deregister, empty directory, then canary close.
@@ -117,6 +117,33 @@ The fixture has a relay fence forbidding every business allocation/mapping
 operation. It is run only by the B build job and proves no OBMM or Guest result.
 Worker stdout/stderr use bounded nonblocking parent forwarding; failure notice
 precedes diagnostic serialization and the external supervisor owns escalation.
+
+The c013 continuation starts its single responsibility Catalog before any new
+Guest/bootstrap. An embedded verifier checks the pinned manager assessment and
+all original source/controller/SDK/image bindings, exact snapshot/store/journal/
+events, IDs/actor, absence of business objects and nonlive exact births in place
+on B. Original files are read only and are not exported by the verifier. The
+Catalog restores 68MiB, fsyncs an intent, uses `cancel_uncreated` only for the
+proved pre-dispatch 64MiB reservation, and fsyncs the result. Original Unknown
+response/IDs remain terminal history. Two typed Provider canaries retain 4MiB
+as `UnknownCanaryClose` in the same DdrResources and public resource snapshot.
+No SDK close or Unmapped is claimed for them.
+
+The authority then reserves the two current canaries before their real prepare.
+After real bootstrap/register/worker readiness, authenticated
+`ActivateManagedBootstrap` commits those reservations with actual boot-bound
+backings. Business is refused until activation. Final normal close releases
+only current resources: active0/reserved0/retained4MiB. B peak is72MiB under128,
+plus unqueried A historical128MiB gives200MiB. Existing lineage, partial writes,
+drift or a new unexpected Unknown cannot restart a fresh authority or reuse the
+old proof. The exclusive responsibility lock and immutable lineage accompany
+the one live Catalog; SDK3 and default POSIX zero-account close stay unchanged.
+
+The build now consumes the official frozen managed-worker Makefile in a private
+output directory, with546/53011 and locked platform/GVA sources. It records the
+expanded recipe, all compiler source/header/link inputs and ELF/image member
+hashes, and overlays that binary. It never modifies the official source, SDK53,
+base image, dependency versions or recipes.
 
 With `PYTHONPATH=sdk/python`, run `python -B -m unittest discover -s
 examples/mem_service_pool` and the existing `examples/managed_pool/test_sdk.py`.

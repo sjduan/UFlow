@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Mutex,OnceLock};
 use std::time::Duration;
 use uf_core::bridge::{BridgeFrame, BridgeMessageType};
 use uf_core::provider::{AccessKind, Addressability, TransportKind, ExecutionMode, Fidelity};
@@ -23,6 +24,11 @@ pub struct MemServicePoolProvider {
     sequence: AtomicU64,
     bootstrap: BTreeMap<String, u64>,
     bootstrap_unknown: AtomicBool,
+    deferred_bootstrap: bool,
+    readiness_file: Option<PathBuf>,
+    pub reconciliation: Option<Value>,
+    active: OnceLock<Box<MemServicePoolProvider>>,
+    activation: Mutex<()>,
 }
 
 const CANARY_BYTES: u64 = 2 << 20;
@@ -71,16 +77,24 @@ impl MemServicePoolProvider {
     pub fn load(path: &Path) -> Result<Self, String> {
         let data = std::fs::read(path).map_err(|e| e.to_string())?;
         let c = parse(&data)?;
-        fields(&c, &["schema", "backend", "realm", "session", "home", "nodes"], &[])?;
+        fields(&c, &["schema", "backend", "realm", "session", "home", "nodes"], &["deferred_bootstrap","readiness_file","reconciliation"])?;
         if c["schema"] != 2 || c["backend"] != "mem_service_obmm" { return Err("explicit mem_service config v2 required".into()); }
+        let deferred=c["deferred_bootstrap"]==true;
+        if c.get("deferred_bootstrap").is_some_and(|value|!value.is_boolean()) || (!deferred && !c["reconciliation"].is_null()) {
+            return Err("only staged bootstrap may import original responsibility".into());
+        }
+        if deferred && (c["reconciliation"].is_null() || !Path::new(text(&c,"readiness_file")?).is_absolute()) {
+            return Err("deferred bootstrap requires original responsibility import and controlled readiness file".into());
+        }
         let mut nodes = BTreeMap::new();
         for node in c["nodes"].as_array().ok_or("node array required")? {
-            fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket", "canary", "ready", "startup"], &[])?;
+            if deferred {fields(node,&["node","socket"],&[])?;}
+            else {fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket", "canary", "ready", "startup"], &[])?;}
             let id = text(node, "node")?;
-            if !matches!(id, "nodeA" | "nodeB") || nodes.contains_key(id) || number(node, "incarnation")? == 0 {
+            if !matches!(id, "nodeA" | "nodeB") || nodes.contains_key(id) || (!deferred && number(node, "incarnation")? == 0) {
                 return Err("two unique bound logical nodes required".into());
             }
-            text(node, "boot_id")?; text(node, "agent_session")?;
+            if !deferred {text(node, "boot_id")?; text(node, "agent_session")?;}
             if !PathBuf::from(text(node, "socket")?).is_absolute() { return Err("absolute task endpoint required".into()); }
             nodes.insert(id.to_owned(), node.clone());
         }
@@ -88,6 +102,7 @@ impl MemServicePoolProvider {
         if !text(&c,"realm")?.starts_with("simulated:") { return Err("explicit simulated execution realm required".into()); }
         if nodes.len() != 2 || !nodes.contains_key(&home) { return Err("two nodes and bound home required".into()); }
         for (id,node) in &nodes {
+            if deferred {continue;}
             let peer=&nodes[if id=="nodeA" {"nodeB"} else {"nodeA"}];
             let canary=&node["canary"];let ready=&node["ready"];
             canary_descriptor(canary)?;
@@ -107,15 +122,20 @@ impl MemServicePoolProvider {
             }
         }
         Ok(Self { session: text(&c, "session")?.into(), realm: text(&c, "realm")?.into(),
-            nodes, home, sequence: AtomicU64::new(BUSINESS_SEQUENCE), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false) })
+            nodes, home, sequence: AtomicU64::new(BUSINESS_SEQUENCE), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
+            deferred_bootstrap:deferred,readiness_file:c["readiness_file"].as_str().map(PathBuf::from),
+            reconciliation:if c["reconciliation"].is_null(){None}else{Some(c["reconciliation"].clone())},
+            active:OnceLock::new(),activation:Mutex::new(()) })
     }
 
     pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
         // Real, already-live canary exports share the one physical capacity ledger.
         // No charges for temporary peer verification views or application endpoints.
         for (node,identity) in &self.nodes {
-            let id=st.take_next_object_id();let reservation=format!("canary:{node}");
-            st.ddr_resources.reserve_unique(&reservation,CANARY_BYTES)?;
+            let reservation=format!("canary:{node}");
+            let id=if let Some(id)=self.bootstrap.get(node){*id}else{
+                let id=st.take_next_object_id();st.ddr_resources.reserve_unique(&reservation,CANARY_BYTES)?;id};
+            if self.deferred_bootstrap {self.bootstrap.insert(node.clone(),id);continue;}
             st.ddr_resources.commit_backing(&reservation,id,BackingId::Provider {
                 realm:self.realm.clone(),provider:"mem_service_obmm".into(),
                 resource:format!("canary:{node}:{}",text(identity,"boot_id")?),
@@ -161,6 +181,8 @@ impl MemServicePoolProvider {
     }
 
     pub fn finish(&self) -> Result<(), String> {
+        if let Some(active)=self.active.get() {return active.finish();}
+        if self.deferred_bootstrap {return Err("current bootstrap never activated; reservation remains".into());}
         for node in self.nodes.keys() {
             let receipt = self.call(node, json!({"op":"inspect"}))?;
             if receipt["contexts"] != 0 || receipt["pins"] != 0 || receipt["cleanup_required"] != false {
@@ -183,6 +205,7 @@ impl MemServicePoolProvider {
     }
 
     pub fn handle(&self, service: &Service, peer: &Peer, req: &Value) -> Result<Value, String> {
+        if let Some(active)=self.active.get() {return active.handle(service,peer,req);}
         let id = text(req, "operation_id")?;
         let op = text(req, "op")?;
         let key = format!("{}:{id}", peer.actor());
@@ -191,6 +214,7 @@ impl MemServicePoolProvider {
         let common = ["schema","op","operation_id","pool_id","pool_epoch","provider_session","client_session","access_generation","access_binding_v2"];
         let extra: &[&str] = match op {
             "CreateManagedPool" => &["admin_token","nbytes"],
+            "ActivateManagedBootstrap" => &["admin_token"],
             "DestroyManagedPool" | "ShutdownManagedPool" => &["admin_token"],
             "RegisterPoolClient" => &["access","node"],
             "AllocatePoolRange" => &["nbytes","alignment"],
@@ -204,18 +228,28 @@ impl MemServicePoolProvider {
         };
         let mut allowed = common.to_vec(); allowed.extend_from_slice(extra);
         fields(req, &["schema","op","operation_id"], &allowed)?;
-        if matches!(op,"CreateManagedPool"|"DestroyManagedPool"|"ShutdownManagedPool") && req["admin_token"] != service.admin {
+        if matches!(op,"CreateManagedPool"|"DestroyManagedPool"|"ShutdownManagedPool"|"ActivateManagedBootstrap") && req["admin_token"] != service.admin {
             return Err("management capability required".into());
         }
         let mut fingerprint = req.clone(); fingerprint.as_object_mut().unwrap().remove("admin_token");
         let fingerprint = fingerprint.to_string();
         let read_only = matches!(op,"DescribeManagedPool"|"GetManagedPoolSnapshot"|"QueryPoolOperation");
         let prior = service.catalog(|state,st| {
+            let original=&state.reconciliation["identity"];
             if op == "QueryPoolOperation" {
                 let target = text(req,"target_operation_id")?;
+                if !original.is_null() && original["operation_id"]==target {
+                    return Ok(Some(envelope(id,Ok(json!({"state":"VerifiedUncreatedTerminal",
+                        "identity":original,"historical_unknown_response":state.reconciliation["historical_unknown_operation"]["response"],
+                        "SDK_ACK_Unmapped_or_canary_close_claimed":false})),false)));
+                }
                 return Ok(Some(envelope(id,Ok(state.operations.get(&format!("{}:{target}",peer.actor()))
                     .map(|v|json!({"state":v.state,"response":v.response}))
                     .unwrap_or(json!({"state":"NotFound"}))),false)));
+            }
+            if !original.is_null() && (req["operation_id"]==original["operation_id"] ||
+                req.get("pool_id").is_some_and(|pool|pool==&original["pool_id"])) {
+                return Err("original c013 terminal history cannot be reused for admission or access".into());
             }
             if read_only { return Ok(None); }
             if let Some(old) = state.operations.get(&key) {
@@ -247,6 +281,30 @@ impl MemServicePoolProvider {
 
     fn execute(&self, service:&Service, peer:&Peer, req:&Value) -> Result<Value,String> {
         let op=text(req,"op")?;
+        service.catalog(|state,_| {
+            let old=&state.reconciliation["identity"];
+            if (!old.is_null()) && (req.get("pool_id").is_some_and(|id|id==&old["pool_id"]) ||
+                req.get("operation_id").is_some_and(|id|id==&old["operation_id"]) ||
+                req.get("target_operation_id").is_some_and(|id|id==&old["operation_id"])) {
+                return Err("original c013 is VerifiedUncreatedTerminal; historical Unknown is not an accessible pool or retry".into());
+            }
+            Ok(())
+        })?;
+        if op=="ActivateManagedBootstrap" {
+            let _guard=self.activation.lock().map_err(|_|"bootstrap activation poisoned")?;
+            if !self.deferred_bootstrap || self.active.get().is_some() {return Err("bootstrap already activated or not staged".into());}
+            let mut active=Self::load(self.readiness_file.as_ref().ok_or("readiness file missing")?)?;
+            if active.deferred_bootstrap || active.realm!=self.realm || active.session!=self.session || active.home!=self.home ||
+                active.nodes.iter().any(|(name,node)|node["socket"]!=self.nodes[name]["socket"]) {
+                return Err("prepared readiness does not bind this pending authority".into());
+            }
+            active.require_ready()?;
+            active.bootstrap=self.bootstrap.clone();
+            service.catalog(|state,st| {active.admit_bootstrap(st)?;state.reconciliation["current_bootstrap"]=active.loaded();Ok(())})?;
+            self.active.set(Box::new(active)).map_err(|_|"activation already set")?;
+            return Ok(json!({"bootstrap_activated":true,"current_canary_bytes":4<<20}));
+        }
+        if self.deferred_bootstrap {return Err("original responsibility imported; current canaries reserved but not activated".into());}
         if matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange") {
             if let Err(error)=self.require_ready() {
                 self.bootstrap_unknown.store(true,Ordering::Release);
@@ -300,7 +358,7 @@ impl MemServicePoolProvider {
             service.catalog(|state,st| {
                 if st.shutdown_requested {return Err("shutdown already in progress; query original operation".into());}
                 for pool in state.pools.values() {pool.confirm_closed(st)?;}
-                let baseline:u64=self.bootstrap.values().filter_map(|id|st.ddr_resources.charged_object_bytes(*id)).sum();
+                let baseline:u64=st.ddr_resources.retained_bytes()+self.bootstrap.values().filter_map(|id|st.ddr_resources.charged_object_bytes(*id)).sum::<u64>();
                 if state.pools.values().any(|p|p.state!="Released") || st.ddr_resources.charged_bytes()!=baseline || st.ddr_resources.reserved_bytes()!=0 {
                     return Err("cannot shutdown with remaining backing/unknown".into());
                 }
@@ -331,10 +389,10 @@ impl MemServicePoolProvider {
                 }
             }
             self.finish()?;
-            service.catalog(|_,st|if st.ddr_resources.charged_bytes()==0 && st.ddr_resources.reserved_bytes()==0 {Ok(())} else {Err("final ledger not zero".into())})?;
+            let retained=service.catalog(|_,st|if st.ddr_resources.charged_bytes()==st.ddr_resources.retained_bytes() && st.ddr_resources.reserved_bytes()==0 {Ok(st.ddr_resources.retained_bytes())} else {Err("current runtime not drained to retained-only ledger".into())})?;
             self.bootstrap_unknown.store(false,Ordering::Release);
             service.stop.store(true,Ordering::Release);
-            return Ok(json!({"stopping":true,"bootstrap_closed":true,"charged_bytes":0}));
+            return Ok(json!({"stopping":true,"bootstrap_closed":true,"charged_bytes":retained,"retained_bytes":retained,"active_bytes":0,"reserved_bytes":0}));
         }
         let pool_id=text(req,"pool_id")?;
         // Validate incarnation on *every* operation, including metadata/cleanup.
@@ -537,7 +595,8 @@ mod tests {
         let nodes=[("nodeA".into(),json!({"boot_id":"boot-a","incarnation":7})),
             ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
         let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
-            nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false)};
+            nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
+            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(())};
         let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
         provider.admit_bootstrap(&mut st).unwrap();
         assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);

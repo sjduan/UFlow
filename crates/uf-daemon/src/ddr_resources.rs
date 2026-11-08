@@ -15,6 +15,7 @@ pub struct DdrResources {
     pub limit: u64,
     reservations: HashMap<String, u64>,
     resources: HashMap<u64, (BackingId, u64)>, // one charge per real backing, not per view
+    retained: HashMap<u64, serde_json::Value>, // lifecycle witness; capacity remains in resources
 }
 
 impl Default for DdrResources {
@@ -26,11 +27,34 @@ impl Default for DdrResources {
                 .unwrap_or(u64::MAX),
             reservations: HashMap::new(),
             resources: HashMap::new(),
+            retained: HashMap::new(),
         }
     }
 }
 
 impl DdrResources {
+    pub fn retain_provider(&mut self, object:u64, witness:serde_json::Value) -> Result<(),String> {
+        if !matches!(self.resources.get(&object),Some((BackingId::Provider{..},_))) || self.retained.contains_key(&object) {
+            return Err("unique typed provider backing required for retained obligation".into());
+        }
+        self.retained.insert(object,witness);Ok(())
+    }
+    pub fn retained_bytes(&self) -> u64 {
+        self.retained.keys().filter_map(|id|self.charged_object_bytes(*id)).sum()
+    }
+    pub fn snapshot(&self) -> serde_json::Value {
+        use serde_json::json;
+        json!({"charged_bytes":self.charged_bytes(),"reserved_bytes":self.reserved_bytes(),
+            "retained_bytes":self.retained_bytes(),"active_bytes":self.charged_bytes()-self.retained_bytes(),
+            "reservations":self.reservations,
+            "resources":self.resources.iter().map(|(id,(backing,n))| {
+                let identity=match backing {
+                    BackingId::Posix{dev,inode}=>json!({"kind":"posix","dev":dev,"inode":inode}),
+                    BackingId::Provider{realm,provider,resource,generation}=>json!({"kind":"provider","realm":realm,
+                        "provider":provider,"resource":resource,"generation":generation})};
+                json!({"object_id":id,"nbytes":n,"backing":identity,"retained":self.retained.get(id)})
+            }).collect::<Vec<_>>()})
+    }
     pub fn charged_object_bytes(&self, object: u64) -> Option<u64> {
         self.resources.get(&object).map(|(_, n)| *n)
     }
@@ -131,6 +155,7 @@ impl DdrResources {
 
     /// Only call after confirmed real provider/FD release and durable witnesses.
     pub fn release_confirmed(&mut self, object: u64) {
+        if self.retained.contains_key(&object) {return;} // No caller may infer old checked-close.
         self.resources.remove(&object);
     }
 }
