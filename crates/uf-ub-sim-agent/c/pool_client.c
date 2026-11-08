@@ -2,6 +2,7 @@
 #include "pool_control.h"
 #include "pool_platform.h"
 #include <mem_service_mapping_owner.h>
+#include <mem_service_provider_directory.h>
 #include <inttypes.h>
 #include <time.h>
 #include <unistd.h>
@@ -17,10 +18,10 @@ struct context {
     struct mem_service_client_allocation allocation;
     struct mem_service_client_object_mapping mapping;
     struct mem_service_client_mapping_lifecycle lifecycle;
-    char session[64], node[64];
+    char session[64], node[64], boot[96];
     char owner_release_operation[80], retire_operation[80];
     uint64_t incarnation, sequence;
-    bool holder, writable, bootstrap, ready;
+    bool holder, writable, bootstrap, ready, directory_registered;
 };
 
 static uint64_t now_ms(void) {
@@ -84,6 +85,30 @@ static int wait_state(struct context *c,const char *key,const char *state) {
 static int execute(struct context *c,const struct pool_control *req,char reply[4096]) {
     const char *op=pool_get(req,"op");enum mem_service_wire_status status;
     char id[80];uint64_t n=0,generation=0;
+    if(!strcmp(op,"provider_register") || !strcmp(op,"provider_status") || !strcmp(op,"provider_drain")) {
+        /* The public wire has node/incarnation, not an invented boot field.
+         * The actual boot binds that incarnation in this process and C02. */
+        if(!c->bootstrap || !c->ready)return -1;
+        struct mem_service_client_provider_directory directory;
+        if(!strcmp(op,"provider_register")) {
+            if(c->directory_registered || mem_service_client_provider_register(&c->client,c->node,c->incarnation,
+                1,MEM_SERVICE_PROVIDER_CAP_MAP,&directory,&status) || status!=MEM_SERVICE_WIRE_STATUS_OK ||
+                directory.replaced || directory.required_count!=2)return -1;
+            c->directory_registered=true;
+        } else {
+            if(!c->directory_registered || mem_service_client_provider_status(&c->client,&directory,&status) ||
+               status!=MEM_SERVICE_WIRE_STATUS_OK || directory.required_count!=2)return -1;
+            if(!strcmp(op,"provider_drain")) {
+                if(directory.active_count || directory.directory_ready || directory.deregister_ok_count<2)return -1;
+                c->directory_registered=false;
+            }
+        }
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"node\":\"%s\",\"boot_id\":\"%s\",\"incarnation\":%" PRIu64 ",\"readiness_generation\":1,\"capabilities\":1,\"directory_registered\":%s,\"directory_drained\":%s,\"channel_ready\":true,\"directory_epoch\":%" PRIu64 ",\"lease_ms\":%" PRIu64 ",\"required_count\":%" PRIu64 ",\"active_count\":%" PRIu64 ",\"directory_ready\":%s,\"host_registry_data_plane_ready\":%s,\"refresh_ok_count\":%" PRIu64 ",\"deregister_ok_count\":%" PRIu64 "}",
+            c->node,c->boot,c->incarnation,c->directory_registered?"true":"false",!strcmp(op,"provider_drain")?"true":"false",
+            directory.directory_epoch,directory.lease_ms,directory.required_count,directory.active_count,
+            directory.directory_ready?"true":"false",directory.data_plane_ready?"true":"false",directory.refresh_ok_count,directory.deregister_ok_count);
+        return 0;
+    }
     if(!strcmp(op,"bootstrap_prepare")) {
         uint64_t seed;char descriptor[UFLOW_POOL_CANARY_HEX];uint64_t checksum;
         if(c->platform||c->holder||c->owner||pool_u64(req,"seed",&seed)||seed>255)return -1;
@@ -102,14 +127,14 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_ready\":true,\"verified_checksum\":%" PRIu64 ",\"guest_pid\":%u}",checksum,(unsigned)getpid());return 0;
     }
     if(!strcmp(op,"bootstrap_close")) {
-        if(!c->bootstrap||c->holder||c->owner||c->domain||c->lifecycle.pending)return -1;
+        if(!c->bootstrap||c->directory_registered||c->holder||c->owner||c->domain||c->lifecycle.pending)return -1;
         if(uflow_pool_platform_close(&c->platform))return -1;
         c->bootstrap=false;c->ready=false;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_closed\":true,\"canary_bytes\":0,\"cleanup_required\":false}");return 0;
     }
     if(!strcmp(op,"allocate")) {
         const char *key=pool_get(req,"pool_id");
-        if(!c->bootstrap||!c->ready||!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
+        if(!c->bootstrap||!c->ready||!c->directory_registered||!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
         if(snprintf(c->session,sizeof(c->session),"owner-%s",key)>=(int)sizeof(c->session))return -1;
         operation(c,id,"allocate");
         struct mem_service_client_allocate request={.key=key,.idempotency_key=id,.session_id=c->session,
@@ -206,8 +231,8 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
     return -1;
 }
 
-int uflow_pool_client(int fd,const char *connect,const char *node,uint64_t incarnation) {
-    struct context c={0};strncpy(c.node,node,sizeof(c.node)-1);c.incarnation=incarnation;
+int uflow_pool_client(int fd,const char *connect,const char *node,const char *boot,uint64_t incarnation) {
+    struct context c={0};strncpy(c.node,node,sizeof(c.node)-1);strncpy(c.boot,boot,sizeof(c.boot)-1);c.incarnation=incarnation;
     struct mem_service_wire_client_options options;mem_service_wire_client_options_init(&options);
     options.timeout_ms=10000;options.max_attempts=1;
     mem_service_client_init_with_options(&c.client,connect,&options);
@@ -223,5 +248,5 @@ int uflow_pool_client(int fd,const char *connect,const char *node,uint64_t incar
         fprintf(output,"%s\n",reply);fflush(output);
     }
     /* No destructor fabricates unmap/release on a disconnected command pipe. */
-    return c.holder||c.owner||c.lifecycle.pending||c.platform?3:0;
+    return c.holder||c.owner||c.lifecycle.pending||c.platform||c.directory_registered?3:0;
 }

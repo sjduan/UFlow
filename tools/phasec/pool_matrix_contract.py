@@ -12,13 +12,14 @@ def canary_checksum(seed):
     return value
 
 
-def bootstrap_nodes(nodes, realm, event):
+def bootstrap_nodes(nodes, realm, event, *, control=None):
     if set(nodes) != {'nodeA', 'nodeB'}:
         raise ValueError('exactly two bound Guest nodes required')
     sequence = 0
 
     def call(node, body):
         nonlocal sequence
+        if control is not None:return control.call(node.identity['node'],body)
         sequence += 1
         identity = node.identity
         frame = Frame(sequence, sequence, realm, identity['node'], identity['boot_id'],

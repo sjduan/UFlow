@@ -17,7 +17,8 @@ import uuid
 from mem_service_pool_bridge import GuestNode, BridgeServer, notify_failure
 from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
 from pool_peer_io import PeerIO
-from pool_matrix_contract import bootstrap_nodes, guard_intervals, guard_chunks, CANARY_BYTES
+from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
+from pool_startup import Startup
 
 U,M=65536,1024*1024
 
@@ -89,6 +90,9 @@ def matrix(root,config,build):
     log=(out/'pool-events.jsonl').open('x')
     def event(value):
         with lock:
+            if value.get('event')=='worker-log':
+                with (out/('worker-'+value['node']+'.'+value['stream']+'.log')).open('ab') as raw:
+                    raw.write(bytes.fromhex(value['hex']))
             log.write(json.dumps({'host_monotonic_ns':time.monotonic_ns(),**value})+'\n');log.flush()
     lower_socket=str(out/'l.sock')
     lower_config=out/'lower.conf'
@@ -113,13 +117,8 @@ def matrix(root,config,build):
                 nodes[name].send('start')
             for node in nodes.values():
                 if not node.started.wait(10) or node.failure:raise RuntimeError('Guest agent start failed')
-            ready_deadline=time.monotonic()+30
-            while True:
-                ready=subprocess.run([str(lower_binary),'ready','--connect','unix:'+lower_socket],capture_output=True,timeout=3)
-                if ready.returncode==0:break
-                if time.monotonic()>ready_deadline:raise RuntimeError('both real managed workers not ready')
-                time.sleep(.1)
-            bootstrap=bootstrap_nodes(nodes,realm,event)
+            startup=Startup(nodes,realm,event)
+            bootstrap,readiness=startup.run()
             bootstrap_bytes=len(bootstrap)*CANARY_BYTES
             bindings=[]
             for name,node in nodes.items():
@@ -127,7 +126,8 @@ def matrix(root,config,build):
                 server=BridgeServer(endpoint,node);servers.append(server);server.thread.start()
                 identity=node.identity
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
-                                 'incarnation':identity['incarnation'],'socket':str(endpoint),**bootstrap[name]})
+                                 'incarnation':identity['incarnation'],'socket':str(endpoint),**bootstrap[name],
+                                 'startup':readiness[name]})
             provider_config=out/'provider.json'
             provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
                                                    'home':'nodeA','nodes':bindings},indent=2))

@@ -2,7 +2,8 @@
 """Build only in the approved B job; installed neutral SDK + frozen platform TU.
 
 This script has no SSH/upload path. Invoke under E0 runner kind=build, max4workers.
-It does not start Guest, daemon, pool or device and never changes lower sources.
+It runs isolated CPU metadata/ordinary-process fixtures, never Guest, business
+backing, OBMM or device, and never changes lower sources or the c013 authority.
 """
 import argparse
 import gzip
@@ -73,10 +74,12 @@ def build(root, source, name):
         if hashlib.sha256(blob).hexdigest() != digest(path):
             raise RuntimeError('installed SDK/Git mismatch: '+name)
         inputs.append(path)
+    neutral_inputs=list(inputs)
     inputs.extend([lower / 'components/mem_service/providers/mem_service_provider_obmm.c',
                    lower / 'vendor/obmm/src/libobmm/libobmm.c', lower / 'common/obmm_vendor_adaptor_sim.c'])
     own = source / 'crates/uf-ub-sim-agent/c'
-    agent_inputs = [own / name for name in ('pool_agent.c','pool_client.c','pool_platform_obmm.c')]
+    common_inputs=[own/name for name in ('pool_agent.c','pool_client.c','pool_worker.c','pool_agent_io.c')]
+    agent_inputs = common_inputs+[own/'pool_platform_obmm.c']
     includes = [sdk/'include/lingqu/mem_service',root/'env/kernel-uapi/include',own,lower,
                 lower/'libs/obmm_queue',lower/'vendor/obmm/src/libobmm',
                 lower/'kernel_ub/include/uapi',lower/'kernel_ub/include']
@@ -93,6 +96,19 @@ def build(root, source, name):
     binary = (out/'pool-agent').read_bytes()
     if binary[:4] != b'\x7fELF' or int.from_bytes(binary[18:20],'little') != 183:
         raise RuntimeError('actual aarch64 ELF required')
+    fixture=source/'examples/mem_service_pool'
+    fixture_inputs=common_inputs+[fixture/'fixture_platform.c']+neutral_inputs
+    fixture_agent=out/'cpu-agent';fixture_worker=out/'cpu-worker'
+    neutral_includes=['-I'+str(sdk/'include/lingqu/mem_service'),'-I'+str(own)]
+    run(['/usr/bin/gcc','-O0','-g','-Wall','-Wextra','-pthread','-DUFLOW_POOL_CPU_FIXTURE']+neutral_includes+
+        fixture_inputs+['-o',fixture_agent])
+    run(['/usr/bin/gcc','-O0','-g','-Wall','-Wextra','-pthread']+neutral_includes+
+        [fixture/'fixture_worker.c']+neutral_inputs+['-o',fixture_worker])
+    fixture_output=out/'startup-cpu'
+    # Short exclusive Unix socket paths, outside both old authority and sources.
+    scratch=root/('v'+out.name.removeprefix('build-host'))
+    run([sys.executable,'-B',fixture/'startup_cpu_probe.py','--agent',fixture_agent,'--worker',fixture_worker,
+         '--controller',sdk/'bin/linqu_mem_service','--scratch',scratch,'--output',fixture_output],timeout=180)
     shim = out/'fence';shim.mkdir()
     run(['/usr/bin/gcc','-shared','-fPIC',source/'examples/managed_pool/api_fence.c','-o',shim/'libuf_acl_shim.so'])
     cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo'
@@ -137,6 +153,11 @@ def build(root, source, name):
              'compiler_argv':command,'agent_sha256':digest(out/'pool-agent'),
              'image':str(image),'image_sha256':digest(image),'base_sha256':digest(base),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
+             'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),
+                 'source_inputs':{str(p):digest(p) for p in fixture_inputs+[fixture/'fixture_worker.c',fixture/'startup_cpu_probe.py']},
+                 'agent':str(fixture_agent),'agent_sha256':digest(fixture_agent),
+                 'worker':str(fixture_worker),'worker_sha256':digest(fixture_worker),
+                 'canary_endpoint_double':True,'actual_processes_directory_SDK':True,'business_backing':False},
              'fence_shim':str(shim/'libuf_acl_shim.so'),'fence_shim_sha256':digest(shim/'libuf_acl_shim.so'),
              'daemon':str(daemon),'daemon_sha256':digest(daemon),'installed_sdk_manifest':sdk_before,
              'source':str(source),'no_business_runtime_executed':True,

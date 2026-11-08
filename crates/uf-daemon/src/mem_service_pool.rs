@@ -26,6 +26,31 @@ pub struct MemServicePoolProvider {
 }
 
 const CANARY_BYTES: u64 = 2 << 20;
+const BUSINESS_SEQUENCE: u64 = 1u64 << 32;
+fn ready_receipts(identity: &Value, worker: &Value, status: &Value) -> Result<u64,String> {
+    let expected=&identity["startup"]["worker"];
+    let lease=number(status,"lease_ms")?;
+    if status["schema"]!=2 || status["phase"]!="completed" || status["node"]!=identity["node"] ||
+        status["boot_id"]!=identity["boot_id"] || status["incarnation"]!=identity["incarnation"] ||
+        status["readiness_generation"]!=1 || status["capabilities"]!=1 || status["channel_ready"]!=true ||
+        status["directory_registered"]!=true || status["directory_ready"]!=true || status["required_count"]!=2 ||
+        status["active_count"]!=2 || lease<100 || worker["schema"]!=2 || worker["phase"]!="completed" ||
+        worker["worker_alive"]!=true || worker["worker_ready"]!=true || number(worker,"worker_refresh_count")?==0 ||
+        worker["worker_pid"]!=expected["worker_pid"] || worker["worker_birth"]!=expected["worker_birth"] ||
+        number(worker,"worker_pid")?==0 || number(worker,"worker_birth")?==0 ||
+        worker["incarnation"]!=identity["incarnation"] || worker["readiness_generation"]!=1 || worker["capabilities"]!=1 ||
+        worker["lease_ms"]!=lease || number(worker,"refresh_age_ms")?>=lease/2 {
+        return Err("live same-boot channel/directory/worker refresh required before business".into());
+    }
+    // The SDK's optional Host in-process registry bit is preserved as a raw
+    // diagnostic. Managed admission uses directory readiness + actual Guest
+    // canary/channel + real worker refresh, exactly as the frozen worker does.
+    let epoch=number(status,"directory_epoch")?;
+    if epoch==0 || status["directory_epoch"]!=identity["startup"]["directory_epoch"] {
+        return Err("directory incarnation changed since startup".into());
+    }
+    Ok(epoch)
+}
 fn canary_descriptor(value: &Value) -> Result<&str, String> {
     let s=value["canary_descriptor"].as_str().ok_or("opaque canary descriptor missing")?;
     if s.is_empty() || s.len()>384 || s.len()%2!=0 || !s.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
@@ -50,7 +75,7 @@ impl MemServicePoolProvider {
         if c["schema"] != 2 || c["backend"] != "mem_service_obmm" { return Err("explicit mem_service config v2 required".into()); }
         let mut nodes = BTreeMap::new();
         for node in c["nodes"].as_array().ok_or("node array required")? {
-            fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket", "canary", "ready"], &[])?;
+            fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket", "canary", "ready", "startup"], &[])?;
             let id = text(node, "node")?;
             if !matches!(id, "nodeA" | "nodeB") || nodes.contains_key(id) || number(node, "incarnation")? == 0 {
                 return Err("two unique bound logical nodes required".into());
@@ -73,9 +98,16 @@ impl MemServicePoolProvider {
                 ready["verified_checksum"]!=peer["canary"]["checksum"] || ready["guest_pid"]!=canary["guest_pid"] {
                 return Err("both actual same-context canary preparation and peer readiness required before Catalog".into());
             }
+            if node["startup"]["managed_ready"]!=true {return Err("actual startup readiness proof missing".into());}
+            ready_receipts(node,&node["startup"]["worker"],&node["startup"]["directory"])?;
+            let registered=&node["startup"]["registration"];
+            if registered["directory_registered"]!=true || registered["boot_id"]!=node["boot_id"] ||
+                registered["incarnation"]!=node["incarnation"] || registered["readiness_generation"]!=1 || registered["capabilities"]!=1 {
+                return Err("public directory registration binding missing".into());
+            }
         }
         Ok(Self { session: text(&c, "session")?.into(), realm: text(&c, "realm")?.into(),
-            nodes, home, sequence: AtomicU64::new(1024), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false) })
+            nodes, home, sequence: AtomicU64::new(BUSINESS_SEQUENCE), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false) })
     }
 
     pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
@@ -134,6 +166,18 @@ impl MemServicePoolProvider {
             if receipt["contexts"] != 0 || receipt["pins"] != 0 || receipt["cleanup_required"] != false {
                 return Err("actual lower context drain not confirmed".into());
             }
+        }
+        Ok(())
+    }
+
+    fn require_ready(&self) -> Result<(),String> {
+        let mut epoch=None;
+        for (name,identity) in &self.nodes {
+            let worker=self.call(name,json!({"op":"worker_state"}))?;
+            let status=self.call(name,json!({"op":"provider_status"}))?;
+            let observed=ready_receipts(identity,&worker,&status)?;
+            if epoch.is_some_and(|previous|previous!=observed) {return Err("two-node directory changed during readiness check".into());}
+            epoch=Some(observed);
         }
         Ok(())
     }
@@ -203,6 +247,12 @@ impl MemServicePoolProvider {
 
     fn execute(&self, service:&Service, peer:&Peer, req:&Value) -> Result<Value,String> {
         let op=text(req,"op")?;
+        if matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange") {
+            if let Err(error)=self.require_ready() {
+                self.bootstrap_unknown.store(true,Ordering::Release);
+                return Err(error); // No creation reservation or allocation RPC was made.
+            }
+        }
         if op=="CreateManagedPool" {
             let n=number(req,"nbytes")?;
             let id=opaque_id()?; let epoch=opaque_id()?;
@@ -257,6 +307,19 @@ impl MemServicePoolProvider {
                 st.shutdown_requested=true;
                 Ok(())
             })?;
+            for node in self.nodes.keys() {
+                self.bootstrap_unknown.store(true,Ordering::Release);
+                let stopped=self.call(node,json!({"op":"worker_stop"}))?;
+                if stopped["worker_stopped"]!=true || stopped["worker_exit_code"]!=0 || stopped["directory_deregistered"]!=true {
+                    return Err("actual worker stop/deregister not confirmed".into());
+                }
+            }
+            for node in self.nodes.keys() {
+                let drained=self.call(node,json!({"op":"provider_drain"}))?;
+                if drained["directory_drained"]!=true || drained["active_count"]!=0 {
+                    return Err("actual directory drain not confirmed".into());
+                }
+            }
             for (node,id) in &self.bootstrap {
                 if service.catalog(|_,st|Ok(st.ddr_resources.charged_object_bytes(*id).is_some()))? {
                     self.bootstrap_unknown.store(true,Ordering::Release);
@@ -439,6 +502,30 @@ impl MemServicePoolProvider {
 mod tests {
     use super::*;
     #[test]
+    fn admission_requires_real_worker_freshness_directory_and_boot_binding() {
+        let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,
+            "worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":7,
+            "readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
+        let identity=json!({"node":"nodeA","boot_id":"boot-a","incarnation":7,
+            "startup":{"worker":worker,"directory_epoch":2}});
+        let status=json!({"schema":2,"phase":"completed","node":"nodeA","boot_id":"boot-a","incarnation":7,
+            "readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,
+            "directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2,
+            "host_registry_data_plane_ready":false});
+        assert_eq!(ready_receipts(&identity,&worker,&status).unwrap(),2);
+        for (key,value) in [("worker_alive",json!(false)),("worker_ready",json!(false)),
+            ("worker_refresh_count",json!(0)),("worker_pid",json!(42)),("worker_birth",json!(722)),
+            ("incarnation",json!(8)),("readiness_generation",json!(2)),("capabilities",json!(0)),
+            ("refresh_age_ms",json!(500)),("lease_ms",json!(900))] {
+            let mut bad=worker.clone();bad[key]=value;assert!(ready_receipts(&identity,&bad,&status).is_err(),"{key}");
+        }
+        for (key,value) in [("directory_ready",json!(false)),("active_count",json!(1)),
+            ("directory_registered",json!(false)),("channel_ready",json!(false)),("boot_id",json!("old")),
+            ("incarnation",json!(8)),("directory_epoch",json!(3)),("readiness_generation",json!(2))] {
+            let mut bad=status.clone();bad[key]=value;assert!(ready_receipts(&identity,&worker,&bad).is_err(),"{key}");
+        }
+    }
+    #[test]
     fn canary_opaque_descriptor_bound_is_not_general_payload_permission() {
         assert!(canary_descriptor(&json!({"canary_descriptor":"ab".repeat(192)})).is_ok());
         for value in [json!("a"),json!("zz"),json!("ab".repeat(193)),json!(123)] {
@@ -450,7 +537,7 @@ mod tests {
         let nodes=[("nodeA".into(),json!({"boot_id":"boot-a","incarnation":7})),
             ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
         let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
-            nodes,home:"nodeA".into(),sequence:AtomicU64::new(1024),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false)};
+            nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false)};
         let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
         provider.admit_bootstrap(&mut st).unwrap();
         assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);

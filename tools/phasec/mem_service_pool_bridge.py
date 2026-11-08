@@ -27,14 +27,60 @@ def notify_failure():
         pass  # Already pending notice; never wait in an exceptional boundary.
 
 
-def exact(connection, size):
+def exact(connection, size, deadline=None, capture=None):
     output = bytearray()
     while len(output) < size:
+        if deadline is not None:
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:raise TimeoutError('whole lower frame deadline')
+            connection.settimeout(remaining)
         data = connection.recv(size-len(output))
         if not data:
             raise RuntimeError('unconfirmed control EOF')
         output.extend(data)
+        if capture is not None:capture.extend(data)
     return bytes(output)
+
+
+def lower_metadata(data):
+    """The frozen public key=value grammar, including repeated provider rows."""
+    value, providers = {}, []
+    for line in data.decode('utf-8').splitlines():
+        if not line or '=' not in line or any(ord(c)<32 for c in line):
+            raise ValueError('malformed public lower metadata')
+        key, item = line.split('=', 1)
+        if not key or len(key)>64 or len(item)>4096:raise ValueError('lower metadata bound')
+        if key == 'provider':
+            fields=item.split(' ')
+            if len(fields)!=5:raise ValueError('public provider row shape')
+            row={'node':fields[0]}
+            for field in fields[1:]:
+                name, raw=field.split('=',1)
+                if name in row or not raw.isdecimal():raise ValueError('provider row identity')
+                row[name]=int(raw)
+            if set(row)!={'node','incarnation','readiness_generation','capabilities','age_ms'}:
+                raise ValueError('provider row fields')
+            providers.append(row)
+        else:
+            if key in value:raise ValueError('duplicate lower metadata field')
+            value[key]=item
+    if providers:value['providers']=providers
+    return value
+
+
+def lower_response(data, request, op):
+    if len(data)<48:raise ValueError('truncated lower response')
+    fields=LOWER.unpack_from(data)
+    if fields[:3]!=(0x4d535643,1,48) or fields[3]!=request or fields[4]!=op or fields[5] or fields[6]>4096 or len(data)!=48+fields[6]:
+        raise ValueError('lower response identity/length')
+    if fields[8]>10 or fields[9]>10:raise ValueError('lower response status bound')
+    value=2166136261 if fields[6] else 0
+    for byte in data[48:]:value=((value^byte)*16777619)&0xffffffff
+    if fields[7]!=value:raise ValueError('lower response checksum')
+    metadata=lower_metadata(data[48:]) if fields[6] else {}
+    if (fields[8]==0)!=(metadata.get('status')=='ok'):
+        raise ValueError('lower header/body status mismatch')
+    return fields,metadata
 
 
 def lower_request(data):
@@ -56,9 +102,15 @@ def lower_request(data):
 
 
 class GuestNode:
-    def __init__(self, channel, identity, lower_socket, event, realm):
+    def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10):
         self.channel, self.identity, self.lower_socket, self.event = channel, identity, lower_socket, event
         self.realm = realm
+        self.notify,self.lower_timeout=notify,lower_timeout
+        self.root_pid,self.root_birth=0,0
+        self.worker=None
+        self.directory=None
+        self.refreshes={}
+        self.log_bytes=0
         self.pending, self.lock, self.command_lock = {}, threading.Lock(), threading.Lock()
         self.started, self.drained, self.stop = threading.Event(), threading.Event(), threading.Event()
         self.failure = None
@@ -68,23 +120,58 @@ class GuestNode:
         with self.lock:
             self.channel.send(line)
 
-    def relay(self, identifier, data):
+    def relay(self, identifier, data, origin):
         request, op = lower_request(data)
-        with socket.socket(socket.AF_UNIX) as lower:
-            lower.settimeout(10)
-            lower.connect(self.lower_socket)
-            lower.sendall(data)
-            header = exact(lower, LOWER.size)
-            fields = LOWER.unpack(header)
-            if fields[:3] != (0x4d535643, 1, 48) or fields[3] != request or fields[4] != op or fields[6] > 4096:
-                raise ValueError('lower reply identity/length mismatch')
-            response = header + exact(lower, fields[6])
+        public=lower_metadata(data[48:]) if len(data)>48 else {}
+        if origin['role']=='root':
+            if origin['pid']!=self.root_pid or not origin['control_request'] or (origin['control_request'],origin['correlation']) not in self.pending:
+                raise ValueError('root SDK process/control identity mismatch')
+            if self.root_birth and self.root_birth!=origin['birth']:raise ValueError('root process birth changed')
+            self.root_birth=origin['birth']
+        elif origin['role']=='worker':
+            if not self.worker or (origin['pid'],origin['birth'])!=(self.worker['pid'],self.worker['birth']):
+                raise ValueError('worker process birth mismatch')
+            if op in (0x77,0x79) and (public.get('node_id'),public.get('incarnation'))!=(self.identity['node'],str(self.identity['incarnation'])):
+                raise ValueError('worker lower identity mismatch')
+            if op==0x77 and public.get('readiness_generation')!='1':raise ValueError('wrong worker readiness generation')
+        elif origin['role']!='client':raise ValueError('unowned lower origin')
+        response=b'';captured=bytearray()
+        try:
+            deadline=time.monotonic()+self.lower_timeout
+            with socket.socket(socket.AF_UNIX) as lower:
+                lower.settimeout(self.lower_timeout)
+                lower.connect(self.lower_socket)
+                lower.settimeout(max(.001,deadline-time.monotonic()))
+                lower.sendall(data)
+                header=exact(lower,48,deadline,captured)
+                fields=LOWER.unpack(header)
+                if fields[6]>4096:raise ValueError('lower response length bound')
+                response=header+exact(lower,fields[6],deadline,captured)
+            fields,reply=lower_response(response,request,op)
+            if fields[8] or fields[9]:self.notify()  # Never infer no side effects from INTERNAL/reason.
+        except BaseException:
+            self.notify()
+            self.event({'event':'lower-control-unconfirmed','node':self.identity['node'],'origin':origin,
+                'operation':op,'request':request,'request_hex':data.hex(),'partial_response_hex':bytes(captured).hex(),
+                'outcome':'Unknown','side_effect_absence_inferred':False})
+            raise
+        evidence={'event':'lower-control','node':self.identity['node'],'boot_id':self.identity['boot_id'],
+            'incarnation':self.identity['incarnation'],'origin':origin,'relay_id':identifier,'operation':op,
+            'request':request,'request_bytes':len(data),'response_bytes':len(response),
+            'request_checksum':LOWER.unpack_from(data)[7],'response_checksum':fields[7],
+            'request_hex':data.hex(),'response_hex':response.hex(),'request_metadata':public,'response_metadata':reply,
+            'status':fields[8],'error_code':fields[9],'reason':reply.get('reason',''),
+            'outcome':'completed' if not fields[8] and not fields[9] else 'Unknown',
+            'side_effect_absence_inferred':False,'payload_plane':False}
+        evidence['host_monotonic_ns']=time.monotonic_ns()
+        self.event(evidence)  # Complete legal metadata is retained before forwarding to a failing child.
+        if not fields[8] and not fields[9]:
+            if origin['role']=='worker' and op==0x77:
+                self.refreshes[request]=evidence
+                while len(self.refreshes)>64:self.refreshes.pop(next(iter(self.refreshes)))
+            if origin['role']=='root' and op==0x78:self.directory=evidence
         for offset in range(0, len(response), 1024):
             self.send('wire %s %s' % (identifier, response[offset:offset+1024].hex()))
-        self.event({'event': 'lower-control', 'node': self.identity['node'], 'operation': op,
-                    'request': request, 'request_bytes': len(data), 'response_bytes': len(response),
-                    'status':fields[8],'error_code':fields[9],
-                    'payload_plane': False})
 
     def pump(self):
         try:
@@ -94,8 +181,32 @@ class GuestNode:
                 except (socket.timeout, TimeoutError):
                     continue
                 if line.startswith('UFPOOL_RPC '):
-                    _, identifier, encoded = line.split(' ', 2)
-                    self.relay(int(identifier), bytes.fromhex(encoded))
+                    _, identifier,role,pid,birth,control,correlation,encoded=line.split(' ',7)
+                    self.relay(int(identifier),bytes.fromhex(encoded),{'role':role,'pid':int(pid),'birth':int(birth),
+                        'control_request':int(control),'correlation':int(correlation)})
+                elif line.startswith('UFPOOL_WORKER_START '):
+                    _,pid,birth=line.split(' ')
+                    if self.worker:raise ValueError('worker replacement forbidden')
+                    self.worker={'pid':int(pid),'birth':int(birth)}
+                    self.event({'event':'worker-start','node':self.identity['node'],**self.worker})
+                elif line.startswith('UFPOOL_WORKER_REFRESH '):
+                    _,pid,birth,count,lease,request=line.split(' ')
+                    if int(request) not in self.refreshes or (int(pid),int(birth))!=(self.worker['pid'],self.worker['birth']):
+                        raise ValueError('worker refresh receipt lacks actual lower completion')
+                    self.event({'event':'worker-refresh','node':self.identity['node'],'pid':int(pid),'birth':int(birth),
+                        'count':int(count),'lease_ms':int(lease),'request':int(request)})
+                elif line.startswith('UFPOOL_WORKER_LOG '):
+                    _,pid,birth,stream,encoded=line.split(' ',4)
+                    if not self.worker or (int(pid),int(birth))!=(self.worker['pid'],self.worker['birth']) or stream not in ('stdout','stderr'):
+                        raise ValueError('worker log ownership')
+                    data=bytes.fromhex(encoded)
+                    self.log_bytes+=len(data)
+                    if len(data)>512 or self.log_bytes>256*1024:raise ValueError('worker log bound')
+                    self.event({'event':'worker-log','node':self.identity['node'],'pid':int(pid),'birth':int(birth),
+                        'stream':stream,'bytes':len(data),'hex':encoded})
+                elif line.startswith('UFPOOL_WORKER_EXIT '):
+                    self.notify()
+                    self.event({'event':'worker-exit','node':self.identity['node'],'raw':line})
                 elif line.startswith('UFPOOL_REPLY '):
                     _, request, correlation, encoded = line.split(' ', 3)
                     key = (int(request), int(correlation))
@@ -110,18 +221,18 @@ class GuestNode:
                 elif line == 'UFPOOL_WORKERS_CLOSED':
                     self.drained.set()
                 elif line == 'UFPOOL_FAILURE_NOTICE':
-                    notify_failure()  # Immediately, before reading/serializing diagnostics.
+                    self.notify()  # Immediately, before reading/serializing diagnostics.
                 elif line.startswith(('UFPOOL_FATAL', 'UFLOW_ENV_FAIL')):
                     raise RuntimeError('Guest reported failure before diagnostics: '+line)
                 # Kernel/boot lines remain in serial raw logs; no parsing as ACK.
         except BaseException as error:
-            notify_failure()  # Must precede event serialization or cleanup.
+            self.notify()  # Must precede event serialization or cleanup.
             self.failure = error
             for item in self.pending.values():
                 item['ready'].set()
             self.event({'event': 'guest-bridge-failure', 'node': self.identity['node'], 'detail': str(error)})
 
-    def exchange(self, frame):
+    def exchange(self, frame, timeout=120):
         # Serial transport lock is per node and held for one bounded operation;
         # no pool/global lock is held while A/B application leases stay alive.
         with self.command_lock:
@@ -139,17 +250,19 @@ class GuestNode:
             self.pending[key] = item
             try:
                 self.send('v2 %d %d %s' % (*key, frame.body.hex()))
-                if not item['ready'].wait(120) or self.failure:
+                if not item['ready'].wait(timeout) or self.failure:
                     raise RuntimeError('same Guest operation outcome unknown') from self.failure
                 receipt = item['response']
                 if receipt.get('phase') != 'completed':
-                    notify_failure()
+                    self.notify()
+                if body['op']=='bootstrap_prepare' and receipt.get('canary_prepared') is True:
+                    self.root_pid=receipt['guest_pid']
                 self.event({'event': 'guest-completion', 'node': frame.node, 'request': frame.request,
                             'correlation': frame.correlation, 'op': body['op'], 'receipt': receipt,
                             'host_monotonic_ns': time.monotonic_ns(), 'clock_domain': 'B-host'})
                 return frame.completion(receipt)
             except BaseException:
-                notify_failure()  # Before removing pending ownership or any diagnostics.
+                self.notify()  # Before removing pending ownership or any diagnostics.
                 raise
             finally:
                 self.pending.pop(key, None)

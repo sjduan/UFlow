@@ -90,6 +90,34 @@ cleared. No physical NPU, model, performance or global-zero claim is made.
 
 ## Portable checks
 
+Startup is ordered: both root prepare/peer verify, then public SDK directory
+registration with the actual boot-bound incarnation/generation/capabilities,
+then worker fork and real SDK refresh. The bridge binds refresh to SO_PEERCRED
+PID/birth and retains full bounded public metadata requests and replies. Catalog
+is created only after both directory entries and both fresh workers are proven.
+Every new business admission rechecks the live directory/worker evidence;
+cleanup remains possible without reopening admission. Normal shutdown requires
+actual worker exit zero and SDK deregister, empty directory, then canary close.
+
+The frozen status response's `data_plane_ready` includes an optional in-process
+Host provider registry, which is empty when providers run externally. Its raw
+value is retained as `host_registry_data_plane_ready`; it is never rewritten.
+Managed readiness is separately derived from the public directory gate plus
+actual Guest channel canaries and real worker refreshes. Generic `ready` exit
+zero does not establish this condition. Any transport error or non-OK response,
+including `store_write_uncertain`, preserves Unknown without an absence-of-side-
+effects inference. Historical c013 responsibility is unaffected.
+
+`startup_cpu_probe.py` executes the production C agent/client and installed SDK
+against the installed metadata controller with ordinary CPU child workers and
+an explicit canary endpoint double. It tests ordering, missing/expired entries,
+wrong incarnation/generation, worker exit/missing/stale refresh, bounded logs,
+actual SDK deregister/drain, and EOF/truncation/timeout/corrupt/error replies.
+The fixture has a relay fence forbidding every business allocation/mapping
+operation. It is run only by the B build job and proves no OBMM or Guest result.
+Worker stdout/stderr use bounded nonblocking parent forwarding; failure notice
+precedes diagnostic serialization and the external supervisor owns escalation.
+
 With `PYTHONPATH=sdk/python`, run `python -B -m unittest discover -s
 examples/mem_service_pool` and the existing `examples/managed_pool/test_sdk.py`.
 Rust ledger/range/core tests, compilation, old POSIX/Simpler/E10 Linux regression
