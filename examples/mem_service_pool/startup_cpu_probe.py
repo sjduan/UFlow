@@ -156,7 +156,7 @@ def run_case(h,kind):
         bootstrap_nodes(h.nodes,startup.control.realm,h.event,control=startup.control)
         rejected(lambda:startup.control.call('nodeA',{'op':'worker_start'}));return
     if kind=='generic-only':
-        result=subprocess.run([str(h.args.controller),'ready','--config',str(h.config)],capture_output=True,timeout=2)
+        result=subprocess.run([str(h.args.controller),'ready','--connect','unix:'+h.lower_socket],capture_output=True,timeout=2)
         h.event({'event':'generic-ready','exit':result.returncode,'stdout_hex':result.stdout.hex(),'stderr_hex':result.stderr.hex()})
         assert result.returncode==0
         bootstrap_nodes(h.nodes,startup.control.realm,h.event,control=startup.control)
