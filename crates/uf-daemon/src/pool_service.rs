@@ -635,6 +635,19 @@ impl Service {
 
 pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
            mem_service_config: Option<&Path>) -> Result<(), String> {
+    #[cfg(not(test))]
+    return run_inner(endpoint,root,python,budget,mem_service_config);
+    #[cfg(test)]
+    return run_inner(endpoint,root,python,budget,mem_service_config,None);
+}
+
+#[cfg(test)]
+pub(crate) fn run_reconciliation_fixture(endpoint:&str,root:&Path,config:&Path,proof:&Value) -> Result<(),String> {
+    run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),Some(proof))
+}
+
+fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:Option<&Path>,
+    #[cfg(test)] fixture:Option<&Value>) -> Result<(),String> {
     if budget == 0 || budget > 256 * 1024 * 1024 || budget % 65536 != 0 {
         return Err("bounded aligned host budget required".into());
     }
@@ -674,9 +687,15 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
     let provider = if remote.is_none() { Some(Provider::start(root, python)?) } else { None };
     let mut catalog = Catalog::new(-1, Vec::new());
     catalog.ddr_resources.limit = budget;
-    let responsibility=if let Some(config)=remote.as_ref().and_then(|p|p.reconciliation.as_ref()) {
-        Some(crate::pool_reconciliation::restore(&mut catalog,config,root)?)
-    } else {None};
+    let restore_original=|st:&mut Catalog|if let Some(config)=remote.as_ref().and_then(|p|p.reconciliation.as_ref()) {
+        crate::pool_reconciliation::restore(st,config,root).map(Some)
+    } else {Ok(None)};
+    #[cfg(not(test))]
+    let responsibility=restore_original(&mut catalog)?;
+    #[cfg(test)]
+    let responsibility=if let Some(proof)=fixture {
+        Some(crate::pool_reconciliation::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?)
+    } else {restore_original(&mut catalog)?};
     if let Some(p)=&mut remote {p.admit_bootstrap(&mut catalog)?;}
     let (provider_session, provider_loaded) = if let Some(p) = &provider {
         (p.session.clone(), p.loaded.clone())

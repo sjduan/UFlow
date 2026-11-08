@@ -101,6 +101,15 @@ pub fn restore(st:&mut Catalog,config:&Value,authority:&Path) -> Result<File,Str
 }
 
 #[cfg(test)]
+pub(crate) fn restore_fixture(st:&mut Catalog,proof:&Value,dir:&Path,authority:&Path) -> Result<File,String> {
+    if proof["proof_sha256"]!="CPU-unit-fixture-not-a-production-proof" {return Err("explicit CPU fixture marker required".into());}
+    fs::create_dir(dir).map_err(|e|e.to_string())?;
+    let lock=OpenOptions::new().write(true).create_new(true).mode(0o600).open(dir.join("authority.lock")).map_err(|e|e.to_string())?;
+    if unsafe{libc::flock(lock.as_raw_fd(),libc::LOCK_EX|libc::LOCK_NB)}!=0{return Err("fixture lock".into());}
+    apply(st,proof,dir,authority)?;Ok(lock)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU64,Ordering};
@@ -120,6 +129,18 @@ mod tests {
             "proof_sha256":"CPU-unit-fixture-not-a-production-proof","evidence_sha256":{}})
     }
     fn catalog()->Catalog {let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;st}
+    #[test]
+    fn staged_catalog_fixture() {
+        if let Ok(config)=std::env::var("UFLOW_RECON_CATALOG_CPU_CONFIG") {
+            let c:Value=serde_json::from_slice(&fs::read(config).unwrap()).unwrap();
+            crate::pool_service::run_reconciliation_fixture(c["endpoint"].as_str().unwrap(),Path::new(c["state"].as_str().unwrap()),
+                Path::new(c["provider_config"].as_str().unwrap()),&fixture()).unwrap();
+        } else {
+            let dir=Scratch::new();let mut st=catalog();let p=fixture();
+            let _lock=restore_fixture(&mut st,&p,&dir.0.join("fixture"),&dir.0).unwrap();
+            assert_eq!(st.ddr_resources.retained_bytes(),4<<20);assert_eq!(st.next_resource_binding_id,40001);
+        }
+    }
     #[test]
     fn only_uncreated64_cancelled_retained_typed4_shares_capacity_and_survives_close() {
         let dir=Scratch::new();let mut st=catalog();let p=fixture();apply(&mut st,&p,&dir.0,&dir.0).unwrap();

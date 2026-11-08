@@ -42,7 +42,10 @@ def build_worker(root,out,run):
         text=subprocess.check_output([compiler,'-M']+options+[str(source)],cwd=work).decode().replace('\\\n',' ')
         paths=shlex.split(text.split(':',1)[1])
         for name in paths:dependencies.add(Path(name).resolve())
-    for name in re.findall(r'^LOAD\s+(\S+)',(work/'link.map').read_text(),re.M):
+    linker_generated=[]
+    for line in re.findall(r'^LOAD\s+([^\n]+)',(work/'link.map').read_text(),re.M):
+        name=line.strip()
+        if name=='linker stubs':linker_generated.append(name);continue
         path=Path(name);dependencies.add(path.resolve() if path.is_absolute() else (work/path).resolve())
     dependencies.add(Path(compiler).resolve())
     for program in ['cc1','as','collect2','ld']:
@@ -73,6 +76,7 @@ def build_worker(root,out,run):
         'compiler_version':subprocess.check_output([compiler,'--version']).decode().splitlines()[0],
         'source_and_headers_link_inputs':records,'ELF':str(binary),'ELF_bytes':len(data),'ELF_sha256':sha(binary),
         'link_map_sha256':sha(work/'link.map'),'recipe_sha256':sha(work/'recipe.txt'),
+        'linker_generated_sections':linker_generated,
         'managed_worker_enabled':'-DMEM_SERVICE_OBMM_MANAGED_WORKER' in command,
         'official_source_modified':False,'device_or_worker_executed':False}
     if not receipt['managed_worker_enabled']:raise RuntimeError('official managed worker definition absent')

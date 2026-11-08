@@ -138,6 +138,9 @@ def build(root, source, name):
                if row.get('reason')=='compiler-artifact' and row.get('target',{}).get('name')=='uf-daemon' and
                row.get('profile',{}).get('test') and row.get('executable')]
     if len(test_bins)!=1:raise RuntimeError('exact compiled Rust test executable required')
+    run([sys.executable,'-B',fixture/'staged_catalog_cpu.py','--agent',fixture_agent,'--worker',fixture_worker,
+         '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('z'+out.name.removeprefix('build-host')),
+         '--output',out/'staged-catalog-cpu','--rust-tests',test_bins[0]],env=env,timeout=60)
     for case in ('managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness',
                  'independent_owner_processes_compete_for_one_catalog_budget','t1_registration_and_clean_drain_use_the_fixture_authority'):
         run([test_bins[0],'--exact','external_ddr::managed_tests::'+case,
