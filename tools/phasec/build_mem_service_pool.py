@@ -97,14 +97,18 @@ def build(root, source, name):
     run(['/usr/bin/gcc','-shared','-fPIC',source/'examples/managed_pool/api_fence.c','-o',shim/'libuf_acl_shim.so'])
     cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo'
     if not Path(cargo).is_file():raise RuntimeError('existing Cargo toolchain not found; no implicit install')
+    # Core's real Unix-socket fixtures use CARGO_TARGET_DIR.parent(). Keep that
+    # parent short enough for Linux SUN_LEN, independently of delivered sources.
+    cargo_target=out.parent/out.name.replace('build-','cargo-',1)
+    if cargo_target.exists():raise RuntimeError('fresh per-generation Cargo output required')
     env = {**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),
-           'CARGO_BUILD_JOBS':'4','UF_ACL_SHIM_LIB_DIR':str(shim),
+           'CARGO_BUILD_JOBS':'4','CARGO_TARGET_DIR':str(cargo_target),'UF_ACL_SHIM_LIB_DIR':str(shim),
            'LD_LIBRARY_PATH':str(shim),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(source/'sdk/python')}
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
-    run([cargo,'build','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=1800)
-    run([cargo,'test','--locked','-p','uf-core','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=300)
+    run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
+    run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
     for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests'):
-        run([cargo,'test','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4',group],cwd=source,env=env,timeout=300)
+        run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_*.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/managed_pool','-p','test_sdk.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/common_session','-p','test_*.py'],env=env)
@@ -128,7 +132,7 @@ def build(root, source, name):
     image=out/'pool-agent.cpio.gz'
     with packed.open('rb') as src,gzip.open(image,'xb',compresslevel=6) as dest:
         shutil.copyfileobj(src,dest)
-    daemon=out/'cargo/debug/uf-daemon'
+    daemon=cargo_target/'debug/uf-daemon'
     receipt={'schema':2,'source_commit':manifest['commit'],'source_manifest_sha256':digest(source/'.uflow-source.json'),
              'compiler_argv':command,'agent_sha256':digest(out/'pool-agent'),
              'image':str(image),'image_sha256':digest(image),'base_sha256':digest(base),
