@@ -662,16 +662,17 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
         .and_then(|_| secret.sync_all())
         .map_err(|e| e.to_string())?;
     drop(secret);
-    let remote = mem_service_config.map(crate::mem_service_pool::MemServicePoolProvider::load).transpose()?;
+    let mut remote = mem_service_config.map(crate::mem_service_pool::MemServicePoolProvider::load).transpose()?;
     if remote.is_some() && budget > 128 * 1024 * 1024 {
         return Err("mem_service B pool budget is at most 128MiB".into());
     }
     let provider = if remote.is_none() { Some(Provider::start(root, python)?) } else { None };
+    let mut catalog = Catalog::new(-1, Vec::new());
+    catalog.ddr_resources.limit = budget;
+    if let Some(p)=&mut remote {p.admit_bootstrap(&mut catalog)?;}
     let (provider_session, provider_loaded) = if let Some(p) = &provider {
         (p.session.clone(), p.loaded.clone())
     } else { let p = remote.as_ref().unwrap(); (p.session.clone(), p.loaded()) };
-    let mut catalog = Catalog::new(-1, Vec::new());
-    catalog.ddr_resources.limit = budget;
     let service = Arc::new(Service {
         shared: Arc::new((Mutex::new(catalog), Condvar::new())),
         provider: Mutex::new(provider),

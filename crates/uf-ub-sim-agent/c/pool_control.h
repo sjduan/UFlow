@@ -8,7 +8,7 @@
 #include <string.h>
 
 /* Bounded flat JSON grammar. No escapes, arrays, payload strings or pointers. */
-struct pool_field { char key[40], value[257]; bool quoted; };
+struct pool_field { char key[40], value[385]; bool quoted; };
 struct pool_control { struct pool_field fields[24]; unsigned count; };
 static inline void pool_space(const char **p) { while (**p==' '||**p=='\r'||**p=='\n'||**p=='\t') ++*p; }
 static inline int pool_string(const char **p, char *out, size_t max) {
@@ -35,6 +35,7 @@ static inline int pool_parse(const char *p, struct pool_control *c) {
         else {size_t n=0;while ((*p>='0'&&*p<='9')||(*p>='a'&&*p<='z')) {
             if(n+1>=sizeof(f->value))return -1;f->value[n++]=*p++;
         }f->value[n]=0;if(!n)return -1;}
+        if(strlen(f->value)>256 && strcmp(f->key,"canary_descriptor") && strcmp(f->key,"peer_canary_descriptor"))return -1;
         c->count++;pool_space(&p);if(*p=='}'){++p;break;}if(*p++!=',')return -1;
     }
     pool_space(&p);return *p ? -1:0;

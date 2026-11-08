@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import selectors
 import signal
 import subprocess
 import sys
@@ -17,6 +16,8 @@ import time
 import uuid
 from mem_service_pool_bridge import GuestNode, BridgeServer, notify_failure
 from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
+from pool_peer_io import PeerIO
+from pool_matrix_contract import bootstrap_nodes, guard_intervals, guard_chunks, CANARY_BYTES
 
 U,M=65536,1024*1024
 
@@ -33,27 +34,29 @@ class Peer:
     def __init__(self,source,endpoint,node,pool,env,access='rw'):
         self.node=node
         self.child=subprocess.Popen([sys.executable,'-B',str(source/'examples/mem_service_pool/client_peer.py'),endpoint,node],
-            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1,env=env)
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0,env=env)
+        self.io=PeerIO(self.child,notify_failure)
         self.binding=self.call('register',pool=pool,access=access)
 
     def call(self,op,expect_error=False,expect_unknown=False,**values):
-        self.child.stdin.write(json.dumps({'op':op,**values})+'\n');self.child.stdin.flush()
-        with selectors.DefaultSelector() as select:
-            select.register(self.child.stdout,selectors.EVENT_READ)
-            if not select.select(125):raise TimeoutError('independent client operation deadline')
-        line=self.child.stdout.readline()
-        if not line:raise RuntimeError('independent client EOF: '+self.child.stderr.read(4096))
-        result=json.loads(line)
+        result=self.io.transaction({'op':op,**values})
+        if type(result) is not dict or result.get('status') not in ('ok','error'):
+            notify_failure()
+            raise RuntimeError('invalid independent client reply')
         if expect_error:
             if result['status']!='error' or result.get('class')!=('PoolV2Unknown' if expect_unknown else 'PoolV2Error'):
+                notify_failure()
                 raise RuntimeError('expected known rejection; got '+str(result))
             return result
-        if result['status']!='ok':raise RuntimeError(str(result))
+        if result['status']!='ok':
+            notify_failure()
+            raise RuntimeError(str(result)+'; bounded stderr: '+self.io.diagnostic())
         return result['result']
 
     def close(self):
         result=self.call('close');self.child.stdin.close()
         if self.child.wait(timeout=10)!=0:raise RuntimeError('client exit after unmap failed')
+        self.io.reaped()
         return result
 
 
@@ -116,13 +119,15 @@ def matrix(root,config,build):
                 if ready.returncode==0:break
                 if time.monotonic()>ready_deadline:raise RuntimeError('both real managed workers not ready')
                 time.sleep(.1)
+            bootstrap=bootstrap_nodes(nodes,realm,event)
+            bootstrap_bytes=len(bootstrap)*CANARY_BYTES
             bindings=[]
             for name,node in nodes.items():
                 endpoint=out/('a.sock' if name=='nodeA' else 'b.sock')
                 server=BridgeServer(endpoint,node);servers.append(server);server.thread.start()
                 identity=node.identity
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
-                                 'incarnation':identity['incarnation'],'socket':str(endpoint)})
+                                 'incarnation':identity['incarnation'],'socket':str(endpoint),**bootstrap[name]})
             provider_config=out/'provider.json'
             provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
                                                    'home':'nodeA','nodes':bindings},indent=2))
@@ -131,7 +136,7 @@ def matrix(root,config,build):
             endpoint=str(out/'u.sock');state=out/'state'
             daemon_log=(out/'catalog.log').open('xb')
             daemon=subprocess.Popen([build['daemon'],'--host-pool','--socket',endpoint,'--pool-state-root',str(state),
-                 '--pool-budget-bytes',str(64*M),'--pool-mem-service-config',str(provider_config)],env=env,
+                 '--pool-budget-bytes',str(128*M),'--pool-mem-service-config',str(provider_config)],env=env,
                  stdout=daemon_log,stderr=subprocess.STDOUT)
             wait_socket(endpoint,daemon)
             admin=(state/'admin.token').read_text()
@@ -189,17 +194,23 @@ def matrix(root,config,build):
             readonly.call('raw',expect_error=True,method='AcquirePoolRange',values={
                 'block':block,'mode':'w','expected_generation':block['generation'],'byte_offset':0,'nbytes':U})
             event({'event':'E1-real-readonly-mapping','binding':readonly.binding,'close':readonly.close()})
-            # Full guard coverage outside all changed ranges, respecting actual content versions.
+            # Define all expected guard bytes before consulting returned segmentation.
+            planned_written=[(U,U+20*M),(24*M+U,44*M+U),(48*M+U,48*M+3*U)]
+            if written!=planned_written:raise RuntimeError('executed write intervals differ from independent plan')
+            guards=guard_intervals(64*M,planned_written)
+            event({'event':'E2-expected-guard-coverage','pool_bounds':[0,64*M],
+                   'written':planned_written,'guards':guards,'nbytes':sum(end-begin for begin,end in guards)})
             snapshot=a.call('snapshot')
             segments=snapshot['pools'][0]['ranges']['allocations'][0]['segments']
-            for segment in segments:
-                off,n=segment['offset'],segment['nbytes']
-                if any(off<end and begin<off+n for begin,end in written):continue
-                for begin in range(off,off+n,16*M):
-                    count=min(16*M,off+n-begin)
-                    lease=b.call('acquire',block=block,mode='r',offset=begin,nbytes=count)
-                    result=b.call('execute',lease=lease,pattern_id=0);b.call('release',lease=lease)
-                    event({'event':'E2-guard','offset':begin,'nbytes':count,'result':result})
+            verified_guards=0
+            for begin,count in guard_chunks(guards,segments,16*M):
+                lease=b.call('acquire',block=block,mode='r',offset=begin,nbytes=count)
+                result=b.call('execute',lease=lease,pattern_id=0);b.call('release',lease=lease)
+                digest=expected(0,begin,count)
+                if result['receipt']['checksum']!=digest:raise RuntimeError('independent guard checksum mismatch')
+                verified_guards+=count
+                event({'event':'E2-guard','offset':begin,'nbytes':count,'expected_checksum':digest,'result':result})
+            if verified_guards!=sum(end-begin for begin,end in guards):raise RuntimeError('guard verification incomplete')
             # Same allocation: A and B keep real leases while C completes disjoint I/O.
             la=a.call('acquire',block=block,mode='w',offset=52*M,nbytes=2*U)
             lb=b.call('acquire',block=block,mode='w',offset=52*M+2*U,nbytes=2*U)
@@ -223,7 +234,7 @@ def matrix(root,config,build):
             c.call('raw',method='ReportPoolUnknown',values={'lease':uncertain,
                 'reason':'controlled client-reported uncertainty; no injected device or provider fault'})
             held=c.call('snapshot')
-            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M:
+            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M+bootstrap_bytes:
                 raise RuntimeError('original pool and budget not retained by uncertainty')
             b.call('acquire',expect_error=True,expect_unknown=True,block=block,mode='r',offset=U,nbytes=U)
             try:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
@@ -233,25 +244,31 @@ def matrix(root,config,build):
                    'original_pool':pool['pool_id'],'replacement_pool_not_created':True})
             event({'event':'E4-first-client-unmapped','receipt':c.close()})
             reconciled=a.call('snapshot')
-            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M:
+            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M+bootstrap_bytes:
                 raise RuntimeError('actual same-context unmap did not reconcile only this client')
             invalid=[s for s in reconciled['pools'][0]['ranges']['allocations'][0]['segments'] if s['state']=='Invalid']
             if not any(s['offset']==52*M+8*U and s['nbytes']==U for s in invalid):
                 raise RuntimeError('uncertain content became committed instead of Invalid')
+            if any(l['state']!='Closed' for l in reconciled['catalog_range_leases']
+                   if l['client_session']==c.binding['client_session']):
+                raise RuntimeError('Catalog lease remained open after same-context lower unmap')
             check=b.call('acquire',block=block,mode='r',offset=U,nbytes=20*M)
             b.call('execute',lease=check,pattern_id=17);b.call('release',lease=check)
             a.close();b.close()
             retired=exchange(endpoint,'DestroyManagedPool',{**base,'admin_token':admin})
             final=exchange(endpoint,'GetManagedPoolSnapshot',base)
-            if final['charged_bytes'] or final['creation_reserved_bytes']:
-                raise RuntimeError('one Catalog capacity ledger not zero after confirmed lower retire')
-            exchange(endpoint,'ShutdownManagedPool',{'admin_token':admin})
+            if final['charged_bytes']!=bootstrap_bytes or final['creation_reserved_bytes']:
+                raise RuntimeError('business retire did not leave exactly the two owned canaries')
+            shutdown=exchange(endpoint,'ShutdownManagedPool',{'admin_token':admin})
+            if shutdown['charged_bytes']!=0 or shutdown['bootstrap_closed'] is not True:
+                raise RuntimeError('canary checked-close/final ledger not confirmed')
             if daemon.wait(timeout=10)!=0:raise RuntimeError('Catalog normal shutdown failed')
-            event({'event':'E4-two-layer-release','retired':retired,'catalog':final})
+            event({'event':'E4-two-layer-release','retired':retired,'catalog_before_canary_close':final,'shutdown':shutdown})
             for server in servers:server.close()
             for node in nodes.values():node.prepare_close()
             (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':True,
                 'pool_id':pool['pool_id'],'data_bytes_on_control_bridge':0,'capacity':64*M,
+                'bootstrap_bytes':bootstrap_bytes,'peak_B_responsibility':64*M+bootstrap_bytes,'final_B_charged_bytes':0,
                 'A_historical_bytes_unqueried':128*M,'global_responsibility_zero_claimed':False},indent=2))
         except BaseException:
             notify_failure()  # Never perform potentially blocking state capture before notice.

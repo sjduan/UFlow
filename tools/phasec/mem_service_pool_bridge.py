@@ -142,10 +142,15 @@ class GuestNode:
                 if not item['ready'].wait(120) or self.failure:
                     raise RuntimeError('same Guest operation outcome unknown') from self.failure
                 receipt = item['response']
+                if receipt.get('phase') != 'completed':
+                    notify_failure()
                 self.event({'event': 'guest-completion', 'node': frame.node, 'request': frame.request,
                             'correlation': frame.correlation, 'op': body['op'], 'receipt': receipt,
                             'host_monotonic_ns': time.monotonic_ns(), 'clock_domain': 'B-host'})
                 return frame.completion(receipt)
+            except BaseException:
+                notify_failure()  # Before removing pending ownership or any diagnostics.
+                raise
             finally:
                 self.pending.pop(key, None)
 

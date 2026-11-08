@@ -63,6 +63,12 @@ class BridgeTests(unittest.TestCase):
         data=bytearray(frame().encode());data[11]=0
         with self.assertRaises(ValueError):Frame.decode(data)
 
+    def test_only_opaque_canary_descriptor_has_explicit_384_hex_bound(self):
+        self.assertEqual(metadata(json.dumps({'canary_descriptor':'ab'*192}).encode())['canary_descriptor'],'ab'*192)
+        for value in ({'canary_descriptor':'ab'*193},{'canary_descriptor':'xyz'},
+                      {'peer_canary_descriptor':123},{'op':'a'*257}):
+            with self.assertRaises(ValueError):metadata(json.dumps(value).encode())
+
     def test_foreign_realm_is_rejected_before_any_serial_access(self):
         node=GuestNode(None,{'node':'nodeB','boot_id':'boot-b','agent_session':'sdk-b','incarnation':7},
                        'not-connected',lambda event:None,'simulated:other')

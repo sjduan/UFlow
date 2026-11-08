@@ -31,6 +31,9 @@ impl Default for DdrResources {
 }
 
 impl DdrResources {
+    pub fn charged_object_bytes(&self, object: u64) -> Option<u64> {
+        self.resources.get(&object).map(|(_, n)| *n)
+    }
     pub fn reserve_unique(&mut self, operation: &str, nbytes: u64) -> Result<(), String> {
         if self.reservations.contains_key(operation) {
             return Err("matching DDR creation in progress; retry after outcome".into());

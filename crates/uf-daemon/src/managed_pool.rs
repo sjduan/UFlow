@@ -63,6 +63,56 @@ pub struct Pool {
     pub release_result: Value,
 }
 impl Pool {
+    /// Call only at the backend's confirmed real unmap/drain boundary.
+    /// Reconcile both representations before a caller can observe closure.
+    pub fn confirm_client_unmapped(&mut self, st: &mut Catalog, client: &str) -> Result<(), String> {
+        let session=self.clients.get(client).ok_or("client missing at confirmed unmap")?;
+        if !session.closing || !session.children.is_empty() ||
+            self.ranges.leases.values().any(|l|l.client==client && !matches!(l.state,"Unknown"|"Closed")) {
+            return Err("client has unclosed active/child obligations".into());
+        }
+        if !st.access_bindings.contains_key(&session.access_id) {
+            return Err("Catalog access missing at confirmed unmap".into());
+        }
+        for lease in self.ranges.leases.values().filter(|l|l.client==client) {
+            let record=st.leases.get(&lease.catalog_id).ok_or("Catalog range lease missing")?;
+            if record.object_id!=self.object || record.client_id!=session.catalog_id {
+                return Err("Catalog/range lease ownership disagrees".into());
+            }
+        }
+        self.ranges.reconcile_unmapped(client); // Unknown writes become Invalid, never Committed.
+        for lease in self.ranges.leases.values().filter(|l|l.client==client) {
+            st.leases.get_mut(&lease.catalog_id).unwrap().state=lease.state.into();
+        }
+        let session=self.clients.get_mut(client).unwrap();
+        session.state="Unmapped";session.pidfd=None;
+        st.access_bindings.get_mut(&session.access_id).unwrap().state="Closed".into();
+        st.clients.remove(&session.catalog_id);
+        Ok(())
+    }
+
+    pub fn confirm_closed(&self, st: &Catalog) -> Result<(), String> {
+        for session in self.clients.values() {
+            if session.state!="Unmapped" || session.pidfd.is_some() || !session.children.is_empty() ||
+                st.clients.contains_key(&session.catalog_id) ||
+                st.access_bindings.get(&session.access_id).is_none_or(|r|r.state!="Closed") {
+                return Err("Catalog/client/access closure disagrees".into());
+            }
+        }
+        for lease in self.ranges.leases.values() {
+            let session=self.clients.get(&lease.client).ok_or("range client missing")?;
+            if lease.state!="Closed" || st.leases.get(&lease.catalog_id).is_none_or(|r|
+                r.state!="Closed" || r.object_id!=self.object || r.client_id!=session.catalog_id) {
+                return Err("Catalog/range closure disagrees".into());
+            }
+        }
+        if st.leases.values().any(|l|l.object_id==self.object && l.state!="Closed") ||
+            st.access_bindings.values().any(|a|a.placement_id==self.placement && a.state!="Closed") {
+            return Err("orphan Catalog lease/access prevents release".into());
+        }
+        Ok(())
+    }
+
     pub fn description(&self) -> Value {
         json!({"schema":if self.backend=="mem_service_obmm" {2}else{1},"pool_id":self.id,"pool_epoch":self.epoch,"provider_session":self.provider_session,
                "provider_kind":self.backend,"nbytes":self.nbytes,"resource_id":self.object,
@@ -221,6 +271,8 @@ impl State {
             "revision":self.revision,"charged_bytes":st.ddr_resources.charged_bytes(),
             "creation_reserved_bytes":st.ddr_resources.reserved_bytes(),"budget_bytes":st.ddr_resources.limit,
             "operation_records":self.operations.len(),"control_counts":self.counts,"native_jobs_executed":0,"payload_rpc_bytes":0,
+            "catalog_range_leases":self.pools.values().flat_map(|p|p.ranges.leases.values().map(|l|json!({
+                "lease_id":l.catalog_id,"client_session":l.client,"state":st.leases.get(&l.catalog_id).map(|r|r.state.as_str())}))).collect::<Vec<_>>(),
             "pools":self.pools.values().map(|pool| {
                 let mut value=pool.description();
                 value["frozen"]=json!(pool.frozen()); value["ranges"]=pool.ranges.snapshot(); value["last_error"]=json!(pool.last_error);
@@ -578,20 +630,7 @@ impl State {
                             .into(),
                     );
                 }
-                pool.ranges.reconcile_unmapped(client_id);
-                let session = pool.clients.get_mut(client_id).unwrap();
-                session.state = "Unmapped";
-                session.pidfd = None;
-                st.access_bindings.get_mut(&access_id).unwrap().state = "Closed".into();
-                st.clients.remove(&catalog_client);
-                for lease in pool
-                    .ranges
-                    .leases
-                    .values()
-                    .filter(|l| l.client == client_id)
-                {
-                    st.leases.get_mut(&lease.catalog_id).unwrap().state = lease.state.into();
-                }
+                pool.confirm_client_unmapped(st,client_id)?;
                 Ok(json!({"unmapped":true,"unknown_content_invalid_not_committed":unknown}))
             }
             "AttachPoolChild" => {
@@ -671,4 +710,66 @@ fn descendant(mut child: i32, parent: i32) -> bool {
         child = ppid;
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn confirmed_unmap_closes_catalog_unknown_and_keeps_content_invalid() {
+        let mut st=Catalog::new(-1,Vec::new());let mut state=State::default();
+        state.create_pending(&mut st,"pool".into(),"epoch".into(),"provider".into(),65536,"create").unwrap();
+        state.pools.get_mut("pool").unwrap().state="Allocated";
+        state.pools.get_mut("pool").unwrap().backend="mem_service_obmm";
+        let pid=std::process::id() as i32;
+        let peer=Peer {birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),
+            pidfd:pidfd(pid).unwrap()};
+        let registered=state.metadata(&mut st,&peer,&json!({"op":"RegisterPoolClient","pool_id":"pool",
+            "pool_epoch":"epoch","access":"rw"})).unwrap();
+        let client=text(&registered,"client_session").unwrap().to_owned();
+        let access=number(&registered,"access_generation").unwrap();
+        state.pools.get_mut("pool").unwrap().clients.get_mut(&client).unwrap().state="Mapped";
+        st.access_bindings.get_mut(&access).unwrap().state="Mapped".into();
+        let base=json!({"pool_id":"pool","pool_epoch":"epoch","provider_session":"provider",
+            "client_session":client,"access_generation":access});
+        let mut request=base.clone();request["op"]=json!("AllocatePoolRange");
+        request["nbytes"]=json!(65536);request["alignment"]=json!(65536);
+        let block=state.metadata(&mut st,&peer,&request).unwrap();
+        let mut request=base.clone();request["op"]=json!("AcquirePoolRange");request["block"]=block;
+        request["mode"]=json!("w");request["expected_generation"]=json!(1);request["byte_offset"]=json!(0);request["nbytes"]=json!(65536);
+        let lease=state.metadata(&mut st,&peer,&request).unwrap();
+        let lid=number(&lease,"lease_generation").unwrap();
+        assert_eq!(st.leases[&lid].state,"Writing");
+        let pool=state.pools.get_mut("pool").unwrap();
+        pool.clients.get_mut(&client).unwrap().closing=true;
+        assert!(pool.confirm_client_unmapped(&mut st,&client).is_err());
+        assert_eq!(st.leases[&lid].state,"Writing");
+        assert_eq!(st.access_bindings[&access].state,"Mapped");
+        pool.clients.get_mut(&client).unwrap().closing=false;
+        let mut report=base.clone();report["op"]=json!("ReportPoolUnknown");report["lease"]=lease;
+        report["reason"]=json!("controlled uncertainty");state.metadata(&mut st,&peer,&report).unwrap();
+        assert_eq!(st.leases[&lid].state,"Unknown");
+        let pool=state.pools.get_mut("pool").unwrap();
+        assert!(pool.frozen());assert!(pool.confirm_closed(&st).is_err());
+        pool.clients.get_mut(&client).unwrap().closing=true;
+        // The backend calls this shared boundary only after its real lower receipt.
+        pool.confirm_client_unmapped(&mut st,&client).unwrap();
+        assert_eq!(st.leases[&lid].state,"Closed");
+        assert_eq!(st.access_bindings[&access].state,"Closed");
+        assert_eq!(pool.clients[&client].state,"Unmapped");
+        assert!(!st.clients.contains_key(&pool.clients[&client].catalog_id));
+        assert!(pool.ranges.leases.values().all(|l|l.state=="Closed"));
+        let segment=&pool.ranges.blocks.values().next().unwrap().segments[0];
+        assert_eq!(segment.state,"Invalid");assert_eq!(segment.version,0);assert!(segment.content.is_empty());
+        assert!(!pool.frozen());pool.confirm_closed(&st).unwrap();
+        // Each independently corrupted authority must block Destroy/Shutdown.
+        st.leases.get_mut(&lid).unwrap().state="Unknown".into();assert!(pool.confirm_closed(&st).is_err());
+        st.leases.get_mut(&lid).unwrap().state="Closed".into();
+        st.access_bindings.get_mut(&access).unwrap().state="Unknown".into();assert!(pool.confirm_closed(&st).is_err());
+        st.access_bindings.get_mut(&access).unwrap().state="Closed".into();
+        let mut orphan=st.leases[&lid].clone();orphan.lease_id+=100;orphan.state="Unknown".into();
+        st.leases.insert(orphan.lease_id,orphan);assert!(pool.confirm_closed(&st).is_err());
+    }
+
 }

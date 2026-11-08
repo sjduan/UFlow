@@ -39,7 +39,11 @@ def metadata(data):
             raise ValueError('control integer outside u64')
         if type(item) not in (int, bool, str):
             raise ValueError('flat scalar control fields required')
-        if type(item) is str and (len(item.encode()) > 256 or any(ord(c) < 32 for c in item)):
+        limit = 384 if key in ('canary_descriptor', 'peer_canary_descriptor') else 256
+        if key in ('canary_descriptor', 'peer_canary_descriptor') and (
+                type(item) is not str or not item or len(item) % 2 or any(c not in '0123456789abcdef' for c in item)):
+            raise ValueError('bounded opaque neutral canary descriptor required')
+        if type(item) is str and (len(item.encode()) > limit or any(ord(c) < 32 for c in item)):
             raise ValueError('bounded control token required')
     return value
 

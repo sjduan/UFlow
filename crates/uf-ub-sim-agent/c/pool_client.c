@@ -20,7 +20,7 @@ struct context {
     char session[64], node[64];
     char owner_release_operation[80], retire_operation[80];
     uint64_t incarnation, sequence;
-    bool holder, writable;
+    bool holder, writable, bootstrap, ready;
 };
 
 static uint64_t now_ms(void) {
@@ -84,9 +84,32 @@ static int wait_state(struct context *c,const char *key,const char *state) {
 static int execute(struct context *c,const struct pool_control *req,char reply[4096]) {
     const char *op=pool_get(req,"op");enum mem_service_wire_status status;
     char id[80];uint64_t n=0,generation=0;
+    if(!strcmp(op,"bootstrap_prepare")) {
+        uint64_t seed;char descriptor[UFLOW_POOL_CANARY_HEX];uint64_t checksum;
+        if(c->platform||c->holder||c->owner||pool_u64(req,"seed",&seed)||seed>255)return -1;
+        c->bootstrap=true;
+        char instance[80];snprintf(instance,sizeof(instance),"canary-%s",c->node);
+        if(uflow_pool_platform_open(instance,&c->platform)||
+           uflow_pool_platform_prepare(c->platform,(uint8_t)seed,descriptor,&checksum))return -1;
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_prepared\":true,\"canary_descriptor\":\"%s\",\"checksum\":%" PRIu64 ",\"canary_bytes\":%llu,\"visible_bytes\":%llu,\"seed\":%" PRIu64 ",\"guest_pid\":%u}",
+            descriptor,checksum,UFLOW_POOL_CANARY_BYTES,UFLOW_POOL_CANARY_VISIBLE,seed,(unsigned)getpid());return 0;
+    }
+    if(!strcmp(op,"bootstrap_verify")) {
+        uint64_t checksum;
+        if(!c->bootstrap||c->ready||pool_u64(req,"checksum",&checksum)||
+           uflow_pool_platform_activate(c->platform,pool_get(req,"peer_canary_descriptor"),checksum,&c->channel))return -1;
+        c->ready=true;
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_ready\":true,\"verified_checksum\":%" PRIu64 ",\"guest_pid\":%u}",checksum,(unsigned)getpid());return 0;
+    }
+    if(!strcmp(op,"bootstrap_close")) {
+        if(!c->bootstrap||c->holder||c->owner||c->domain||c->lifecycle.pending)return -1;
+        if(uflow_pool_platform_close(&c->platform))return -1;
+        c->bootstrap=false;c->ready=false;
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_closed\":true,\"canary_bytes\":0,\"cleanup_required\":false}");return 0;
+    }
     if(!strcmp(op,"allocate")) {
         const char *key=pool_get(req,"pool_id");
-        if(!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
+        if(!c->bootstrap||!c->ready||!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
         if(snprintf(c->session,sizeof(c->session),"owner-%s",key)>=(int)sizeof(c->session))return -1;
         operation(c,id,"allocate");
         struct mem_service_client_allocate request={.key=key,.idempotency_key=id,.session_id=c->session,
@@ -101,11 +124,17 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         const char *key=pool_get(req,"key"),*session=pool_get(req,"client_session"),*access=pool_get(req,"access");
         if(c->holder||c->owner||!*session||strlen(session)>=sizeof(c->session)||pool_u64(req,"generation",&generation)||!generation)return -1;
         if(strcmp(access,"r")&&strcmp(access,"rw"))return -1;
-        strcpy(c->session,session);c->writable=!strcmp(access,"rw");operation(c,id,"acquire");
+        if(c->platform||c->bootstrap)return -1;
+        uint64_t checksum;if(pool_u64(req,"checksum",&checksum))return -1;
+        strcpy(c->session,session);c->writable=!strcmp(access,"rw");
+        /* Each actual client endpoint verifies the live peer canary itself.
+         * A sibling endpoint's ready flag is never reused. */
+        if(uflow_pool_platform_open(c->session,&c->platform)||
+           uflow_pool_platform_activate(c->platform,pool_get(req,"peer_canary_descriptor"),checksum,&c->channel))return -1;
+        c->ready=true;operation(c,id,"acquire");
         c->holder=true;
         if(mem_service_client_acquire_object_at_node(&c->client,key,id,c->session,c->node,c->incarnation,
              true,generation,&c->allocation,&status)||status!=MEM_SERVICE_WIRE_STATUS_OK)return -1;
-        if(uflow_pool_platform_open(c->session,&c->platform,&c->channel))return -1;
         operation(c,id,"map");
         uint64_t rights=MEM_SERVICE_CLIENT_MAP_READ|(c->writable?MEM_SERVICE_CLIENT_MAP_WRITE:0);
         if(mem_service_client_map_managed_allocation(&c->client,&c->channel,&c->allocation,c->session,id,
@@ -150,6 +179,7 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         }
         if(c->domain){if(mem_service_access_domain_destroy(c->domain))return -1;c->domain=NULL;}
         if(uflow_pool_platform_close(&c->platform))return -1;
+        c->ready=false;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"client_session\":\"%s\",\"unmapped\":true,\"holder\":false,\"pins\":0,\"cleanup_required\":false}",c->session);return 0;
     }
     if(!strcmp(op,"retire")) {

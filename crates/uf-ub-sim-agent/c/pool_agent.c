@@ -17,7 +17,7 @@ int uflow_pool_client(int,const char *,const char *,uint64_t);
 #define SLOTS 5
 #define RELAYS 32
 #define WIRE_MAX (MEM_SERVICE_WIRE_HEADER_LEN+MEM_SERVICE_WIRE_MAX_PAYLOAD_LEN)
-struct child {pid_t pid;int fd;char session[64];bool obligation;char reply[4096];size_t used;};
+struct child {pid_t pid;int fd;char session[64];bool obligation,canary;char reply[4096];size_t used;};
 struct relay {int fd;uint64_t id,deadline;unsigned char input[WIRE_MAX],output[WIRE_MAX];size_t in,out,sent;bool requested;};
 struct replay {uint64_t request,correlation,hash;char reply[8400];};
 static struct child clients[SLOTS];static struct relay relays[RELAYS];static struct replay cache[64];
@@ -118,6 +118,8 @@ int main(void){
                 if(active!=(int)i)return fail("unexpected SDK response");*end=0;
                 struct pool_control response;if(pool_parse(c->reply,&response))return fail("SDK response metadata");
                 if(!strcmp(pool_get(&response,"phase"),"completed")){
+                    if(!strcmp(pool_get(&response,"canary_prepared"),"true"))c->canary=true;
+                    if(!strcmp(pool_get(&response,"canary_closed"),"true"))c->canary=false;
                     if(!strcmp(pool_get(&response,"mapped"),"true")||!strcmp(pool_get(&response,"state"),"active"))c->obligation=true;
                     if(!strcmp(pool_get(&response,"unmapped"),"true")||!strcmp(pool_get(&response,"state"),"retired"))c->obligation=false;
                 }else c->obligation=true;
@@ -140,7 +142,7 @@ int main(void){
                 close(listener);puts("UFLOW_ENV_DAEMON_CLOSED");fflush(stdout);sleep(30);return fail("QMP close deadline");
             }
             if(!strcmp(input,"prepare-quit")){
-                for(unsigned i=0;i<SLOTS;i++)if(clients[i].obligation)return fail("quit with lower obligation");
+                for(unsigned i=0;i<SLOTS;i++)if(clients[i].obligation||clients[i].canary)return fail("quit with lower obligation");
                 if(active>=0)return fail("quit while operation active");
                 quitting=true;quit_deadline=now_ms()+9000;
                 for(unsigned i=0;i<SLOTS;i++)if(clients[i].fd>=0){close(clients[i].fd);clients[i].fd=-1;}
@@ -162,7 +164,7 @@ int main(void){
                 if(request_id<=high_request&&high_request-request_id>=64)return fail("retired request replay");if(request_id>high_request)high_request=request_id;
                 const char *op=pool_get(&req,"op"),*session=pool_get(&req,"client_session");
                 if(!strcmp(op,"inspect")){
-                    unsigned count=0;for(unsigned i=0;i<SLOTS;i++)count+=clients[i].obligation;
+                    unsigned count=0;for(unsigned i=0;i<SLOTS;i++)count+=clients[i].obligation+clients[i].canary;
                     char result[256],encoded[512];snprintf(result,sizeof(result),"{\"schema\":2,\"phase\":\"completed\",\"contexts\":%u,\"pins\":0,\"cleanup_required\":%s}",count,count?"true":"false");pool_hex((unsigned char*)result,strlen(result),encoded,sizeof(encoded));
                     printf("UFPOOL_REPLY %" PRIu64 " %" PRIu64 " %s\n",request_id,correlation,encoded);fflush(stdout);continue;
                 }

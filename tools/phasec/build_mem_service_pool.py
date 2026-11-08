@@ -63,6 +63,13 @@ def build(root, source, name):
     includes = [sdk/'include/lingqu/mem_service',root/'env/kernel-uapi/include',own,lower,
                 lower/'libs/obmm_queue',lower/'vendor/obmm/src/libobmm',
                 lower/'kernel_ub/include/uapi',lower/'kernel_ub/include']
+    # CPU facade contract with the real neutral SDK and explicit endpoint doubles.
+    # Compiled/run only inside this admitted B build; never labelled real OBMM.
+    platform_test=out/'platform-contract'
+    run(['/usr/bin/gcc','-O0','-Wall','-Wextra']+['-I'+str(p) for p in includes]+[
+        source/'examples/mem_service_pool/test_platform.c',sdk/'src/lingqu/mem_service/mem_service_provider.c',
+        '-o',platform_test])
+    run([platform_test])
     compiler = ['/usr/local/bin/aarch64-linux-gnu-gcc','-O2','-Wall','-Wextra','-static','-pthread','-D__EXPORTED_HEADERS__']
     command = compiler + ['-I'+str(p) for p in includes] + [str(p) for p in agent_inputs+inputs] + ['-o',str(out/'pool-agent')]
     run(command)
@@ -76,7 +83,7 @@ def build(root, source, name):
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run(['cargo','build','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=1800)
     run(['cargo','test','--locked','-p','uf-core','--target-dir',out/'cargo','-j','4'],cwd=source,env=env,timeout=300)
-    for group in ('ddr_resources::tests','pool_ranges::tests'):
+    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests'):
         run(['cargo','test','--locked','-p','uf-daemon','--target-dir',out/'cargo','-j','4',group],cwd=source,env=env,timeout=300)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_*.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/managed_pool','-p','test_sdk.py'],env=env)

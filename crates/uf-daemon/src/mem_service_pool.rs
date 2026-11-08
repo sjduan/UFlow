@@ -1,6 +1,7 @@
 //! Opt-in simulated backend. Catalog/managed_pool/pool_ranges remain authority.
 //! All provider calls are outside Catalog; no FD fiction or payload transport.
 use crate::ddr_resources::BackingId;
+use crate::catalog::Catalog;
 use crate::managed_pool::{Operation, Peer};
 use crate::pool_provider::opaque_id;
 use crate::pool_service::Service;
@@ -9,7 +10,7 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 use uf_core::bridge::{BridgeFrame, BridgeMessageType};
 use uf_core::provider::{AccessKind, Addressability, TransportKind, ExecutionMode, Fidelity};
@@ -20,6 +21,17 @@ pub struct MemServicePoolProvider {
     nodes: BTreeMap<String, Value>,
     home: String,
     sequence: AtomicU64,
+    bootstrap: BTreeMap<String, u64>,
+    bootstrap_unknown: AtomicBool,
+}
+
+const CANARY_BYTES: u64 = 2 << 20;
+fn canary_descriptor(value: &Value) -> Result<&str, String> {
+    let s=value["canary_descriptor"].as_str().ok_or("opaque canary descriptor missing")?;
+    if s.is_empty() || s.len()>384 || s.len()%2!=0 || !s.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+        return Err("bounded opaque canary descriptor required".into());
+    }
+    Ok(s)
 }
 
 fn envelope(id: &str, result: Result<Value, String>, unknown: bool) -> Value {
@@ -38,7 +50,7 @@ impl MemServicePoolProvider {
         if c["schema"] != 2 || c["backend"] != "mem_service_obmm" { return Err("explicit mem_service config v2 required".into()); }
         let mut nodes = BTreeMap::new();
         for node in c["nodes"].as_array().ok_or("node array required")? {
-            fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket"], &[])?;
+            fields(node, &["node", "boot_id", "agent_session", "incarnation", "socket", "canary", "ready"], &[])?;
             let id = text(node, "node")?;
             if !matches!(id, "nodeA" | "nodeB") || nodes.contains_key(id) || number(node, "incarnation")? == 0 {
                 return Err("two unique bound logical nodes required".into());
@@ -50,13 +62,40 @@ impl MemServicePoolProvider {
         let home = text(&c, "home")?.to_owned();
         if !text(&c,"realm")?.starts_with("simulated:") { return Err("explicit simulated execution realm required".into()); }
         if nodes.len() != 2 || !nodes.contains_key(&home) { return Err("two nodes and bound home required".into()); }
+        for (id,node) in &nodes {
+            let peer=&nodes[if id=="nodeA" {"nodeB"} else {"nodeA"}];
+            let canary=&node["canary"];let ready=&node["ready"];
+            canary_descriptor(canary)?;
+            if canary["schema"]!=2 || canary["phase"]!="completed" || canary["canary_prepared"]!=true ||
+                canary["canary_bytes"]!=CANARY_BYTES || canary["visible_bytes"]!=4096 ||
+                number(canary,"checksum")?==0 || number(canary,"guest_pid")?==0 ||
+                ready["schema"]!=2 || ready["phase"]!="completed" || ready["canary_ready"]!=true ||
+                ready["verified_checksum"]!=peer["canary"]["checksum"] || ready["guest_pid"]!=canary["guest_pid"] {
+                return Err("both actual same-context canary preparation and peer readiness required before Catalog".into());
+            }
+        }
         Ok(Self { session: text(&c, "session")?.into(), realm: text(&c, "realm")?.into(),
-            nodes, home, sequence: AtomicU64::new(1) })
+            nodes, home, sequence: AtomicU64::new(1024), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false) })
+    }
+
+    pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
+        // Real, already-live canary exports share the one physical capacity ledger.
+        // No charges for temporary peer verification views or application endpoints.
+        for (node,identity) in &self.nodes {
+            let id=st.take_next_object_id();let reservation=format!("canary:{node}");
+            st.ddr_resources.reserve_unique(&reservation,CANARY_BYTES)?;
+            st.ddr_resources.commit_backing(&reservation,id,BackingId::Provider {
+                realm:self.realm.clone(),provider:"mem_service_obmm".into(),
+                resource:format!("canary:{node}:{}",text(identity,"boot_id")?),
+                generation:number(identity,"incarnation")?},CANARY_BYTES)?;
+            self.bootstrap.insert(node.clone(),id);
+        }
+        Ok(())
     }
 
     pub fn loaded(&self) -> Value {
         json!({"backend":"mem_service_obmm","schema":2,"realm":self.realm,
-            "session":self.session,"home":self.home,"nodes":self.nodes,
+            "session":self.session,"home":self.home,"nodes":self.nodes,"bootstrap_charge_objects":self.bootstrap,
             "source":"546985e26bce60798fa3f88329c3fbed8350c798",
             "fidelity":"functional-simulation","payload_rpc_bytes":0})
     }
@@ -153,7 +192,7 @@ impl MemServicePoolProvider {
         // Any failure after a provider mutation keeps that exact pool/operation.
         // Metadata rejection is safe; execute marks uncertain lower work itself.
         service.catalog(|state,_| {
-            let unknown = state.pools.values().any(|p|p.state.contains("Unknown") || p.frozen()
+            let unknown = self.bootstrap_unknown.load(Ordering::Acquire) || state.pools.values().any(|p|p.state.contains("Unknown") || p.frozen()
                 || p.ranges.leases.values().any(|l|l.state=="Unknown"));
             let response = envelope(id,result,unknown);
             if !read_only { state.operations.insert(key,Operation { request:fingerprint,
@@ -209,15 +248,30 @@ impl MemServicePoolProvider {
         }
         if op=="ShutdownManagedPool" {
             service.catalog(|state,st| {
-                if state.pools.values().any(|p|p.state!="Released") || st.ddr_resources.charged_bytes()!=0 || st.ddr_resources.reserved_bytes()!=0 {
+                if st.shutdown_requested {return Err("shutdown already in progress; query original operation".into());}
+                for pool in state.pools.values() {pool.confirm_closed(st)?;}
+                let baseline:u64=self.bootstrap.values().filter_map(|id|st.ddr_resources.charged_object_bytes(*id)).sum();
+                if state.pools.values().any(|p|p.state!="Released") || st.ddr_resources.charged_bytes()!=baseline || st.ddr_resources.reserved_bytes()!=0 {
                     return Err("cannot shutdown with remaining backing/unknown".into());
                 }
                 st.shutdown_requested=true;
                 Ok(())
             })?;
+            for (node,id) in &self.bootstrap {
+                if service.catalog(|_,st|Ok(st.ddr_resources.charged_object_bytes(*id).is_some()))? {
+                    self.bootstrap_unknown.store(true,Ordering::Release);
+                    let receipt=self.call(node,json!({"op":"bootstrap_close"}))?;
+                    if receipt["canary_closed"]!=true || receipt["canary_bytes"]!=0 || receipt["cleanup_required"]!=false {
+                        return Err("canary checked-close unconfirmed; original bootstrap charge retained".into());
+                    }
+                    service.catalog(|_,st|{st.ddr_resources.release_confirmed(*id);Ok(())})?;
+                }
+            }
             self.finish()?;
+            service.catalog(|_,st|if st.ddr_resources.charged_bytes()==0 && st.ddr_resources.reserved_bytes()==0 {Ok(())} else {Err("final ledger not zero".into())})?;
+            self.bootstrap_unknown.store(false,Ordering::Release);
             service.stop.store(true,Ordering::Release);
-            return Ok(json!({"stopping":true}));
+            return Ok(json!({"stopping":true,"bootstrap_closed":true,"charged_bytes":0}));
         }
         let pool_id=text(req,"pool_id")?;
         // Validate incarnation on *every* operation, including metadata/cleanup.
@@ -239,8 +293,9 @@ impl MemServicePoolProvider {
             Ok(())
         })?;
         if op=="DestroyManagedPool" {
-            let canonical=service.catalog(|state,_| {
+            let canonical=service.catalog(|state,st| {
                 let p=state.pools.get_mut(pool_id).unwrap();
+                p.confirm_closed(st)?;
                 if p.state!="Allocated" || p.clients.values().any(|c|c.state!="Unmapped") || p.ranges.leases.values().any(|l|l.state!="Closed") {
                     return Err("actual client/range/Unknown obligations prevent retire".into());
                 }
@@ -279,8 +334,11 @@ impl MemServicePoolProvider {
             })?;
             let client=text(&registered,"client_session")?.to_owned();
             let canonical=service.catalog(|state,_|Ok(state.pools[pool_id].canonical.clone()))?;
+            let peer_node=if node=="nodeA" {"nodeB"} else {"nodeA"};
+            let canary=&self.nodes[peer_node]["canary"];
             let mapped=self.call(node,json!({"op":"map","key":pool_id,"generation":canonical["generation"],
-                "client_session":client,"access":registered["access"]}));
+                "client_session":client,"access":registered["access"],
+                "peer_canary_descriptor":canary_descriptor(canary)?,"checksum":canary["checksum"]}));
             return service.catalog(|state,st| {
                 let p=state.pools.get_mut(pool_id).unwrap();let session=p.clients.get_mut(&client).unwrap();
                 let binding=st.access_bindings.get_mut(&session.access_id).unwrap();
@@ -348,15 +406,13 @@ impl MemServicePoolProvider {
             }
             let unmapped=self.call(&node,json!({"op":"unmap","client_session":client}));
             return service.catalog(|state,st| {
-                let p=state.pools.get_mut(pool_id).unwrap();let session=p.clients.get_mut(client).unwrap();
+                let p=state.pools.get_mut(pool_id).unwrap();
                 match unmapped {
                     Ok(r) if r["client_session"]==client && r["unmapped"]==true && r["holder"]==false && r["pins"]==0 && r["cleanup_required"]==false => {
-                        p.ranges.reconcile_unmapped(client);
-                        session.state="Unmapped";session.pidfd=None;
-                        st.access_bindings.get_mut(&session.access_id).unwrap().state="Closed".into();st.clients.remove(&session.catalog_id);
+                        p.confirm_client_unmapped(st,client)?;
                         Ok(json!({"unmapped":true,"lower":r}))
                     }
-                    other=>{session.state="Unknown";st.access_bindings.get_mut(&session.access_id).unwrap().state="Unknown".into();
+                    other=>{let session=p.clients.get_mut(client).unwrap();session.state="Unknown";st.access_bindings.get_mut(&session.access_id).unwrap().state="Unknown".into();
                         Err(format!("same map/holder cleanup retained: {other:?}"))}
                 }
             });
@@ -369,7 +425,39 @@ impl MemServicePoolProvider {
                 let lease=p.validate_lease(&req["lease"],client,session.access_id)?;
                 if p.ranges.leases[&lease.token].state!="Active" { return Err("cannot release executing or uncertain lower operation".into()); }
             }
-            state.metadata(st,peer,req)
+            let mut result=state.metadata(st,peer,req)?;
+            if op=="GetManagedPoolSnapshot" {
+                result["bootstrap_charged_bytes"]=json!(self.bootstrap.values().filter_map(|id|st.ddr_resources.charged_object_bytes(*id)).sum::<u64>());
+                result["bootstrap_unknown"]=json!(self.bootstrap_unknown.load(Ordering::Acquire));
+            }
+            Ok(result)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn canary_opaque_descriptor_bound_is_not_general_payload_permission() {
+        assert!(canary_descriptor(&json!({"canary_descriptor":"ab".repeat(192)})).is_ok());
+        for value in [json!("a"),json!("zz"),json!("ab".repeat(193)),json!(123)] {
+            assert!(canary_descriptor(&json!({"canary_descriptor":value})).is_err());
+        }
+    }
+    #[test]
+    fn both_canary_backings_share_physical_budget_with_business_not_each_view() {
+        let nodes=[("nodeA".into(),json!({"boot_id":"boot-a","incarnation":7})),
+            ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
+        let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
+            nodes,home:"nodeA".into(),sequence:AtomicU64::new(1024),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false)};
+        let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
+        provider.admit_bootstrap(&mut st).unwrap();
+        assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);
+        st.ddr_resources.reserve("business",64<<20).unwrap();
+        assert_eq!(st.ddr_resources.charged_bytes()+st.ddr_resources.reserved_bytes(),68<<20);
+        assert!(st.ddr_resources.reserve("over-budget",61<<20).is_err());
+        for id in provider.bootstrap.values() {assert_eq!(st.ddr_resources.charged_object_bytes(*id),Some(2<<20));}
+        // This capacity test does not call release_confirmed or invent lower close evidence.
     }
 }
