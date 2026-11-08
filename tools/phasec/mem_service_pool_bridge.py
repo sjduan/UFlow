@@ -236,6 +236,9 @@ class GuestNode:
         # Serial transport lock is per node and held for one bounded operation;
         # no pool/global lock is held while A/B application leases stay alive.
         with self.command_lock:
+            if self.failure:
+                self.notify()
+                raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
             expected = self.identity
             if frame.realm != self.realm:
                 raise ValueError('execution realm mismatch')

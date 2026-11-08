@@ -112,7 +112,7 @@ class Harness:
             for raw in ids:
                 child=int(raw);result.extend(descendants(child));result.append((child,birth(child)))
             return result
-        owned=dict(descendants(os.getpid()))
+        owned=dict(descendants(os.getpid()));waits={}
         for signo in (signal.SIGTERM,signal.SIGKILL):
             for pid,stamp in owned.items():
                 if stamp is not None and birth(pid)==stamp:
@@ -121,11 +121,14 @@ class Harness:
             until=time.monotonic()+1
             while time.monotonic()<until:
                 try:
-                    while os.waitpid(-1,os.WNOHANG)[0]:pass
+                    while True:
+                        pid,status=os.waitpid(-1,os.WNOHANG)
+                        if not pid:break
+                        waits[pid]=os.waitstatus_to_exitcode(status)
                 except ChildProcessError:break
                 time.sleep(.02)
         remaining={pid:stamp for pid,stamp in owned.items() if stamp is not None and birth(pid)==stamp}
-        self.event({'event':'fixture-owned-tree-closed','exact_births':owned,'remaining':remaining})
+        self.event({'event':'fixture-owned-tree-closed','exact_births':owned,'actual_waits':waits,'remaining':remaining})
         for p,_ in self.children:
             # waitpid above may already have reaped Popen's direct child.
             p.wait(timeout=1)
@@ -138,7 +141,7 @@ class Harness:
 
 def rejected(action):
     try:action()
-    except (RuntimeError,ValueError,KeyError):return
+    except (RuntimeError,ValueError,KeyError,OSError):return
     raise AssertionError('expected actual gate rejection')
 
 
@@ -159,6 +162,11 @@ def run_case(h,kind):
         result=subprocess.run([str(h.args.controller),'ready','--connect','unix:'+h.lower_socket],capture_output=True,timeout=2)
         h.event({'event':'generic-ready','exit':result.returncode,'stdout_hex':result.stdout.hex(),'stderr_hex':result.stderr.hex()})
         assert result.returncode==0
+        with socket.socket(socket.AF_UNIX) as s:
+            s.settimeout(1);s.connect(h.lower_socket);s.sendall(packet(998,0x78,''))
+            header=exact(s,48);response=header+exact(s,LOWER.unpack(header)[6])
+        assert b'provider_directory_ready=0\n' in response and b'provider_active_count=0\n' in response
+        h.event({'event':'generic-ready-but-directory-unready','raw_response_hex':response.hex()})
         bootstrap_nodes(h.nodes,startup.control.realm,h.event,control=startup.control)
         for name in h.nodes:startup.registrations[name]={}
         rejected(startup.check_once)
