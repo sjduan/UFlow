@@ -128,7 +128,11 @@ def build(root, source, name):
     for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests'):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
-    short=root/('x'+out.name.removeprefix('build-host'));short.mkdir(exist_ok=False)
+    # The fixture appends .external-ddr to its already nonce-qualified socket.
+    # A compact generation label leaves that suffix within Linux SUN_LEN.
+    short=root/('x'+format(int(out.name.removeprefix('build-host')),'x'));short.mkdir(exist_ok=False)
+    if len(str(short/'br-4194304-1794135978000000000.sock.external-ddr').encode())>=108:
+        raise RuntimeError('short E10 fixture path exceeds its full socket suffix budget')
     e10_env={**env,'CARGO_TARGET_DIR':str(short)}
     test_manifest=out/'test-artifacts.jsonl'
     with test_manifest.open('xb') as f:
