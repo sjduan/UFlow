@@ -300,7 +300,7 @@ impl MemServicePoolProvider {
             }
             active.require_ready()?;
             active.bootstrap=self.bootstrap.clone();
-            service.catalog(|state,st| {active.admit_bootstrap(st)?;state.reconciliation["current_bootstrap"]=active.loaded();Ok(())})?;
+            service.catalog(|state,st| {active.admit_bootstrap(st)?;state.bootstrap_readiness=active.loaded();Ok(())})?;
             self.active.set(Box::new(active)).map_err(|_|"activation already set")?;
             return Ok(json!({"bootstrap_activated":true,"current_canary_bytes":4<<20}));
         }

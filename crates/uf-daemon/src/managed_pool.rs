@@ -230,6 +230,7 @@ pub struct State {
     pub revision: u64,
     pub counts: BTreeMap<String, u64>,
     pub reconciliation: Value,
+    pub bootstrap_readiness: Value,
 }
 impl State {
     pub fn owns_object(&self, id: u64) -> bool {
@@ -281,6 +282,7 @@ impl State {
             "creation_reserved_bytes":st.ddr_resources.reserved_bytes(),"budget_bytes":st.ddr_resources.limit,
             "resource_ledger":st.ddr_resources.snapshot(),"retained_bytes":st.ddr_resources.retained_bytes(),
             "active_bytes":st.ddr_resources.charged_bytes()-st.ddr_resources.retained_bytes(),"reconciliation":reconciliation,
+            "bootstrap_readiness":self.bootstrap_readiness,
             "operation_records":self.operations.len(),"control_counts":self.counts,"native_jobs_executed":0,"payload_rpc_bytes":0,
             "catalog_range_leases":self.pools.values().flat_map(|p|p.ranges.leases.values().map(|l|json!({
                 "lease_id":l.catalog_id,"client_session":l.client,"state":st.leases.get(&l.catalog_id).map(|r|r.state.as_str())}))).collect::<Vec<_>>(),

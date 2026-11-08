@@ -17,7 +17,7 @@ def build_worker(root,out,run):
         raise RuntimeError('fixed official worker source pins required')
     work=out/'official-worker';work.mkdir(exist_ok=False)
     compiler='/usr/local/bin/aarch64-linux-gnu-gcc'
-    flags='-O2 -Wall -Wextra -static -I'+str(root/'env/kernel-uapi/include')+' -Wl,-Map='+str(work/'link.map')
+    flags='-O2 -Wall -Wextra -static -save-temps=obj -I'+str(root/'env/kernel-uapi/include')+' -Wl,-Map='+str(work/'link.map')
     argv=['make','-f',str(lower/'apps/mem_service/Makefile'),'-j','4',
         'ROOT='+str(lower),'HOST_CC='+compiler,'HOST_CFLAGS='+flags,'GVA_MANAGER_ROOT='+str(gva),
         'MEM_SERVICE_OBMM_BUILD_CONFIG='+str(work/'obmm-provider.build-config'),'linqu_mem_service_provider_obmm']
@@ -41,13 +41,17 @@ def build_worker(root,out,run):
         text=subprocess.check_output([compiler,'-M']+options+[str(source)],cwd=work).decode().replace('\\\n',' ')
         paths=shlex.split(text.split(':',1)[1])
         for name in paths:dependencies.add(Path(name).resolve())
-    dependencies.update(Path(name) for name in re.findall(r'^LOAD\s+(/\S+)',(work/'link.map').read_text(),re.M))
+    for name in re.findall(r'^LOAD\s+(\S+)',(work/'link.map').read_text(),re.M):
+        path=Path(name);dependencies.add(path.resolve() if path.is_absolute() else (work/path).resolve())
     dependencies.add(Path(compiler).resolve())
+    for program in ['cc1','as','collect2','ld']:
+        dependencies.add(Path(subprocess.check_output([compiler,'-print-prog-name='+program]).decode().strip()).resolve())
     if len(dependencies)>1024:raise RuntimeError('bounded compiler closure exceeded')
     records={}
     for path in sorted(dependencies):
-        if not path.is_file() or path.stat().st_size>128<<20:raise RuntimeError('regular bounded compiler input required')
+        if not path.is_file() or path.stat().st_size>128<<20:raise RuntimeError('regular bounded compiler input required: '+str(path))
         entry={'bytes':path.stat().st_size,'sha256':sha(path)}
+        if path.is_relative_to(work):entry['compiler_generated_intermediate']=True
         if path.is_relative_to(lower/'vendor/obmm'):
             repository=lower/'vendor/obmm';rel=path.relative_to(repository).as_posix();pin='53011eed10716b422d2ac29199f68b55f7c5bdc5'
         elif path.is_relative_to(lower):
