@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 
 def build_worker(root,out,run):
@@ -45,7 +46,10 @@ def build_worker(root,out,run):
         path=Path(name);dependencies.add(path.resolve() if path.is_absolute() else (work/path).resolve())
     dependencies.add(Path(compiler).resolve())
     for program in ['cc1','as','collect2','ld']:
-        dependencies.add(Path(subprocess.check_output([compiler,'-print-prog-name='+program]).decode().strip()).resolve())
+        name=subprocess.check_output([compiler,'-print-prog-name='+program]).decode().strip()
+        resolved=name if Path(name).is_absolute() else shutil.which(name)
+        if not resolved:raise RuntimeError('compiler subprogram not found in actual PATH: '+name)
+        dependencies.add(Path(resolved).resolve())
     if len(dependencies)>1024:raise RuntimeError('bounded compiler closure exceeded')
     records={}
     for path in sorted(dependencies):
