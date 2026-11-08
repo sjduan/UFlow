@@ -93,7 +93,7 @@ class Harness:
             # Explicitly forbid every business lifecycle op before forwarding.
             class MetadataNode(GuestNode):
                 def relay(node,identifier,data,origin):
-                    if lower_request(data)[1] not in (1,2,3,0x76,0x77,0x78,0x79):
+                    if lower_request(data)[1] not in (1,2,3,0x76,0x77,0x78,0x79,0x7c):
                         raise RuntimeError('CPU regression forbids business backing operations')
                     return super().relay(identifier,data,origin)
             node=MetadataNode(channel,identity,self.lower_socket,self.event,'simulated:cpu-startup',notify=self.notice,lower_timeout=.4)

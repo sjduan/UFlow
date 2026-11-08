@@ -5,11 +5,23 @@ import sys
 from types import SimpleNamespace
 import unittest
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
-from mem_service_pool_bridge import LOWER,lower_metadata,lower_response
+from mem_service_pool_bridge import LOWER,lower_metadata,lower_response,worker_idle_reply
 from pool_startup import validate_readiness,NotReady
 
 
 class StartupContracts(unittest.TestCase):
+    def test_only_same_worker_normal_poll_not_found_is_expected_idle(self):
+        identity={'node':'nodeA','incarnation':7};worker={'pid':41,'birth':721}
+        origin={'role':'worker',**worker};fields=(0,)*8+(1,1,0)
+        public={'node_id':'nodeA','incarnation':'7','after_generation':'0'}
+        reply={'status':'not_found','reason':'not_found','key':''}
+        self.assertTrue(worker_idle_reply(identity,worker,origin,0x7c,fields,public,reply))
+        for bad_origin,bad_op,bad_fields,bad_public,bad_reply in [
+            ({**origin,'role':'root'},0x7c,fields,public,reply),({**origin,'birth':722},0x7c,fields,public,reply),
+            (origin,0x70,fields,public,reply),(origin,0x7c,(0,)*8+(10,10,0),public,reply),
+            (origin,0x7c,fields,{**public,'recovery':'1'},reply),
+            (origin,0x7c,fields,public,{**reply,'reason':'managed_store_write_uncertain'})]:
+            self.assertFalse(worker_idle_reply(identity,worker,bad_origin,bad_op,bad_fields,bad_public,bad_reply))
     def evidence(self):
         nodes={name:SimpleNamespace(identity={'boot_id':'boot-'+name,'incarnation':index},worker={'pid':40+index,'birth':700+index})
                for index,name in enumerate(('nodeA','nodeB'),1)}

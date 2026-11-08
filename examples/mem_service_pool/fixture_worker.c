@@ -45,6 +45,13 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"actual SDK refresh rejected status=%u\n",(unsigned)status);return 8;
             }
             refreshed=true;count++;
+            if(view.directory_ready) {
+                struct mem_service_client_allocation empty;
+                int polled=mem_service_client_poll_allocation(&client,node,inc,0,&empty,&status);
+                if(polled<0||status!=MEM_SERVICE_WIRE_STATUS_NOT_FOUND) {
+                    fprintf(stderr,"CPU fixture expected an empty actual SDK work queue\n");return 12;
+                }
+            }
         }
         usleep(50000);
     }

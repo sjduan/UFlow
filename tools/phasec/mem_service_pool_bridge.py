@@ -101,6 +101,17 @@ def lower_request(data):
     return request, op
 
 
+def worker_idle_reply(identity,worker,origin,op,fields,public,reply):
+    # Frozen worker deliberately polls an empty work queue and continues on
+    # NOT_FOUND. This read-only result is neither allocation completion nor a
+    # no-side-effect/cleanup witness. All other errors remain Unknown.
+    return (worker is not None and origin['role']=='worker' and
+        (origin['pid'],origin['birth'])==(worker['pid'],worker['birth']) and op==0x7c and
+        fields[8:10]==(1,1) and public=={'node_id':identity['node'],
+            'incarnation':str(identity['incarnation']),'after_generation':'0'} and
+        reply=={'status':'not_found','reason':'not_found','key':''})
+
+
 class GuestNode:
     def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10):
         self.channel, self.identity, self.lower_socket, self.event = channel, identity, lower_socket, event
@@ -131,7 +142,7 @@ class GuestNode:
         elif origin['role']=='worker':
             if not self.worker or (origin['pid'],origin['birth'])!=(self.worker['pid'],self.worker['birth']):
                 raise ValueError('worker process birth mismatch')
-            if op in (0x77,0x79) and (public.get('node_id'),public.get('incarnation'))!=(self.identity['node'],str(self.identity['incarnation'])):
+            if op in (0x77,0x79,0x7c) and (public.get('node_id'),public.get('incarnation'))!=(self.identity['node'],str(self.identity['incarnation'])):
                 raise ValueError('worker lower identity mismatch')
             if op==0x77 and public.get('readiness_generation')!='1':raise ValueError('wrong worker readiness generation')
         elif origin['role']!='client':raise ValueError('unowned lower origin')
@@ -148,7 +159,8 @@ class GuestNode:
                 if fields[6]>4096:raise ValueError('lower response length bound')
                 response=header+exact(lower,fields[6],deadline,captured)
             fields,reply=lower_response(response,request,op)
-            if fields[8] or fields[9]:self.notify()  # Never infer no side effects from INTERNAL/reason.
+            idle=worker_idle_reply(self.identity,self.worker,origin,op,fields,public,reply)
+            if (fields[8] or fields[9]) and not idle:self.notify()  # No generic INTERNAL/NOT_FOUND waiver.
         except BaseException as error:
             self.notify()
             self.event({'event':'lower-control-unconfirmed','node':self.identity['node'],'origin':origin,
@@ -165,7 +177,8 @@ class GuestNode:
             'request_checksum':LOWER.unpack_from(data)[7],'response_checksum':fields[7],
             'request_hex':data.hex(),'response_hex':response.hex(),'request_metadata':public,'response_metadata':reply,
             'status':fields[8],'error_code':fields[9],'reason':reply.get('reason',''),
-            'outcome':'completed' if not fields[8] and not fields[9] else 'Unknown',
+            'outcome':'idle' if idle else ('completed' if not fields[8] and not fields[9] else 'Unknown'),
+            'expected_worker_idle_poll':idle,
             'side_effect_absence_inferred':False,'payload_plane':False}
         evidence['host_monotonic_ns']=time.monotonic_ns()
         self.event(evidence)  # Complete legal metadata is retained before forwarding to a failing child.
