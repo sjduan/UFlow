@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""Real E1-E4 driver. Prepared for approved B execution, never fixture PASS.
+
+Run under E0 kind=guest. No SSH, device query, transport workaround or SDK copy.
+"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import selectors
+import signal
+import subprocess
+import sys
+import threading
+import time
+import uuid
+from mem_service_pool_bridge import GuestNode, BridgeServer, notify_failure
+from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
+
+U,M=65536,1024*1024
+
+
+def expected(seed,offset,n):
+    h=1469598103934665603
+    for i in range(offset,offset+n):
+        byte=((i*1315423911+seed*2654435761)^((i>>7)*17)^(i>>19))&255
+        h=((h^byte)*1099511628211)&((1<<64)-1)
+    return '%016x'%h
+
+
+class Peer:
+    def __init__(self,source,endpoint,node,pool,env,access='rw'):
+        self.node=node
+        self.child=subprocess.Popen([sys.executable,'-B',str(source/'examples/mem_service_pool/client_peer.py'),endpoint,node],
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1,env=env)
+        self.binding=self.call('register',pool=pool,access=access)
+
+    def call(self,op,expect_error=False,expect_unknown=False,**values):
+        self.child.stdin.write(json.dumps({'op':op,**values})+'\n');self.child.stdin.flush()
+        with selectors.DefaultSelector() as select:
+            select.register(self.child.stdout,selectors.EVENT_READ)
+            if not select.select(125):raise TimeoutError('independent client operation deadline')
+        line=self.child.stdout.readline()
+        if not line:raise RuntimeError('independent client EOF: '+self.child.stderr.read(4096))
+        result=json.loads(line)
+        if expect_error:
+            if result['status']!='error' or result.get('class')!=('PoolV2Unknown' if expect_unknown else 'PoolV2Error'):
+                raise RuntimeError('expected known rejection; got '+str(result))
+            return result
+        if result['status']!='ok':raise RuntimeError(str(result))
+        return result['result']
+
+    def close(self):
+        result=self.call('close');self.child.stdin.close()
+        if self.child.wait(timeout=10)!=0:raise RuntimeError('client exit after unmap failed')
+        return result
+
+
+def wait_socket(path,child):
+    deadline=time.monotonic()+15
+    while not Path(path).exists():
+        if child.poll() is not None or time.monotonic()>=deadline:
+            raise RuntimeError('private daemon did not become reachable')
+        time.sleep(.05)
+
+
+def matrix(root,config,build):
+    if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('accepted E0 supervisor required')
+    out=Path(config['output']);source=Path(build['source'])
+    if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
+    for path,digest in ((Path(build['image']),build['image_sha256']),
+                        (Path(build['daemon']),build['daemon_sha256']),
+                        (Path(build['fence_shim']),build['fence_shim_sha256']),
+                        (source/'.uflow-source.json',build['source_manifest_sha256'])):
+        if hashlib.sha256(path.read_bytes()).hexdigest()!=digest:raise RuntimeError('source/binary binding drift')
+    for rel,digest in build['installed_sdk_manifest'].items():
+        if hashlib.sha256((root/'env/mem-service-sdk'/rel).read_bytes()).hexdigest()!=digest:
+            raise RuntimeError('fixed SDK install changed before run')
+    for node in config['nodes']:
+        argv=node['boot_argv']
+        if argv[argv.index('-initrd')+1]!=build['image']:raise RuntimeError('Guest is not using the source-bound image')
+    sys.path.insert(0,str(root/'env/guest-kit004'))
+    from uflow_guest_group import run
+    lock=threading.Lock()
+    log=(out/'pool-events.jsonl').open('x')
+    def event(value):
+        with lock:
+            log.write(json.dumps({'host_monotonic_ns':time.monotonic_ns(),**value})+'\n');log.flush()
+    lower_socket=str(out/'l.sock')
+    lower_config=out/'lower.conf'
+    lower_config.write_text('listen=unix:'+lower_socket+'\nstore='+str(out/'lower.store')+
+        '\nrequired_provider=nodeA\nrequired_provider=nodeB\nprovider_lease_ms=10000\nallocation_home_provider=nodeA\n')
+    lower_binary=root/'env/mem-service-sdk/bin/linqu_mem_service'
+    lower_log=(out/'lower.log').open('xb')
+    lower=subprocess.Popen([str(lower_binary),'serve','--config',str(lower_config)],stdout=lower_log,stderr=subprocess.STDOUT)
+    wait_socket(lower_socket,lower)
+    def callback(channels,identities):
+        nodes={}
+        servers=[]
+        peers=[]
+        daemon=None
+        pool=None
+        realm='simulated:mem-service:'+str(uuid.uuid4());session=str(uuid.uuid4())
+        try:
+            for identity in identities:
+                name=identity['node']
+                nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm)
+                nodes[name].thread.start()
+                nodes[name].send('start')
+            for node in nodes.values():
+                if not node.started.wait(10) or node.failure:raise RuntimeError('Guest agent start failed')
+            ready_deadline=time.monotonic()+30
+            while True:
+                ready=subprocess.run([str(lower_binary),'ready','--connect','unix:'+lower_socket],capture_output=True,timeout=3)
+                if ready.returncode==0:break
+                if time.monotonic()>ready_deadline:raise RuntimeError('both real managed workers not ready')
+                time.sleep(.1)
+            bindings=[]
+            for name,node in nodes.items():
+                endpoint=out/('a.sock' if name=='nodeA' else 'b.sock')
+                server=BridgeServer(endpoint,node);servers.append(server);server.thread.start()
+                identity=node.identity
+                bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
+                                 'incarnation':identity['incarnation'],'socket':str(endpoint)})
+            provider_config=out/'provider.json'
+            provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
+                                                   'home':'nodeA','nodes':bindings},indent=2))
+            env={**os.environ,'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
+                 'LD_LIBRARY_PATH':str(Path(build['fence_shim']).parent)}
+            endpoint=str(out/'u.sock');state=out/'state'
+            daemon_log=(out/'catalog.log').open('xb')
+            daemon=subprocess.Popen([build['daemon'],'--host-pool','--socket',endpoint,'--pool-state-root',str(state),
+                 '--pool-budget-bytes',str(64*M),'--pool-mem-service-config',str(provider_config)],env=env,
+                 stdout=daemon_log,stderr=subprocess.STDOUT)
+            wait_socket(endpoint,daemon)
+            admin=(state/'admin.token').read_text()
+            pool=exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
+            base={key:pool[key] for key in ('pool_id','pool_epoch','provider_session')}
+            event({'event':'E1-one-allocation','pool':pool,'provider':json.loads(provider_config.read_text())})
+            # Real server negatives, not local SDK-validator substitutes.
+            for field,value in [('pool_epoch','stale-epoch'),('provider_session','stale-provider')]:
+                try:exchange(endpoint,'RegisterPoolClient',{**base,field:value,'node':'nodeB','access':'rw'})
+                except PoolV2Unknown:raise
+                except PoolV2Error as error:event({'event':'E1-negative','field':field,'outcome':type(error).__name__})
+                else:raise RuntimeError('identity negative unexpectedly accepted')
+            peers=[Peer(source,endpoint,node,pool,env) for node in ('nodeA','nodeB','nodeA')]
+            if len({p.binding['receipt']['guest_pid'] for p in peers if p.node=='nodeA'})!=2:
+                raise RuntimeError('A/C are not independent Guest processes')
+            a,b,c=peers
+            block=a.call('allocate',size=64*M)
+            for change in ({'expected_generation':2},{'byte_offset':(1<<64)-65536},{'nbytes':65*M}):
+                values={'block':block,'mode':'w','expected_generation':block['generation'],'byte_offset':0,'nbytes':U,**change}
+                a.call('raw',expect_error=True,method='AcquirePoolRange',values=values)
+            for change in ({'node':'unbound'},{'access':'write'}):
+                try:exchange(endpoint,'RegisterPoolClient',{**base,'node':'nodeB','access':'rw',**change})
+                except PoolV2Unknown:raise
+                except PoolV2Error:event({'event':'E1-negative','fields':change,'known_rejected':True})
+                else:raise RuntimeError('node/rights negative unexpectedly accepted')
+            # Initialize and prove the entire backing in <=20MiB pieces; no payload on Host.
+            for off in range(0,64*M,16*M):
+                lease=a.call('acquire',block=block,mode='w',offset=off,nbytes=16*M)
+                a.call('execute',lease=lease,pattern_id=0)
+            cases=[(a,b,U,20*M,17),(b,a,24*M+U,20*M,29),(a,b,48*M+U,2*U,41)]
+            written=[]
+            for writer,reader,off,n,seed in cases:
+                started=time.monotonic_ns()
+                lease=writer.call('acquire',block=block,mode='w',offset=off,nbytes=n)
+                done=writer.call('execute',lease=lease,pattern_id=seed)
+                read=reader.call('acquire',block=block,mode='r',offset=off,nbytes=n)
+                verified=reader.call('execute',lease=read,pattern_id=seed)
+                digest=expected(seed,off,n)
+                if done['receipt']['checksum']!=digest or verified['receipt']['checksum']!=digest:
+                    raise RuntimeError('independently computed full-range hash mismatch')
+                reader.call('release',lease=read)
+                written.append((off,off+n))
+                event({'event':'E2-direction','writer':writer.binding,'reader':reader.binding,'offset':off,'nbytes':n,
+                       'pattern_id':seed,'write':done,'read':verified,'expected_checksum':digest,
+                       'start_host_ns':started,'end_host_ns':time.monotonic_ns(),'clock_domain':'B-host'})
+            readonly=Peer(source,endpoint,'nodeB',pool,env,access='r')
+            ro_lease=readonly.call('acquire',block=block,mode='r',offset=U,nbytes=20*M)
+            readonly.call('execute',lease=ro_lease,pattern_id=17)
+            readonly.call('release',lease=ro_lease)
+            readonly.call('raw',expect_error=True,method='AcquirePoolRange',values={
+                'block':block,'mode':'w','expected_generation':block['generation'],'byte_offset':0,'nbytes':U})
+            event({'event':'E1-real-readonly-mapping','binding':readonly.binding,'close':readonly.close()})
+            # Full guard coverage outside all changed ranges, respecting actual content versions.
+            snapshot=a.call('snapshot')
+            segments=snapshot['pools'][0]['ranges']['allocations'][0]['segments']
+            for segment in segments:
+                off,n=segment['offset'],segment['nbytes']
+                if any(off<end and begin<off+n for begin,end in written):continue
+                for begin in range(off,off+n,16*M):
+                    count=min(16*M,off+n-begin)
+                    lease=b.call('acquire',block=block,mode='r',offset=begin,nbytes=count)
+                    result=b.call('execute',lease=lease,pattern_id=0);b.call('release',lease=lease)
+                    event({'event':'E2-guard','offset':begin,'nbytes':count,'result':result})
+            # Same allocation: A and B keep real leases while C completes disjoint I/O.
+            la=a.call('acquire',block=block,mode='w',offset=52*M,nbytes=2*U)
+            lb=b.call('acquire',block=block,mode='w',offset=52*M+2*U,nbytes=2*U)
+            before=c.call('snapshot')
+            for mode in ('r','w'):
+                c.call('acquire',expect_error=True,block=block,mode=mode,offset=52*M+U,nbytes=2*U)
+            lc=c.call('acquire',block=block,mode='w',offset=52*M+4*U,nbytes=U)
+            done=c.call('execute',lease=lc,pattern_id=73)
+            rc=c.call('acquire',block=block,mode='r',offset=52*M+4*U,nbytes=U)
+            same=a.call('acquire',block=block,mode='r',offset=52*M+4*U,nbytes=U)
+            c.call('execute',lease=rc,pattern_id=73)
+            after=c.call('snapshot')
+            tokens={lease['lease_id'] for lease in after['pools'][0]['ranges']['leases']}
+            if not {la['lease_id'],lb['lease_id']}<=tokens:raise RuntimeError('A/B released before C completed')
+            event({'event':'E3-real-lifetime-barrier','before':before,'C_write':done,'after':after,
+                   'independent_host_pids':[p.child.pid for p in peers],
+                   'clock_domain':'B-host','cross_guest_clock_subtraction':False})
+            c.call('release',lease=rc);a.call('release',lease=same)
+            a.call('release',lease=la,write_not_started=True);b.call('release',lease=lb,write_not_started=True)
+            uncertain=c.call('acquire',block=block,mode='w',offset=52*M+8*U,nbytes=U)
+            c.call('raw',method='ReportPoolUnknown',values={'lease':uncertain,
+                'reason':'controlled client-reported uncertainty; no injected device or provider fault'})
+            held=c.call('snapshot')
+            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M:
+                raise RuntimeError('original pool and budget not retained by uncertainty')
+            b.call('acquire',expect_error=True,expect_unknown=True,block=block,mode='r',offset=U,nbytes=U)
+            try:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
+            except PoolV2Unknown:pass
+            else:raise RuntimeError('replacement pool admitted while original obligation unknown')
+            event({'event':'E4-explicit-client-uncertainty','snapshot':held,'injection_kind':'control-only, no actual device fault',
+                   'original_pool':pool['pool_id'],'replacement_pool_not_created':True})
+            event({'event':'E4-first-client-unmapped','receipt':c.close()})
+            reconciled=a.call('snapshot')
+            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M:
+                raise RuntimeError('actual same-context unmap did not reconcile only this client')
+            invalid=[s for s in reconciled['pools'][0]['ranges']['allocations'][0]['segments'] if s['state']=='Invalid']
+            if not any(s['offset']==52*M+8*U and s['nbytes']==U for s in invalid):
+                raise RuntimeError('uncertain content became committed instead of Invalid')
+            check=b.call('acquire',block=block,mode='r',offset=U,nbytes=20*M)
+            b.call('execute',lease=check,pattern_id=17);b.call('release',lease=check)
+            a.close();b.close()
+            retired=exchange(endpoint,'DestroyManagedPool',{**base,'admin_token':admin})
+            final=exchange(endpoint,'GetManagedPoolSnapshot',base)
+            if final['charged_bytes'] or final['creation_reserved_bytes']:
+                raise RuntimeError('one Catalog capacity ledger not zero after confirmed lower retire')
+            exchange(endpoint,'ShutdownManagedPool',{'admin_token':admin})
+            if daemon.wait(timeout=10)!=0:raise RuntimeError('Catalog normal shutdown failed')
+            event({'event':'E4-two-layer-release','retired':retired,'catalog':final})
+            for server in servers:server.close()
+            for node in nodes.values():node.prepare_close()
+            (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':True,
+                'pool_id':pool['pool_id'],'data_bytes_on_control_bridge':0,'capacity':64*M,
+                'A_historical_bytes_unqueried':128*M,'global_responsibility_zero_claimed':False},indent=2))
+        except BaseException:
+            notify_failure()  # Never perform potentially blocking state capture before notice.
+            event({'event':'matrix-failure','original_pool':pool,'same_pool_retained':True,
+                   'unknown_not_reconciled_by_process_death':True})
+            raise
+    try:
+        run(config,control=callback)
+        lower.send_signal(signal.SIGTERM)
+        if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
+        event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
+    except BaseException:
+        notify_failure()
+        # External supervisor owns bounded TERM/KILL/wait for this exact subtree.
+        raise
+    finally:
+        log.close()
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('config',type=Path);p.add_argument('build_receipt',type=Path)
+    args=p.parse_args()
+    try:matrix(Path('/workspace/uflow/runs/mem-service-shared-pool-20261108'),
+        json.loads(args.config.read_bytes()),json.loads(args.build_receipt.read_bytes()))
+    except BaseException:
+        notify_failure()
+        raise

@@ -4,11 +4,17 @@
 //! capacity charge. Reservations cover provider creation outside Catalog locks.
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum BackingId {
+    Posix { dev: u64, inode: u64 },
+    Provider { realm: String, provider: String, resource: String, generation: u64 },
+}
+
 #[derive(Debug)]
 pub struct DdrResources {
     pub limit: u64,
     reservations: HashMap<String, u64>,
-    resources: HashMap<u64, (u64, u64, u64)>, // object -> dev, inode, bytes
+    resources: HashMap<u64, (BackingId, u64)>, // one charge per real backing, not per view
 }
 
 impl Default for DdrResources {
@@ -34,7 +40,7 @@ impl DdrResources {
     pub fn charged_bytes(&self) -> u64 {
         self.resources
             .values()
-            .fold(0u64, |sum, (_, _, n)| sum.saturating_add(*n))
+            .fold(0u64, |sum, (_, n)| sum.saturating_add(*n))
     }
 
     pub fn reserved_bytes(&self) -> u64 {
@@ -76,6 +82,16 @@ impl DdrResources {
         ino: u64,
         nbytes: u64,
     ) -> Result<(), String> {
+        self.commit_backing(operation, object, BackingId::Posix { dev, inode: ino }, nbytes)
+    }
+
+    pub fn commit_backing(&mut self, operation: &str, object: u64,
+                          backing: BackingId, nbytes: u64) -> Result<(), String> {
+        if let BackingId::Provider { realm, provider, resource, generation } = &backing {
+            if realm.is_empty() || provider.is_empty() || resource.is_empty() || *generation == 0 {
+                return Err("complete provider backing identity required".into());
+            }
+        }
         if self.reservations.get(operation) != Some(&nbytes) {
             return Err("no matching creation reservation".into());
         }
@@ -83,11 +99,11 @@ impl DdrResources {
             || self
                 .resources
                 .values()
-                .any(|(d, i, _)| (*d, *i) == (dev, ino))
+                .any(|(identity, _)| identity == &backing)
         {
             return Err("physical DDR resource already charged".into());
         }
-        self.resources.insert(object, (dev, ino, nbytes));
+        self.resources.insert(object, (backing, nbytes));
         self.reservations.remove(operation);
         Ok(())
     }
@@ -119,6 +135,23 @@ impl DdrResources {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn provider_backing_has_no_fake_inode_and_views_do_not_recharge() {
+        let mut ledger = DdrResources { limit:256, ..Default::default() };
+        let backing=BackingId::Provider {realm:"sim:r".into(),provider:"mem_service_obmm".into(),
+            resource:"nodeA:inc:allocation".into(),generation:7};
+        ledger.reserve("one",128).unwrap();
+        ledger.commit_backing("one",1,backing.clone(),128).unwrap();
+        ledger.admit_existing(2,0,0,64).unwrap(); // A real POSIX identity is a distinct namespace.
+        ledger.reserve("duplicate",64).unwrap();
+        assert!(ledger.commit_backing("duplicate",3,backing,64).is_err());
+        assert_eq!(ledger.charged_bytes(),192);
+        assert_eq!(ledger.reserved_bytes(),64); // Unknown/duplicate creation not silently freed.
+        assert!(ledger.reserve("another",1).is_err());
+        ledger.release_confirmed(1);
+        assert_eq!(ledger.charged_bytes(),64);
+    }
 
     #[test]
     fn pool_external_legacy_share_one_capacity_and_pending_reservation() {

@@ -44,6 +44,7 @@ pub struct Session {
     pub children: BTreeMap<i32, ChildView>,
 }
 pub struct Pool {
+    pub backend: &'static str,
     pub id: String,
     pub epoch: String,
     pub provider_session: String,
@@ -63,13 +64,13 @@ pub struct Pool {
 }
 impl Pool {
     pub fn description(&self) -> Value {
-        json!({"schema":1,"pool_id":self.id,"pool_epoch":self.epoch,"provider_session":self.provider_session,
-               "provider_kind":"posix_shm_simpler","nbytes":self.nbytes,"resource_id":self.object,
-               "placement_id":self.placement,"binding_id":self.binding,"resource_generation":1,
+        json!({"schema":if self.backend=="mem_service_obmm" {2}else{1},"pool_id":self.id,"pool_epoch":self.epoch,"provider_session":self.provider_session,
+               "provider_kind":self.backend,"nbytes":self.nbytes,"resource_id":self.object,
+               "placement_id":self.placement,"binding_id":self.binding,"resource_generation":if self.backend=="mem_service_obmm" {self.canonical["generation"].as_u64().unwrap_or(1)}else{1},
                "canonical":self.canonical,"state":self.state})
     }
     pub fn frozen(&self) -> bool {
-        self.clients.values().any(|client| {
+        (self.backend == "mem_service_obmm" && self.ranges.leases.values().any(|l| l.state == "Unknown")) || self.clients.values().any(|client| {
             client.state == "Unknown" || client.children.values().any(|child| child.unknown)
         })
     }
@@ -273,6 +274,7 @@ impl State {
         self.pools.insert(
             id.clone(),
             Pool {
+                backend: "posix_shm_simpler",
                 id,
                 epoch,
                 provider_session,

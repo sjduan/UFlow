@@ -24,6 +24,7 @@ mod ddr_witness_evidence;
 mod direct_transfer;
 mod external_ddr;
 mod managed_pool;
+mod mem_service_pool;
 mod object_service;
 mod pool_provider;
 mod pool_ranges;
@@ -63,6 +64,7 @@ struct Args {
     host_pool: bool,
     pool_state_root: String,
     pool_provider_python: String,
+    pool_mem_service_config: String,
     pool_budget_bytes: u64,
     device: i32,
     socket: String,
@@ -84,6 +86,7 @@ fn parse_args() -> Args {
         host_pool: false,
         pool_state_root: String::new(),
         pool_provider_python: String::new(),
+        pool_mem_service_config: String::new(),
         pool_budget_bytes: 256 * 1024 * 1024,
         device: env::var("UF_TARGET_DEVICE")
             .ok()
@@ -119,6 +122,7 @@ fn parse_args() -> Args {
             "--host-pool" => args.host_pool = true,
             "--pool-state-root" => args.pool_state_root = value(),
             "--pool-provider-python" => args.pool_provider_python = value(),
+            "--pool-mem-service-config" => args.pool_mem_service_config = value(),
             "--pool-budget-bytes" => {
                 args.pool_budget_bytes = value().parse().expect("invalid pool budget")
             }
@@ -487,7 +491,7 @@ fn main() {
     let args = parse_args();
     if args.host_pool {
         if args.pool_state_root.is_empty()
-            || args.pool_provider_python.is_empty()
+            || (args.pool_provider_python.is_empty() == args.pool_mem_service_config.is_empty())
             || args.block_count != 0
             || args.initialize_external_ddr_authority
             || args.inspect_external_ddr_evidence
@@ -503,6 +507,8 @@ fn main() {
             std::path::Path::new(&args.pool_state_root),
             &args.pool_provider_python,
             args.pool_budget_bytes,
+            if args.pool_mem_service_config.is_empty() { None }
+            else { Some(std::path::Path::new(&args.pool_mem_service_config)) },
         ) {
             eprintln!("managed host pool stopped with unresolved state: {error}");
             std::process::exit(1);

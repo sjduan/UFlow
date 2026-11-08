@@ -23,6 +23,8 @@ pub enum BridgeMessageType {
     Error = 11,
     Shutdown = 12,
     Accepted = 13,
+    // Explicit opt-in pool envelope. Old v1 peers reject unknown type 14.
+    PoolControlV2 = 14,
 }
 
 impl TryFrom<u16> for BridgeMessageType {
@@ -43,6 +45,7 @@ impl TryFrom<u16> for BridgeMessageType {
             11 => Ok(Self::Error),
             12 => Ok(Self::Shutdown),
             13 => Ok(Self::Accepted),
+            14 => Ok(Self::PoolControlV2),
             _ => Err(BridgeProtocolError::UnknownMessageType(value)),
         }
     }

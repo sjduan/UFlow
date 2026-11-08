@@ -16,15 +16,16 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
-pub struct Service {
+pub(crate) struct Service {
     shared: SharedCatalog,
-    provider: Mutex<Provider>,
+    provider: Mutex<Option<Provider>>,
+    remote: Option<crate::mem_service_pool::MemServicePoolProvider>,
     provider_session: String,
     provider_loaded: Value,
     root: PathBuf,
-    admin: String,
+    pub(crate) admin: String,
     persisted: Mutex<u64>,
-    stop: AtomicBool,
+    pub(crate) stop: AtomicBool,
     drop_reply_once: AtomicBool,
     durability_unknown: AtomicBool,
 }
@@ -201,7 +202,7 @@ impl Service {
         Ok(())
     }
 
-    fn catalog<R>(
+    pub(crate) fn catalog<R>(
         &self,
         apply: impl FnOnce(&mut State, &mut Catalog) -> Result<R, String>,
     ) -> Result<R, String> {
@@ -309,6 +310,9 @@ impl Service {
     }
 
     fn handle(&self, peer: &Peer, request: &Value) -> Result<(Value, Option<File>), String> {
+        if let Some(remote) = &self.remote {
+            return remote.handle(self, peer, request).map(|value| (value, None));
+        }
         let op = validate(request)?;
         let id = text(request, "operation_id")?;
         let key = format!("{}:{id}", peer.actor());
@@ -496,6 +500,7 @@ impl Service {
             .provider
             .lock()
             .map_err(|_| "provider executor poisoned")?
+            .as_ref().ok_or("POSIX provider unavailable")?
             .allocate(&pool_id, object, nbytes);
         let response = self.catalog(|state, st| {
             let pool = state.pools.get_mut(&pool_id).unwrap();
@@ -602,6 +607,7 @@ impl Service {
             .provider
             .lock()
             .map_err(|_| "provider executor poisoned")?
+            .as_ref().ok_or("POSIX provider unavailable")?
             .release(pool_id, dev, ino);
         let response=self.catalog(|state,st| {
             let pool=state.pools.get_mut(pool_id).unwrap();
@@ -626,7 +632,8 @@ impl Service {
     }
 }
 
-pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64) -> Result<(), String> {
+pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
+           mem_service_config: Option<&Path>) -> Result<(), String> {
     if budget == 0 || budget > 256 * 1024 * 1024 || budget % 65536 != 0 {
         return Err("bounded aligned host budget required".into());
     }
@@ -655,14 +662,20 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64) -> Result<(),
         .and_then(|_| secret.sync_all())
         .map_err(|e| e.to_string())?;
     drop(secret);
-    let provider = Provider::start(root, python)?;
-    let provider_session = provider.session.clone();
-    let provider_loaded = provider.loaded.clone();
+    let remote = mem_service_config.map(crate::mem_service_pool::MemServicePoolProvider::load).transpose()?;
+    if remote.is_some() && budget > 128 * 1024 * 1024 {
+        return Err("mem_service B pool budget is at most 128MiB".into());
+    }
+    let provider = if remote.is_none() { Some(Provider::start(root, python)?) } else { None };
+    let (provider_session, provider_loaded) = if let Some(p) = &provider {
+        (p.session.clone(), p.loaded.clone())
+    } else { let p = remote.as_ref().unwrap(); (p.session.clone(), p.loaded()) };
     let mut catalog = Catalog::new(-1, Vec::new());
     catalog.ddr_resources.limit = budget;
     let service = Arc::new(Service {
         shared: Arc::new((Mutex::new(catalog), Condvar::new())),
         provider: Mutex::new(provider),
+        remote,
         provider_session,
         provider_loaded,
         root: root.into(),
@@ -750,11 +763,10 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64) -> Result<(),
             .join()
             .map_err(|_| "managed handler panic; stop unknown")?;
     }
-    service
-        .provider
-        .lock()
-        .map_err(|_| "provider lock poisoned")?
-        .shutdown()?;
+    if let Some(provider) = service.provider.lock().map_err(|_| "provider lock poisoned")?.as_mut() {
+        provider.shutdown()?;
+    }
+    if let Some(remote) = &service.remote { remote.finish()?; }
     service.catalog(|state, _| {
         if state.pools.values().any(|pool| pool.state != "Released") {
             return Err("late live pool at stop".into());
@@ -766,7 +778,8 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64) -> Result<(),
     )
     .map_err(|e| e.to_string())?;
     final_state["normal_shutdown"] = json!(true);
-    final_state["provider_exited"] = json!(true);
+    final_state["provider_exited"] = json!(service.remote.is_none());
+    final_state["external_guest_contexts_drained"] = json!(service.remote.is_some());
     fs::write(
         root.join("clean.json"),
         serde_json::to_vec(&final_state).map_err(|e| e.to_string())?,
@@ -777,6 +790,6 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64) -> Result<(),
     }) {
         fs::remove_file(endpoint).map_err(|e| e.to_string())?;
     }
-    eprintln!("managed host pool drained; real provider exited; physical DDR ledger zero");
+    eprintln!("managed pool drained; backend completion receipts and capacity release confirmed");
     Ok(())
 }
