@@ -149,10 +149,14 @@ class GuestNode:
                 response=header+exact(lower,fields[6],deadline,captured)
             fields,reply=lower_response(response,request,op)
             if fields[8] or fields[9]:self.notify()  # Never infer no side effects from INTERNAL/reason.
-        except BaseException:
+        except BaseException as error:
             self.notify()
             self.event({'event':'lower-control-unconfirmed','node':self.identity['node'],'origin':origin,
-                'operation':op,'request':request,'request_hex':data.hex(),'partial_response_hex':bytes(captured).hex(),
+                'boot_id':self.identity['boot_id'],'incarnation':self.identity['incarnation'],
+                'operation':op,'request':request,'relay_id':identifier,'request_bytes':len(data),
+                'request_checksum':LOWER.unpack_from(data)[7],'request_metadata':public,
+                'request_hex':data.hex(),'partial_response_hex':bytes(captured).hex(),'partial_response_bytes':len(captured),
+                'host_monotonic_ns':time.monotonic_ns(),'detail':str(error),
                 'outcome':'Unknown','side_effect_absence_inferred':False})
             raise
         evidence={'event':'lower-control','node':self.identity['node'],'boot_id':self.identity['boot_id'],
@@ -207,7 +211,7 @@ class GuestNode:
                 elif line.startswith('UFPOOL_WORKER_EXIT '):
                     self.notify()
                     self.failure=RuntimeError('actual worker exited; original context retained')
-                    for item in self.pending.values():item['ready'].set()
+                    for item in list(self.pending.values()):item['ready'].set()
                     self.event({'event':'worker-exit','node':self.identity['node'],'raw':line})
                 elif line.startswith('UFPOOL_REPLY '):
                     _, request, correlation, encoded = line.split(' ', 3)
@@ -230,7 +234,7 @@ class GuestNode:
         except BaseException as error:
             self.notify()  # Must precede event serialization or cleanup.
             self.failure = error
-            for item in self.pending.values():
+            for item in list(self.pending.values()):
                 item['ready'].set()
             self.event({'event': 'guest-bridge-failure', 'node': self.identity['node'], 'detail': str(error)})
 
