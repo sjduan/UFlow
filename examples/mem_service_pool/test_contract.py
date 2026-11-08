@@ -114,5 +114,16 @@ class BindingTests(unittest.TestCase):
         client.binding['rights']='r'
         with self.assertRaises(ValueError):client.acquire({'generation':1},'w')
 
+    def test_each_request_carries_issued_full_binding(self):
+        seen=[]
+        def transport(endpoint,op,values):
+            seen.append((op,copy.deepcopy(values)))
+            if op=='RegisterPoolClient':return {'client_session':'client','access_generation':9,'access_binding_v2':binding()}
+            return {'snapshot':True}
+        client=MemServicePoolClient('not-connected',pool(),'nodeB',transport=transport)
+        client.snapshot()
+        self.assertEqual(seen[-1][1]['access_binding_v2'],binding())
+        self.assertEqual(seen[-1][1]['client_session'],'client')
+
 
 if __name__=='__main__':unittest.main()

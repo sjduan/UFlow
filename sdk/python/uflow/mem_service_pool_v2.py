@@ -107,6 +107,7 @@ class MemServicePoolClient:
         base = {key: self.pool[key] for key in ('pool_id', 'pool_epoch', 'provider_session')}
         if hasattr(self, 'binding'):
             base.update({key: self.binding[key] for key in ('client_session', 'access_generation')})
+            base['access_binding_v2']=self.binding
         try:
             return self.transport(self.endpoint, op, {**base, **values})
         except PoolV2Unknown as error:

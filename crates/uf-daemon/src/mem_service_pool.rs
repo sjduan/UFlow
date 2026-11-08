@@ -105,7 +105,7 @@ impl MemServicePoolProvider {
         let key = format!("{}:{id}", peer.actor());
         // Strict schema/backend discriminator; schema1 cannot access this mode.
         if number(req, "schema")? != 2 { return Err("mem_service requires explicit schema2 client".into()); }
-        let common = ["schema","op","operation_id","pool_id","pool_epoch","provider_session","client_session","access_generation"];
+        let common = ["schema","op","operation_id","pool_id","pool_epoch","provider_session","client_session","access_generation","access_binding_v2"];
         let extra: &[&str] = match op {
             "CreateManagedPool" => &["admin_token","nbytes"],
             "DestroyManagedPool" | "ShutdownManagedPool" => &["admin_token"],
@@ -221,10 +221,20 @@ impl MemServicePoolProvider {
         }
         let pool_id=text(req,"pool_id")?;
         // Validate incarnation on *every* operation, including metadata/cleanup.
-        service.catalog(|state,_| {
+        service.catalog(|state,st| {
             let p=state.pools.get(pool_id).ok_or("pool not found")?;
             if req["pool_epoch"]!=p.epoch || req["provider_session"]!=p.provider_session || p.backend!="mem_service_obmm" {
                 return Err("stale backend/pool/epoch/provider tuple".into());
+            }
+            if req.get("client_session").is_some() {
+                let access=number(req,"access_generation")?;
+                let session=p.clients.get(text(req,"client_session")?).ok_or("client not found")?;
+                if session.birth!=peer.birth || session.access_id!=access {return Err("client birth/access mismatch".into());}
+                let binding=st.access_bindings.get(&access).ok_or("access binding missing")?;
+                let issued:Value=serde_json::from_slice(&binding.opaque_token).map_err(|_|"stored binding unavailable")?;
+                if req.get("access_binding_v2")!=Some(&issued) {
+                    return Err("stale full backend/realm/node/incarnation/rights/range binding".into());
+                }
             }
             Ok(())
         })?;

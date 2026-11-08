@@ -149,6 +149,11 @@ def matrix(root,config,build):
                 raise RuntimeError('A/C are not independent Guest processes')
             a,b,c=peers
             block=a.call('allocate',size=64*M)
+            for field,value in [('backend','posix_shm_simpler'),('realm','physical:wrong'),('node','nodeB'),
+                                 ('incarnation',0),('rights','r'),('offset',U)]:
+                stale={**a.binding,field:value}
+                a.call('raw',expect_error=True,method='GetManagedPoolSnapshot',values={'access_binding_v2':stale})
+                event({'event':'E1-real-binding-negative','field':field,'actual_pool':pool['pool_id'],'known_rejected':True})
             for change in ({'expected_generation':2},{'byte_offset':(1<<64)-65536},{'nbytes':65*M}):
                 values={'block':block,'mode':'w','expected_generation':block['generation'],'byte_offset':0,'nbytes':U,**change}
                 a.call('raw',expect_error=True,method='AcquirePoolRange',values=values)
