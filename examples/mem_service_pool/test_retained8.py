@@ -1,11 +1,11 @@
 """Portable semantic fixtures only; never invoke production retained8 verify."""
-import base64,copy,json
+import base64,copy,json,stat
 from pathlib import Path
 import sys,unittest
 from unittest.mock import MagicMock,patch
 from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
-from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,ROOT,ASSESSMENT_SHA,sha
+from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,fm_namespace,ROOT,ASSESSMENT_SHA,sha
 import verify_retained8_pool as verifier
 
 class Retained8Semantics(unittest.TestCase):
@@ -67,6 +67,13 @@ class Retained8Semantics(unittest.TestCase):
         endpoints_quiet([{'path':'/original/qmp'}],set())
         for name in ['/original/qmp',*[str(ROOT/'runs'/j/n) for j in ['c013','c027'] for n in ['u.sock','l.sock','a.sock','b.sock']]]:
             with self.assertRaises(ValueError):endpoints_quiet([{'path':'/original/qmp'}],{name})
+    def test_extra_fm_directory_symlink_cannot_hide_from_inventory(self):
+        file=MagicMock();file.__str__.return_value='/exact/FM';file.lstat.return_value.st_mode=stat.S_IFREG
+        directory=MagicMock();directory.__str__.return_value='/exact/subdir';directory.lstat.return_value.st_mode=stat.S_IFDIR
+        link=MagicMock();link.__str__.return_value='/exact/unregistered-link';link.lstat.return_value.st_mode=stat.S_IFLNK
+        link.is_dir.return_value=True
+        fm_namespace([file,directory],{'/exact/FM'})
+        with self.assertRaises(ValueError):fm_namespace([file,directory,link],{'/exact/FM'})
     def test_unclosed_physical_tree_or_inconclusive_old_audit(self):
         self.change('runs/c027/monitor/result.json',lambda v:v.update(remaining={'71':123}))
         with self.assertRaises(ValueError):self.derive()

@@ -26,6 +26,11 @@ def endpoints_quiet(endpoints,live):
     names={row['path'] for row in endpoints}
     names.update(str(ROOT/'runs'/j/name) for j in ['c013','c027'] for name in ['u.sock','l.sock','a.sock','b.sock'])
     require(not names.intersection(live),'old control or Catalog/provider endpoint kernel-active')
+def fm_namespace(paths,expected):
+    # lstat is essential: an unregistered symlink to a directory is not an
+    # ignorable directory and must not disappear from this exact inventory.
+    actual={str(p) for p in paths if not stat.S_ISDIR(p.lstat().st_mode)}
+    require(actual==set(expected),'extra or missing FM, including directory symlinks')
 def read(path,maximum=4<<20):
     require(path.is_file() and not path.is_symlink(),'regular bounded evidence required')
     require(path.stat().st_size<=maximum,'evidence size bound')
@@ -159,7 +164,7 @@ def verify(old_assessment,old_bindings,assessment):
             (row['dev'],row['inode'],row['uid'],row['file_type']),'retained FM identity drift')
         aliases=row['kernel_inode_aliases'];require([row['dev'],row['inode']] in aliases,'bound inode aliases')
         inodes.update(map(tuple,aliases))
-    require({str(p) for j in ['c013','c027'] for p in (ROOT/'runs'/j/'fm').rglob('*') if not p.is_dir()}=={r['path'] for r in inventory},'extra or missing FM')
+    fm_namespace((p for j in ['c013','c027'] for p in (ROOT/'runs'/j/'fm').rglob('*')),(r['path'] for r in inventory))
     proof['fresh_physical_audit']=holder_audit(inodes)
     with (ROOT/'coordination/guest-execution.lock').open('rb') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);fcntl.flock(lock,fcntl.LOCK_UN)
