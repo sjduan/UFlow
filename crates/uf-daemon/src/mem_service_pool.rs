@@ -461,8 +461,7 @@ impl MemServicePoolProvider {
                 match closed {
                     Ok(r) if r["state"]=="retired" && r["backing_bytes"]==0 && r["live_refs"]==0 && r["in_flight"]==0
                         && r["address_reserved_bytes"]==0 && r["export_mappings"]==0 && r["import_mappings"]==0 && r["quarantined_bytes"]==0 => {
-                        p.state="Released";p.release_result=r;st.ddr_resources.release_confirmed(p.object);
-                        st.objects.remove(&p.object);st.mark_object_released(p.object);Ok(json!({"released":true,"lower":p.release_result}))
+                        p.record_confirmed_release(st,r)?;Ok(json!({"released":true,"lower":p.release_result}))
                     }
                     other=>{p.state="ReleaseUnknown";p.last_error=format!("retire retained: {other:?}");Err(p.last_error.clone())}
                 }

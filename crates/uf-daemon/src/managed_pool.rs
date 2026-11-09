@@ -113,6 +113,20 @@ impl Pool {
         Ok(())
     }
 
+    /// Backend calls only after its real retire/FD-close receipt. The generic
+    /// Catalog release marks access tokens Stale; preserve the stronger actual
+    /// checked-unmap witnesses for managed Shutdown's independent crosscheck.
+    pub fn record_confirmed_release(&mut self,st:&mut Catalog,receipt:Value)->Result<(),String>{
+        self.release_result=receipt;
+        if let Err(error)=self.confirm_closed(st){
+            self.state="ReleaseUnknown";self.last_error=error.clone();return Err(error);
+        }
+        self.state="Released";st.ddr_resources.release_confirmed(self.object);
+        st.objects.remove(&self.object);st.mark_object_released(self.object);
+        for session in self.clients.values(){st.access_bindings.get_mut(&session.access_id).unwrap().state="Closed".into();}
+        Ok(())
+    }
+
     pub fn description(&self) -> Value {
         json!({"schema":if self.backend=="mem_service_obmm" {2}else{1},"pool_id":self.id,"pool_epoch":self.epoch,"provider_session":self.provider_session,
                "provider_kind":self.backend,"nbytes":self.nbytes,"resource_id":self.object,
@@ -785,7 +799,14 @@ mod tests {
         st.access_bindings.get_mut(&access).unwrap().state="Unknown".into();assert!(pool.confirm_closed(&st).is_err());
         st.access_bindings.get_mut(&access).unwrap().state="Closed".into();
         let mut orphan=st.leases[&lid].clone();orphan.lease_id+=100;orphan.state="Unknown".into();
-        st.leases.insert(orphan.lease_id,orphan);assert!(pool.confirm_closed(&st).is_err());
+        let orphan_id=orphan.lease_id;st.leases.insert(orphan_id,orphan);assert!(pool.confirm_closed(&st).is_err());
+        st.ddr_resources.commit("create",pool.object,0,1,65536).unwrap();
+        assert!(pool.record_confirmed_release(&mut st,json!({"CPU_backend_receipt":true})).is_err());
+        assert_eq!(st.ddr_resources.charged_bytes(),65536);assert_eq!(pool.state,"ReleaseUnknown");
+        st.leases.remove(&orphan_id);
+        pool.record_confirmed_release(&mut st,json!({"CPU_backend_receipt":true})).unwrap();
+        assert_eq!(pool.state,"Released");assert_eq!(st.ddr_resources.charged_bytes(),0);
+        assert_eq!(st.access_bindings[&access].state,"Closed");pool.confirm_closed(&st).unwrap();
     }
 
 }

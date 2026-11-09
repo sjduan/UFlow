@@ -618,8 +618,7 @@ impl Service {
                     let fd=file.into_raw_fd();
                     if unsafe {libc::close(fd)}!=0 {Err(format!("daemon FD close unknown: {fd}"))}
                     else {
-                        pool.release_result=receipt;pool.state="Released";
-                        st.ddr_resources.release_confirmed(pool.object);st.objects.remove(&pool.object);st.mark_object_released(pool.object);
+                        pool.record_confirmed_release(st,receipt)?;
                         Ok(json!({"released":true,"provider_release":pool.release_result,"daemon_fd_closed":true}))
                     }
                 },Err(error)=>Err(error),
