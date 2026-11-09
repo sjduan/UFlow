@@ -129,6 +129,16 @@ def build(root, source, name):
     scratch=root/('v'+out.name.removeprefix('build-host'))
     run([sys.executable,'-B',fixture/'startup_cpu_probe.py','--agent',fixture_agent,'--worker',fixture_worker,
          '--controller',sdk/'bin/linqu_mem_service','--scratch',scratch,'--output',fixture_output],timeout=180)
+    legacy_agent=out/'cpu-agent-byte-rx';rx_cost=out/'serial-rx-cost.so'
+    legacy_source=fixture/'legacy_byte_rx_agent.c'
+    if digest(legacy_source)!='dad88f19816ddd49af60a6ba689f2f41c7baa5e6dc5b71c6e63280d1514e69a1':
+        raise RuntimeError('exact accepted f39 byte-RX baseline required')
+    run(['/usr/bin/gcc','-O0','-g','-Wall','-Wextra','-pthread','-DUFLOW_POOL_CPU_FIXTURE']+neutral_includes+
+        [legacy_source]+fixture_inputs[1:]+['-o',legacy_agent])
+    run(['/usr/bin/gcc','-Wall','-Wextra','-shared','-fPIC',fixture/'serial_rx_cost.c','-ldl','-o',rx_cost])
+    run([sys.executable,'-B',fixture/'serial_rx_cpu.py','--agent',fixture_agent,'--legacy-agent',legacy_agent,
+         '--legacy-source',legacy_source,'--worker',fixture_worker,'--controller',sdk/'bin/linqu_mem_service',
+         '--cost',rx_cost,'--scratch',root/('rx'+generation),'--output',out/'serial-rx-cpu'],timeout=45)
     shim = out/'fence';shim.mkdir()
     run(['/usr/bin/gcc','-shared','-fPIC',source/'examples/managed_pool/api_fence.c','-o',shim/'libuf_acl_shim.so'])
     cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo'
@@ -214,6 +224,7 @@ def build(root, source, name):
                  'bounded_journal_CPU':json.loads((out/'journal-cpu/results.json').read_bytes()),
                  'PID1_handoff_ms':30000,'unbounded_park':False},
              'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
+             'serial_rx_cpu':json.loads((out/'serial-rx-cpu/results.json').read_bytes()),
              'retained8_admission_cpu':json.loads((out/'retained8-admission-cpu/results.json').read_bytes()),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
              'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),

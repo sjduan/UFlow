@@ -161,7 +161,9 @@ int main(int argc,char **argv) {
     snprintf(connect_to,sizeof(connect_to),"unix:%s",lower_path);
     int listener=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);struct sockaddr_un address={.sun_family=AF_UNIX};strcpy(address.sun_path,lower_path);
     if(listener<0||bind(listener,(void*)&address,sizeof(address))||chmod(lower_path,0600)||listen(listener,32))return fail("private lower relay");
-    char input[12000];size_t input_used=0;bool quitting=false,drained=false,worker_failed=false;
+    char input[12000];size_t input_used=0;
+    unsigned char rx[256];size_t rx_used=0,rx_pos=0;
+    bool quitting=false,drained=false,worker_failed=false;
     uint64_t quit_deadline=0,worker_stop_deadline=0,worker_failure_deadline=0;
     if(identity())return fail("identity output bound");
     for(;;) {
@@ -193,7 +195,7 @@ int main(int argc,char **argv) {
         for(unsigned i=0;i<SLOTS;i++)polls[2+i]=(struct pollfd){.fd=clients[i].fd,.events=POLLIN};
         for(unsigned i=0;i<RELAYS;i++)polls[2+SLOTS+i]=(struct pollfd){.fd=relays[i].fd,.events=(short)(POLLIN|(relays[i].observed&&relays[i].out>relays[i].sent?POLLOUT:0))};
         for(unsigned i=0;i<2;i++)polls[2+SLOTS+RELAYS+i]=(struct pollfd){.fd=worker.logs[i],.events=POLLIN};
-        if(poll(polls,4+SLOTS+RELAYS,50)<0&&errno!=EINTR)return fail("poll");
+        if(poll(polls,4+SLOTS+RELAYS,rx_pos<rx_used?0:50)<0&&errno!=EINTR)return fail("poll");
         if(polls[1].revents&POLLIN) {
             unsigned slot=0;while(slot<RELAYS&&relays[slot].fd>=0)slot++;
             if(slot==RELAYS)return fail("relay bound");
@@ -251,9 +253,20 @@ int main(int argc,char **argv) {
             }
             if(c->used==sizeof(c->reply)-1)return fail("SDK reply line bound");
         }
-        if(polls[0].revents&(POLLIN|POLLHUP)) {
-            char byte;ssize_t n=read(0,&byte,1);if(n<=0)return fail("host control EOF");
-            if(byte!='\n'){if(input_used+1>=sizeof(input))return fail("control line bound");input[input_used++]=byte;continue;}
+        if(rx_pos<rx_used || (polls[0].revents&(POLLIN|POLLHUP))) {
+            /* Bound each RX slice, not each byte. Keep incomplete lines and
+             * trailing commands while servicing relays, logs and the unchanged
+             * worker freshness guard between slices/complete commands. */
+            if(rx_pos==rx_used) {
+                ssize_t n=read(0,rx,sizeof(rx));if(n<=0)return fail("host control EOF");
+                rx_pos=0;rx_used=(size_t)n;
+            }
+            unsigned char *end=memchr(rx+rx_pos,'\n',rx_used-rx_pos);
+            size_t count=end?(size_t)(end-(rx+rx_pos)):rx_used-rx_pos;
+            if(count>=sizeof(input)-input_used)return fail("control line bound");
+            memcpy(input+input_used,rx+rx_pos,count);input_used+=count;rx_pos+=count;
+            if(!end)continue;
+            rx_pos++;
             input[input_used]=0;input_used=0;
             if(!strcmp(input,"identity")){if(identity())return fail("identity output");continue;}
             if(!strcmp(input,"sdk-check")){if(pool_emit("UFLOW_ENV_SDK_OK\n"))return fail("ABI output");continue;}
