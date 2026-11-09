@@ -63,7 +63,7 @@ fn apply(st:&mut Catalog,p:&Value,dir:&Path,authority:&Path)->Result<(),String>{
     for n in ["state.json","prestart-inherited80.json","prestart-resulting76.json"]{if authority.join(n).symlink_metadata().is_ok(){return Err("state already exists or partial; no restart/replacement".into());}}
     let next=dir.join(NEXT);fs::DirBuilder::new().mode(0o700).create(&next).map_err(|e|e.to_string())?;File::open(dir).and_then(|f|f.sync_all()).map_err(|e|e.to_string())?;
     st.ddr_resources=ledger;st.next_object_id=st.next_object_id.max(110);st.next_placement_id=st.next_placement_id.max(10002);st.next_resource_binding_id=st.next_resource_binding_id.max(40002);
-    let snapshot=|st:&Catalog,phase:&str|json!({"schema":1,"phase":phase,"authority":authority,"predecessor_state_sha256":p["predecessor_state_sha256"],"carry":p["carry"],"resource_ledger":st.ddr_resources.snapshot(),"minimum_next_object_id":st.next_object_id,"minimum_next_placement_id":st.next_placement_id,"minimum_next_binding_id":st.next_resource_binding_id});
+    let snapshot=|st:&Catalog,phase:&str|json!({"schema":1,"phase":phase,"authority":authority,"assessment_sha256":SHA,"proof_sha256":p["proof_sha256"],"budget_bytes":st.ddr_resources.limit,"predecessor_state_sha256":p["predecessor_state_sha256"],"carry":p["carry"],"resource_ledger":st.ddr_resources.snapshot(),"minimum_next_object_id":st.next_object_id,"minimum_next_placement_id":st.next_placement_id,"minimum_next_binding_id":st.next_resource_binding_id});
     let baseline=snapshot(st,"Inherited80BeforePrestartCancellation");
     let mut stored_proof=p.clone();
     #[cfg(test)]for k in ["CPU_predecessor_bytes","CPU_crash_at"]{stored_proof.as_object_mut().unwrap().remove(k);}

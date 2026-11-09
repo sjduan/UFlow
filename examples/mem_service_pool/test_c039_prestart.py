@@ -49,6 +49,16 @@ class FixedPrestart(unittest.TestCase):
         q.store_family([])
         for name in ['lower.store','lower.store.next','lower.store.backup']:
             with self.assertRaises(ValueError):q.store_family([Path(name)])
+    def test_closed_namespace_rejects_added_worker_state_or_missing_monitor(self):
+        for job in ['c039','ca039']:
+            prefix='runs/'+job+'/';top={n[len(prefix):].split('/')[0] for n in self.raw if n.startswith(prefix)}
+            if job=='c039':top.add('fm')
+            prefix+='monitor/';monitor={n[len(prefix):] for n in self.raw if n.startswith(prefix)};state={'authority.lock','admin.token','state.json'} if job=='c039' else set()
+            q.closed_names(self.a,job,top,monitor,state)
+            with self.assertRaises(ValueError):q.closed_names(self.a,job,top|{'worker-nodeA.stdout.log'},monitor,state)
+            with self.assertRaises(ValueError):q.closed_names(self.a,job,top,monitor-{'result.json'},state)
+            if job=='c039':
+                with self.assertRaises(ValueError):q.closed_names(self.a,job,top,monitor,state|{'worker.conf.state'})
     def test_only_exact_two_unstarted_reservations_and_old64(self):
         name='runs/c039/state/state.json'
         for key,value in [('canary:nodeA',1),('canary:other',2<<20),('old64',64<<20)]:
@@ -79,6 +89,13 @@ class FixedPrestart(unittest.TestCase):
         self.bad_json('runs/c039/post-close-audit.json',lambda v:v['holder_audit']['holders'].append({'pid':1}))
         self.bad_json('runs/c039/post-close-audit.json',lambda v:v['holder_audit']['denied'].append('/proc/unknown'))
         with self.assertRaises(ValueError):q._r['nonlive']({'2':123},lambda p:123)
+    def test_future_admission_is_one_guest_and_three_matching_locks_not_alternate_authority(self):
+        row={'pid':55,'birth':66,'job':'c044','state':'held','kind':'guest'};records=[dict(row) for _ in range(3)];authority=q.ROOT/'runs/c044/state'
+        self.assertEqual(q._r['admission_record'](records,{55:66},authority),row)
+        for ancestors,path in [({55:67},authority),({55:66},q.ROOT/'runs/c045/state')]:
+            with self.assertRaises(ValueError):q._r['admission_record'](records,ancestors,path)
+        records[2]['job']='c045'
+        with self.assertRaises(ValueError):q._r['admission_record'](records,{55:66},authority)
     def test_limits_and_aggregate_evidence(self):
         raw=dict(self.raw);raw[next(iter(raw))]=b'X'*(q.MAX_FILE+1)
         with self.assertRaises(ValueError):q.exact(self.a,raw)

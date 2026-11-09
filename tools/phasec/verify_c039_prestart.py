@@ -98,6 +98,22 @@ def semantic(a,raw):
     carry['historical_prestart_contexts']=[{'realm':provider['realm'],'provider_session':provider['session'],'guest_identities':identities,'unstarted_reserved_ids':[108,109]}]
     return {'schema':1,'kind':'verified-closed-c039-prestart','assessment_sha256':SHA,'predecessor_state_sha256':a['predecessor_state_sha256'],'completed_succession_proof_sha256':digest,'before_total_bytes':80<<20,'cancel_keys':a['current_unstarted_canary_reservations'],'carry':carry,'evidence_sha256':{n:sha(b) for n,b in raw.items()},'SDK_ACK_Unmapped_or_canary_close_claimed':False,'old64_cancelled':False}
 def store_family(names):require(not list(names),'no c039 lower.store family')
+def closed_names(a,job,top,monitor,state=()):
+    prefix='runs/'+job+'/';expected={n[len(prefix):].split('/')[0] for n in a['files_requiring_fresh_exact_byte_validation'] if n.startswith(prefix)}
+    optional={'u.sock','l.sock'} if job=='c039' else set()
+    if job=='c039':expected.add('fm')
+    require(set(top)-optional==expected,'no added/missing closed prestart files')
+    prefix+='monitor/';wanted={n[len(prefix):] for n in a['files_requiring_fresh_exact_byte_validation'] if n.startswith(prefix)}
+    require(set(monitor)==wanted,'complete closed monitor namespace')
+    if job=='c039':require(set(state)=={'authority.lock','admin.token','state.json'},'no hidden state/journal/store family')
+def closed_filesystem(a):
+    for job in ['c039','ca039']:
+        out=ROOT/'runs'/job;require(out.is_dir() and not out.is_symlink() and not (out/'monitor').is_symlink(),'real closed directories')
+        state=[p.name for p in (out/'state').iterdir()] if job=='c039' else []
+        closed_names(a,job,(p.name for p in out.iterdir()),(p.name for p in (out/'monitor').iterdir()),state)
+        for n in ['u.sock','l.sock']:
+            p=out/n
+            if p.exists():require(stat.S_ISSOCK(p.lstat().st_mode) and p.lstat().st_uid==os.geteuid(),'only inactive known control socket nodes')
 def inventory(a,raw):
     aliases=set();all_rows=[]
     for job in OLD_JOBS:
@@ -141,7 +157,7 @@ def runtime(a,raw):
 def verify(assessment,authority):
     b=read(assessment,MAX_ASSESSMENT);require(sha(b)==SHA,'fixed prestart assessment');a=json.loads(b)
     raw={n:read(ROOT/n) for n in a['files_requiring_fresh_exact_byte_validation']};exact(a,raw);p=semantic(a,raw)
-    store_family((ROOT/'runs/c039').glob('lower.store*'));p['runtime_closure']=runtime(a,raw)
+    store_family((ROOT/'runs/c039').glob('lower.store*'));closed_filesystem(a);p['runtime_closure']=runtime(a,raw)
     for job in (*OLD_JOBS,'ca039'):
         m=json.loads(raw['runs/'+job+'/monitor/result.json']) if 'runs/'+job+'/monitor/result.json' in raw else None
         if m:_r['nonlive']({**m['owned_births'],str(m['supervisor_pid']):m['supervisor_birth']},_r['birth'])
