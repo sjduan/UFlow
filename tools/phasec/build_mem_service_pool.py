@@ -150,6 +150,15 @@ def build(root, source, name):
     env = {**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),
            'CARGO_BUILD_JOBS':'4','CARGO_INCREMENTAL':'0','CARGO_TARGET_DIR':str(cargo_target),'UF_ACL_SHIM_LIB_DIR':str(shim),
            'LD_LIBRARY_PATH':str(shim),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(source/'sdk/python')}
+    # Reject adapter/metadata preparation mistakes before starting a Cargo tree.
+    early_pins=(source/'examples/mem_service_pool/terminal_domain/accepted-E-consumer-pins.json').read_text()
+    early=subprocess.run([sys.executable,'-B','-I','-S',str(source/'tools/phasec/terminal_domain_adapter.py')],
+        input=json.dumps({'action':'verify-current','consumer_pins':early_pins}).encode(),capture_output=True,timeout=120)
+    (out/'E-adapter-python-readonly.json').write_bytes(early.stdout)
+    (out/'E-adapter-python-readonly.stderr').write_bytes(early.stderr)
+    if early.returncode!=0:raise RuntimeError('precompile accepted E adapter rejected: '+early.stderr.decode()[:1200])
+    run([sys.executable,'-B',source/'tools/phasec/terminal_metadata_cpu.py','--directory',
+         root/('implementation/qemu-domain-v1/consumer-phase-c/host'+generation+'-metadata-cpu')],env=env,timeout=120)
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
@@ -162,7 +171,20 @@ def build(root, source, name):
     (out/'terminal-command-not-ready.json').write_text(json.dumps({'actual_exit':disabled.returncode,'stdout':disabled.stdout.decode(),
         'stderr':disabled.stderr.decode(),'production_ready':False,'original_authority_or_verifier_called':False},indent=2))
     if disabled.returncode!=1 or b'production-not-ready' not in disabled.stderr:
-        raise RuntimeError('production terminal command must refuse without accepted E pins, before backend or authority actions')
+        raise RuntimeError('bare terminal build probe must refuse before verifier/authority actions even with accepted E pins')
+    # This distinct explicit mode invokes the real E validator read-only. It
+    # cannot reach transact/recover, original FLOCK or new Guest startup.
+    verified=[]
+    for attempt in (1,2):
+        actual=subprocess.run([str(cargo_target/'debug/uf-daemon'),'--pool-terminal-domain-verify'],env=env,capture_output=True,timeout=120)
+        (out/('E-adapter-readonly-%d.json'%attempt)).write_bytes(actual.stdout)
+        (out/('E-adapter-readonly-%d.stderr'%attempt)).write_bytes(actual.stderr)
+        if actual.returncode!=0:raise RuntimeError('real accepted E adapter rejected read-only HOST integration: '+actual.stderr.decode()[:1200])
+        proof=json.loads(actual.stdout)
+        if proof['kind']!='EValidatedTerminalDomainProofV1' or not proof['validated_candidate']['applies_to_current_domain']:
+            raise RuntimeError('real E current-domain proof required')
+        verified.append(proof)
+    if verified[0]!=verified[1]:raise RuntimeError('fresh real proof canonical content changed across read-only checks')
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     # The fixture appends .external-ddr to its already nonce-qualified socket.
     # A compact generation label leaves that suffix within Linux SUN_LEN.

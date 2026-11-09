@@ -93,7 +93,7 @@ def selected_launch_environment(parent,config,node):
 
 
 def capture_owned_starts(starts_path,expected_starts_sha,config,group_source):
-    """Not called by the current driver; future reviewed callback integration."""
+    """Inline owner callback, enabled only in a reviewed future terminal run."""
     starts_path=Path(starts_path);run=starts_path.parent
     if (run.parent!=ROOT/'runs' or not re.fullmatch(r'c\d{3}',run.name) or starts_path.name!='guest-starts.json' or
             run.resolve()!=run or Path(config['output'])!=run):raise ValueError('exact new task Guest starts scope')

@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "kind": "manager-reviewed-c044-producer-consumer-pins-v1",
+  "goal": "uflow-mem-service-shared-pool-sim",
+  "interface": "mem-service-private-qemu-domain-v1",
+  "interface_sha256": "02975e42457aea8f881fbbe72d0ae8b70d62c879273a0084de8ac610e913fc02",
+  "producer_commit": "85d70750ffe5ad54739d2640d451655c58f662d5",
+  "producer_package_manifest_sha256": "72bbfb460def91b2ed47ed79aa6c4e30e6ad9d54f02555b30e2a578d03aa86fd",
+  "producer_platform_ready_sha256": "f292ac7fbfe40ad1453aa5287a97aa5bebea388dddc49ca5cfa87a21e12f345d",
+  "producer_source_manifest": {
+    "bytes": 2029,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/fixed-release003/source-pins.json",
+    "sha256": "e70768edb3745253c8ecd73230824fd44ebd3b2cc988b2e317499ae5a90831b7"
+  },
+  "modules": {
+    "uflow_qemu_evidence.py": {
+      "sha256": "0dc9cbe9909bca7d53dcc6aa58b72f72942e699999ecf420055528cbd98c0995",
+      "mode": "100755",
+      "remote": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/source-r009/scripts/uflow_qemu_evidence.py"
+    },
+    "uflow_qemu_metadata.py": {
+      "sha256": "3edf6eb9e99cfe1a194d273bd11ae0e21f2ddcd3fff7fed2fd835ec9f5c227e5",
+      "mode": "100755",
+      "remote": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/source-r009/scripts/uflow_qemu_metadata.py"
+    },
+    "uflow_qemu_fixed_launch.py": {
+      "sha256": "949cd0866da8f1ad7b555dc6cf0f0a77574b82ea0499f34a6951fa5c3bb2b12b",
+      "mode": "100755",
+      "remote": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/source-r009/scripts/uflow_qemu_fixed_launch.py"
+    },
+    "uflow_qemu_domain.py": {
+      "sha256": "90c19a3ea880c43394a7128ac6c82a087cdf5d744fcfea8d0d7a062e917bce70",
+      "mode": "100755",
+      "remote": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/source-r009/scripts/uflow_qemu_domain.py"
+    }
+  },
+  "candidate": {
+    "bytes": 5521,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/fixed-release003/domain-candidate.json",
+    "sha256": "a68f48eaf61ef52cbfdd0ac039dc690da23185a3700a90b6b3f98a5d7f8f401b"
+  },
+  "candidate_id": "c02a84f0388ba6d2c0d9f8c964a8b7a8af78249ddafaf1cc1b1a07295a9cdf49",
+  "domain_plan": {
+    "bytes": 3112,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/legacy-evidence003/domain-plan.json",
+    "sha256": "d107b1103172181413bd48b16f5dd3a31f845a40a01f079a4dadc604dc8f817e"
+  },
+  "companion_plan": {
+    "bytes": 1875,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/current-evidence002/companion-plan.json",
+    "sha256": "35a61d48538fa5181a1d6f5df253a6dc7ca83ed9d383edc34f84f17eaee57ac4"
+  },
+  "companion_snapshot": {
+    "bytes": 9068,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/fixed-release003/companion-result.json",
+    "sha256": "04c5b3e7ed07d97a73f2fe916b165792d414feea7f3cf956848784f1149887da"
+  },
+  "metadata_registry_head_sha256": "e7afcd2cf7fe3118e7845c14206e5bf5cbfc56f375eaf3ca62cd5d7bfab96d6b",
+  "API": "uflow_qemu_domain.validate_candidate(path, external_sha, for_current_domain=True)",
+  "module_source_exec_order": [
+    "uflow_qemu_evidence",
+    "uflow_qemu_metadata",
+    "uflow_qemu_fixed_launch",
+    "uflow_qemu_domain"
+  ],
+  "verify_all_four_source_bytes_before_first_exec": true,
+  "module_or_pyc_cache_trusted": false,
+  "accepted_evidence_method": "fixed-launch-source",
+  "source_derived_inference": true,
+  "historical_proc_QMP_capture_claimed": false,
+  "only_eligible_resource_ids": [
+    110,
+    111,
+    112
+  ],
+  "eligible_capacity_bytes": 54525952,
+  "current_state_sha256": "b6592a7442e7cb8540f340168a215fe6cc8cf669c7e87fedb7403ced2fc6c307",
+  "protected_retained_bytes": 12582912,
+  "protected_reserved_bytes": 67108864,
+  "current_B_responsibility_bytes": 134217728,
+  "ledger_fences_applied_by_E": false,
+  "normal_SDK_ACK_proven": false,
+  "original_authority_lock_and_fresh_revalidation_required_for_C_transaction": true,
+  "this_bundle_authorizes_HOST_consumer_implementation_not_actual_ledger_mutation": true,
+  "C_data_write_namespace": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/qemu-domain-v1/consumer-phase-c",
+  "E_code_and_existing_release_registry_remain_readonly_to_C": true
+}

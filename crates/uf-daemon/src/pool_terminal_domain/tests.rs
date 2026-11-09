@@ -198,11 +198,21 @@ fn terminal_serialized_cpu_fixture(){
         atomic_record(path,"attached-catalog76.json",&after).unwrap();
         atomic_record(path,"shutdown-report.json",&a.closure_report().unwrap()).unwrap();
         atomic_record(path,"results.json",&json!({"pass":true,"scope":"real Rust ledger and fsynced serialized CPU fixture, not real E proof or production retirement",
-            "production_ready":false,"production_E_adapter_and_accepted_pins_missing":true,"original_state_sha256":STATE_SHA,
+            "production_ready":false,"CPU_fixture_not_real_E_validation":true,"original_state_sha256":STATE_SHA,
             "B_before_bytes":128<<20,"terminal_domain_loss_bytes":52<<20,"B_after_bytes":76<<20,
             "old_retained12_reserved64_exact":true,"Unknown_and_threeMapped_clients_unchanged":true,
             "normal_SDK_ACK":false,"new_Guest_or_production_authority_or_ledger_touched":false})).unwrap();
     }
+}
+
+#[test]
+fn resolved_execution_gate_refuses_before_original_io(){
+    assert!(production_terminal_only().unwrap_err().contains("production-not-ready"));
+    for path in ["/tmp/force.json","/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/state/state.json"] {
+        assert!(production_terminal_manifest(Path::new(path),&"0".repeat(64)).unwrap_err().contains("production-not-ready"));
+    }
+    assert!(execution_context(Path::new("/tmp/fixture"),"true","successor").unwrap_err().contains("production-not-ready"));
+    assert_eq!(digest(E_PINS.as_bytes()),E_PIN_SHA);
 }
 
 #[test]

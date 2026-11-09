@@ -114,16 +114,22 @@ def matrix(root,config,build):
     realm='simulated:mem-service:'+str(uuid.uuid4());session=str(uuid.uuid4())
     provider_config=out/'provider.json';prepared_config=out/'prepared-provider.json'
     endpoint=str(out/'u.sock');state=out/'state'
+    reconciliation={'closed_c039_prestart_assessment':str(source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')}
+    if config.get('terminal_execution') is not None:
+        execution=config['terminal_execution']
+        if set(execution)!={'path','sha256'}:raise ValueError('exact resolved terminal execution binding required')
+        reconciliation={'terminal_c044_execution_manifest':execution['path'],
+                        'terminal_c044_execution_manifest_sha256':execution['sha256']}
     provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
-        'reconciliation':{'closed_c039_prestart_assessment':str(source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')}},indent=2))
+        'reconciliation':reconciliation},indent=2))
     env={**os.environ,'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
          'LD_LIBRARY_PATH':str(Path(build['fence_shim']).parent)}
     daemon_log=(out/'catalog.log').open('xb')
     daemon=subprocess.Popen([build['daemon'],'--host-pool','--socket',endpoint,'--pool-state-root',str(state),
         '--pool-budget-bytes',str(128*M),'--pool-mem-service-config',str(provider_config)],env=env,
-        stdout=daemon_log,stderr=subprocess.STDOUT)
+        stdout=daemon_log,stderr=subprocess.STDOUT,pass_fds=(int(os.environ['UFLOW_ENV_CLOSE_FD']),))
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
     import_phase=imported['reconciliation']['phase']
@@ -140,6 +146,11 @@ def matrix(root,config,build):
         peers=[]
         pool=None
         try:
+            if config.get('terminal_execution') is not None:
+                from collect_owned_qemu_metadata import capture_owned_starts
+                starts=out/'guest-starts.json'
+                capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
+                                     root/'env/guest-kit004/uflow_guest_group.py')
             isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
@@ -332,6 +343,11 @@ def matrix(root,config,build):
         lower.send_signal(signal.SIGTERM)
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
+        if config.get('terminal_execution') is not None:
+            from pool_run_metadata import complete_run
+            result=complete_run(out,Path(config['metadata_completion_directory']))
+            event({'event':'validated-exact-metadata-union-companion-audit','status':result['status'],
+                   'exact_union_files':result['exact_union_files'],'normal_native_or_SDK_release_ACK_inferred':False})
         normal_closed=True
     except BaseException:
         notify_failure()

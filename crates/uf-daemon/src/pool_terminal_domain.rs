@@ -1,6 +1,6 @@
 //! Private terminal CPU domain loss, distinct from normal SDK release.
-//! Production producer pins are deliberately unavailable until independent E
-//! acceptance. No user boolean, environment variable or CPU receipt enables it.
+//! Accepted E evidence is consumed via fresh source execution. A resolved
+//! execution manifest and real E0 context are required before original I/O.
 use crate::{catalog::Catalog,ddr_resources::DdrResources,ddr_recovery_coverage::digest,
             pool_retained8::{atomic_record,lock_lineage}};
 use serde_json::{json,Value};
@@ -14,10 +14,93 @@ const STATE:&[u8]=include_bytes!("../../../examples/mem_service_pool/terminal_do
 const PINS:&str=include_str!("../../../examples/mem_service_pool/terminal_domain/predecessor-pins.json");
 const SEMANTICS:&[u8]=include_bytes!("../../../examples/mem_service_pool/terminal_domain/external-semantics.json");
 const ROOT:&str="/workspace/uflow/runs/mem-service-shared-pool-20261108";
+const E_PINS:&str=include_str!("../../../examples/mem_service_pool/terminal_domain/accepted-E-consumer-pins.json");
+const E_PIN_SHA:&str="b793a03e31b41709ba7002a8305eb83b06efaa4f114997f67307760597d6fdb8";
+const E_ADAPTER:&str=include_str!("../../../tools/phasec/terminal_domain_adapter.py");
 
-/// There is no production success constructor while E has no accepted pins.
+/// Bare build probes must fail before reading original state or calling E.
 pub(crate) fn production_terminal_only()->Result<Value,String>{
-    Err("production-not-ready: independently accepted E producer manifest, validator SHA and real adapter are missing; no authority/ledger/verifier/Guest action performed".into())
+    Err("production-not-ready: explicit reviewed execution manifest and actual E0 context required; no authority/ledger/verifier/Guest action performed".into())
+}
+
+fn adapter(mut request:Value)->Result<Value,String>{
+    use std::{io::Write,process::{Command,Stdio}};
+    if digest(E_PINS.as_bytes())!=E_PIN_SHA{return Err("compiled external E pins drift".into());}
+    request["consumer_pins"]=json!(E_PINS);
+    let mut child=Command::new("/usr/local/python3.11.14/bin/python3.11")
+        .args(["-B","-I","-S","-c",E_ADAPTER]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+        .spawn().map_err(|e|e.to_string())?;
+    child.stdin.take().ok_or("adapter stdin")?.write_all(&serde_json::to_vec(&request).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+    let output=child.wait_with_output().map_err(|e|e.to_string())?;
+    if !output.status.success()||output.stdout.len()>256<<10||output.stderr.len()>4096 {
+        return Err(format!("fresh accepted E adapter rejected: {}",String::from_utf8_lossy(&output.stderr[..output.stderr.len().min(1200)])));
+    }
+    parsed(&output.stdout)
+}
+
+fn from_e_proof(bytes:&[u8],proof:Value)->Result<VerifiedCandidate,String>{
+    let pins:Value=serde_json::from_str(E_PINS).map_err(|e|e.to_string())?;let c=&proof["validated_candidate"];
+    if digest(bytes)!=STATE_SHA || proof["schema"]!=1 || proof["kind"]!="EValidatedTerminalDomainProofV1" ||
+        proof["consumer_pins_sha256"]!=E_PIN_SHA || proof["producer_commit"]!=pins["producer_commit"] ||
+        proof["verified_module_sources"]!=pins["modules"] ||
+        c["candidate_id"]!=pins["candidate_id"] || c["state_sha256"]!=STATE_SHA || c["applies_to_current_domain"]!=true ||
+        c["interface"]!="mem-service-private-qemu-domain-v1" || c["status"]!="PASS_HOST_CANDIDATE_ONLY" ||
+        c["evidence_mode"]!="fixed-launch-source" || c["source_derived_inference"]!=true || c["historical_proc_or_QMP_capture_claimed"]!=false ||
+        c["only_eligible_resource_ids"]!=json!([110,111,112]) || c["current_eligible_capacity_bytes"]!=52<<20 ||
+        c["protected_historical_retained_bytes"]!=12<<20 || c["protected_historical_reserved_bytes"]!=64<<20 ||
+        c["missing_evidence"]!=json!([]) || c["physical_closure"]["exact_union_files"]!=51 ||
+        c["physical_closure"]["registry_head_sha256"]!=pins["metadata_registry_head_sha256"] {
+        return Err("fresh real accepted current-domain proof/scope required".into());
+    }
+    for key in ["candidate","domain_plan","producer_source_manifest","companion_plan"] {
+        if proof["evidence_references"][key]!=pins[key]{return Err("accepted evidence reference drift".into());}
+    }
+    for key in ["runtime_E1_E5_passed","normal_native_or_SDK_release_ACK_proven","ledger_fences_applied","authority_to_mutate_ledger",
+        "authority_to_launch_new_Guest","authority_to_destroy_FM_payload_files","normal_history_state_transition_performed"] {
+        if c[key]!=false{return Err("E evidence must not claim C authority/native ACK".into());}
+    }
+    let state=parsed(bytes)?;let fences=make_fences(&state);
+    Ok(VerifiedCandidate{state,proof_sha:digest(&serde_json::to_vec(&proof).map_err(|e|e.to_string())?),proof,fences})
+}
+
+fn verify_e(bytes:&[u8])->Result<VerifiedCandidate,String>{
+    from_e_proof(bytes,adapter(json!({"action":"verify-current"}))?)
+}
+
+/// Explicit read-only HOST integration: no authority lock, transaction or Guest.
+pub(crate) fn production_verify_readonly()->Result<Value,String>{
+    let state=bounded(&Path::new(ROOT).join("runs/c044/state/state.json"),1<<20)?;
+    Ok(verify_e(&state)?.proof)
+}
+
+fn execution_context(path:&Path,sha:&str,phase:&str)->Result<(),String>{
+    let fixed=Path::new(ROOT).join("implementation/config-terminal-c060-v1/execution.json");
+    if path!=fixed || sha.len()!=64 {return Err("production-not-ready: fixed explicit execution manifest and external digest required before original I/O".into());}
+    let raw=bounded(path,1<<20)?;
+    if digest(&raw)!=sha{return Err("execution manifest external hash mismatch".into());}
+    let result=adapter(json!({"action":"execution-context","execution_action":phase,
+        "execution_manifest":{"path":path,"bytes":raw.len(),"sha256":sha},"daemon_pid":std::process::id(),
+        "daemon_path":std::env::current_exe().map_err(|e|e.to_string())?}))?;
+    if result["phase"]!=phase||result["execution_manifest_sha256"]!=sha{return Err("resolved execution context rejected".into());}Ok(())
+}
+
+pub(crate) fn production_terminal_manifest(path:&Path,sha:&str)->Result<Value,String>{
+    execution_context(path,sha,"terminal-only")?;
+    let a=transact(&Path::new(ROOT).join("implementation/responsibility-c013"),
+        &Path::new(ROOT).join("runs/c044/state/state.json"),verify_e,"")?;
+    a.closure_report()
+}
+
+/// Recovery revalidates the accepted proof under the original authority, then
+/// durably claims the successor and reserves4 before any Guest identity exists.
+pub(crate) fn restore_staged(st:&mut Catalog,config:&Value,loaded:&Value)->Result<File,String>{
+    let p=config["terminal_c044_execution_manifest"].as_str().ok_or("terminal execution manifest")?;
+    let sha=config["terminal_c044_execution_manifest_sha256"].as_str().ok_or("terminal execution digest")?;
+    execution_context(Path::new(p),sha,"successor")?;
+    let mut a=recover_committed(&Path::new(ROOT).join("implementation/responsibility-c013"),
+        &Path::new(ROOT).join("runs/c044/state/state.json"),verify_e)?;
+    let nodes=loaded["nodes"].as_object().ok_or("deferred provider nodes")?.values().cloned().collect::<Vec<_>>();
+    a.attach_staged(st,&json!({"realm":loaded["realm"],"session":loaded["session"],"nodes":nodes}))
 }
 
 fn bounded(path:&Path,max:u64)->Result<Vec<u8>,String>{
@@ -54,6 +137,7 @@ impl VerifiedCandidate {
 
 // Internal consumer schema is intentionally not presented as E's final public
 // API. Only cfg(test) may mint this interim candidate until that API is accepted.
+#[cfg(test)]
 fn validate_candidate(bytes:&[u8],proof:&Value)->Result<VerifiedCandidate,String>{
     #[cfg(not(test))]
     if proof["CPU_fixture_only_not_real_platform_proof"]==true{return Err("synthetic fixture can never authorize production terminal loss".into());}
