@@ -2,7 +2,7 @@
 //!
 //! Lifecycle witnesses may retain per-backing state, but never add a second
 //! capacity charge. Reservations cover provider creation outside Catalog locks.
-use std::collections::HashMap;
+use std::collections::{HashMap,HashSet};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BackingId {
@@ -25,6 +25,7 @@ pub struct DdrResources {
     resources: HashMap<u64, (BackingId, u64)>, // one charge per real backing, not per view
     retained: HashMap<u64, serde_json::Value>, // lifecycle witness; capacity remains in resources
     retained_reservations: HashMap<String, RetainedUncertainReservation>,
+    retired_unstarted: HashSet<u64>, // fixed c039 IDs108/109: no backing, never reused
 }
 
 impl Default for DdrResources {
@@ -38,17 +39,25 @@ impl Default for DdrResources {
             resources: HashMap::new(),
             retained: HashMap::new(),
             retained_reservations: HashMap::new(),
+            retired_unstarted: HashSet::new(),
         }
     }
 }
 
 impl DdrResources {
+    pub(crate) fn protect_c039_unstarted_ids(&mut self)->Result<(),String>{
+        if self.reservations.get("canary:nodeA")!=Some(&(2<<20)) || self.reservations.get("canary:nodeB")!=Some(&(2<<20)) ||
+            !self.retired_unstarted.is_empty() || [108,109].iter().any(|id|self.resources.contains_key(id)) {
+            return Err("fixed two reserved c039 IDs only; no reentry".into());
+        }
+        self.retired_unstarted.extend([108,109]);Ok(())
+    }
     pub fn retain_uncertain_reservation(&mut self, operation:&str, object_id:u64,
                                       witness:serde_json::Value)->Result<(),String> {
         let nbytes=witness["nbytes"].as_u64().filter(|n|*n>0).ok_or("positive reserved bytes required")?;
         if self.reservations.get(operation).copied()!=Some(nbytes) ||
             witness["key"]!=operation || witness["state"]!="CreationUnknown" || object_id==0 ||
-            self.resources.contains_key(&object_id) || self.retained_reservations.contains_key(operation) ||
+            self.resources.contains_key(&object_id) || self.retired_unstarted.contains(&object_id) || self.retained_reservations.contains_key(operation) ||
             self.retained_reservations.values().any(|r|r.object_id==object_id) {
             return Err("complete unique uncertain creation reservation required".into());
         }
@@ -74,7 +83,7 @@ impl DdrResources {
             "retained_uncertain_reservations":self.retained_reservations.iter().map(|(key,r)|
                 json!({"key":key,"object_id":r.object_id,"witness":r.witness})).collect::<Vec<_>>(),
             "retained_bytes":self.retained_bytes(),"active_bytes":self.charged_bytes()-self.retained_bytes(),
-            "reservations":self.reservations,
+            "reservations":self.reservations,"retired_unstarted_object_ids":self.retired_unstarted.iter().copied().collect::<std::collections::BTreeSet<_>>(),
             "resources":self.resources.iter().map(|(id,(backing,n))| {
                 let identity=match backing {
                     BackingId::Posix{dev,inode}=>json!({"kind":"posix","dev":dev,"inode":inode}),
@@ -144,7 +153,7 @@ impl DdrResources {
 
     pub fn commit_backing(&mut self, operation: &str, object: u64,
                           backing: BackingId, nbytes: u64) -> Result<(), String> {
-        if self.retained_reservations.contains_key(operation) ||
+        if self.retired_unstarted.contains(&object) || self.retained_reservations.contains_key(operation) ||
             self.retained_reservations.values().any(|r|r.object_id==object) {
             return Err("uncertain historical reservation has no confirmed backing/release".into());
         }

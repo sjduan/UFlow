@@ -693,7 +693,9 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     let responsibility=restore_original(&mut catalog)?;
     #[cfg(test)]
     let responsibility=if let Some(proof)=fixture {
-        Some(if proof["kind"]=="verified-closed-c033-quarantine76" {
+        Some(if proof["kind"]=="verified-closed-c039-prestart" {
+            crate::pool_c039_prestart::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
+        } else if proof["kind"]=="verified-closed-c033-quarantine76" {
             crate::pool_quarantine76::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
         } else if proof["kind"]=="verified-c027-retained8-succession" {
             crate::pool_retained8::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?

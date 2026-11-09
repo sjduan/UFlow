@@ -20,7 +20,7 @@ from pool_peer_io import PeerIO
 from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
 from pool_startup import Startup
 from kernel_profile_gate import launch_gate
-from verify_quarantine76_pool import verify_new_fm
+from verify_c039_prestart import verify_new_fm
 
 U,M=65536,1024*1024
 CAPACITY=48*M
@@ -116,7 +116,7 @@ def matrix(root,config,build):
     provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
-        'reconciliation':{'quarantine76_assessment':str(source/'examples/mem_service_pool/reconciliation/quarantine76-assessment.json')}},indent=2))
+        'reconciliation':{'closed_c039_prestart_assessment':str(source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')}},indent=2))
     env={**os.environ,'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
          'LD_LIBRARY_PATH':str(Path(build['fence_shim']).parent)}
     daemon_log=(out/'catalog.log').open('xb')
@@ -125,9 +125,9 @@ def matrix(root,config,build):
         stdout=daemon_log,stderr=subprocess.STDOUT)
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
-    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or imported['reconciliation']['phase']!='ClosedC033Quarantine76':
+    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or imported['reconciliation']['phase']!='ClosedC039Prestart76':
         raise RuntimeError('single-ledger conservative76 quarantine and new canary reservation not established; no Guest')
-    event({'event':'quarantine76-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
+    event({'event':'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
         'retained_reserved_bytes':RETAINED_RESERVED,'kernel_capability':capability,
         'current_canary_reserved_bytes':4*M,'predecessor_cancel64_repeated':False,
         'proof_sha256':imported['reconciliation']['proof_sha256'],'original_SDK_close_claimed':False})
@@ -138,7 +138,7 @@ def matrix(root,config,build):
         peers=[]
         pool=None
         try:
-            isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/quarantine76-assessment.json')
+            isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
                 name=identity['node']

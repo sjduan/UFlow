@@ -30,7 +30,7 @@ def main():
   if argv[0]==str(daemon):
    control=h.path/'rust.json';control.write_text(json.dumps({'provider_config':str(out/'provider.json'),'state':str(out/'state'),'endpoint':str(out/'u.sock')}))
    kwargs['env']={**kwargs['env'],'UFLOW_RECON_CATALOG_CPU_CONFIG':str(control)}
-   argv=[str(a.rust_tests),'--exact','pool_quarantine76::tests::staged_quarantine76_fixture','--nocapture','--test-threads=1']
+   argv=[str(a.rust_tests),'--exact','pool_c039_prestart::tests::staged_c039_prestart_fixture','--nocapture','--test-threads=1']
    child=real_popen(argv,**kwargs);catalog.append(child)
   else:child=real_popen(argv,**kwargs)
   h.children.append((child,birth(child.pid)));return child
@@ -43,9 +43,13 @@ def main():
  def group_run(config,control):
   initial=state();assert initial['charged_bytes']==initial['retained_bytes']==12<<20 and initial['creation_reserved_bytes']==68<<20
   assert initial['retained_reserved_bytes']==64<<20 and total(initial)==80<<20
-  record=json.loads((out/'state/fixture-lineage/successor-c033-v1/result.json').read_bytes())
+  record=json.loads((out/'state/fixture-lineage/successor-c039-prestart-v1/result.json').read_bytes())
   assert record['resource_ledger']['charged_bytes']==12<<20 and record['resource_ledger']['reserved_bytes']==64<<20
-  states.extend([{'point':'inherited-baseline','total':76<<20},{'point':'reserved-new-canaries','total':total(initial)}])
+  inherited=json.loads((out/'state/prestart-inherited80.json').read_bytes());resulting=json.loads((out/'state/prestart-resulting76.json').read_bytes())
+  assert inherited['resource_ledger']['charged_bytes']==12<<20 and inherited['resource_ledger']['reserved_bytes']==68<<20
+  assert resulting['resource_ledger']['charged_bytes']==12<<20 and resulting['resource_ledger']['reserved_bytes']==64<<20
+  assert initial['resource_ledger']['retired_unstarted_object_ids']==[108,109]
+  states.extend([{'point':'inherited-prestart-baseline','total':80<<20},{'point':'proved-two-unstarted-reservations-cancelled','total':76<<20},{'point':'reserved-new-canaries','total':total(initial)}])
   channels={};identities=[]
   for name in ('nodeA','nodeB'):
    raw=(h.output/(name+'.serial.log')).open('xb');h.raw.append(raw)
@@ -82,7 +86,7 @@ def main():
       patch.object(driver,'verify_new_fm',lambda *a:{'CPU_fake_QEMU_no_FM':True,'independent':True}):
    driver.matrix(a.scratch,config,build)
   events=[json.loads(s) for s in (out/'pool-events.jsonl').read_text().splitlines()]
-  assert [s['total'] for s in states]==[76<<20,80<<20,128<<20,76<<20]
+  assert [s['total'] for s in states]==[80<<20,76<<20,80<<20,128<<20,76<<20]
   directions=[e for e in events if e['event']=='E2-direction'];assert [e['nbytes'] for e in directions[:2]]==[20<<20,20<<20]
   assert {e['writer']['node'] for e in directions[:2]}=={'nodeA','nodeB'}
   barrier=next(e for e in events if e['event']=='E3-real-lifetime-barrier');assert len(set(barrier['independent_host_pids']))==3
@@ -94,7 +98,7 @@ def main():
   assert any(e['operation']==0x73 and e['origin']['role']=='root' and e['status']==0 for e in calls)
   original=json.loads((out/'E1-E4.json').read_bytes());assert original['capacity']==48<<20 and original['final_B_total_bytes']==76<<20
   result={'pass':True,'actual_matrix_and_nested_callback':True,'actual_Rust_C_SDK_sockets':True,'actual_CPU_shared_mapping_all_bytes':True,
-   'budget_sequence':states,'both20MiB_directions':True,'independent_full_guards':True,'three_client_lifetime_barrier':True,
+   'budget_sequence':states,'strict_prestart_cancel_before_new_reservation':True,'both20MiB_directions':True,'independent_full_guards':True,'three_client_lifetime_barrier':True,
    'negative64_and_new_live_Unknown_guard':True,'historical_Unknown_query_and_retry_denied':True,'normal_current_drain_keeps_reserved64':True,
    'SDK_allocate_has_no_holder_and_no_spurious_owner_RELEASE':True,
    'CPU_import_canary_worker_platform_QEMU_Image_gate_doubles':True,'real_Guest_or_OBMM_or_production_lineage':False,'actual_capacity':48<<20}

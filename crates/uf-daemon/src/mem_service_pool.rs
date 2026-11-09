@@ -130,6 +130,16 @@ impl MemServicePoolProvider {
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
         let old=&st.managed_pools.reconciliation;
+        if let Some(contexts)=old["historical_prestart_contexts"].as_array(){
+            for c in contexts {
+                if c["realm"]==self.realm || c["provider_session"]==self.session ||
+                    c["guest_identities"].as_array().is_some_and(|ids|ids.iter().any(|i|self.nodes.values().any(|n|
+                        ["boot_id","agent_session","incarnation"].iter().any(|k|n.get(*k).is_some_and(|v|!v.is_null() &&
+                            (Some(v)==i.get(*k) || (matches!(*k,"boot_id"|"agent_session") && (Some(v)==i.get("boot_id")||Some(v)==i.get("agent_session")))))))) {
+                    return Err("closed prestart realm/session/boot/incarnation cannot be revived".into());
+                }
+            }
+        }
         if let Some(canaries)=old["retained_canaries"].as_array() {
             for c in canaries {
                 if c["provider_session"]==self.session || c["backing"]["realm"]==self.realm ||
@@ -624,8 +634,7 @@ mod tests {
     }
     #[test]
     fn all_retained_generations_forbid_runtime_identity_reuse_before_rpc(){
-        let mut st=Catalog::new(-1,Vec::new());st.managed_pools.reconciliation=json!({
-            "retained_canaries":crate::pool_retained8::fixture_proof()["retained_canaries"]});
+        let mut st=Catalog::new(-1,Vec::new());st.managed_pools.reconciliation=crate::pool_c039_prestart::fixture_proof()["carry"].clone();
         let fresh=||MemServicePoolProvider {session:"fresh-session".into(),realm:"simulated:fresh".into(),
             nodes:[("nodeA".into(),json!({"boot_id":"fresh-a","agent_session":"fresh-a","incarnation":17})),
                 ("nodeB".into(),json!({"boot_id":"fresh-b","agent_session":"fresh-b","incarnation":19}))].into_iter().collect(),
@@ -641,6 +650,13 @@ mod tests {
                 let mut p=fresh();p.nodes.get_mut("nodeA").unwrap()[key]=value;
                 assert!(p.reject_retained_reuse(&st).is_err(),"{key}");
             }
+        }
+        for c in st.managed_pools.reconciliation["historical_prestart_contexts"].as_array().unwrap(){
+            let mut p=fresh();p.realm=c["realm"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
+            let mut p=fresh();p.session=c["provider_session"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
+            for identity in c["guest_identities"].as_array().unwrap(){for key in ["boot_id","agent_session","incarnation"]{
+                let mut p=fresh();p.nodes.get_mut("nodeA").unwrap()[key]=identity[key].clone();assert!(p.reject_retained_reuse(&st).is_err());
+            }}
         }
         assert_eq!(st.ddr_resources.charged_bytes(),0);
     }

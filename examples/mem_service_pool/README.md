@@ -269,3 +269,33 @@ The Rust regression drives Catalog acquire → Unknown → the shared confirmed-
 boundary, checks Invalid content and all lease/access/client closure, and rejects
 independently corrupted Catalog state. The existing `Service::catalog` outer
 lease synchronization remains; immediate closure no longer depends on it.
+# Closed c039 prestart succession
+
+The next matrix uses only the fixed `closed_c039_prestart_assessment` restore
+path. Its externally pinned 80,548-byte assessment binds 286 complete original
+metadata/source files. The production verifier checks the positive c733
+callback/agent control flow, ordered complete failure trace, exact reservations,
+full predecessor chain, actual Image/build/SDK/worker closure and fresh closed
+birth/control/40-FM holder evidence. It additionally requires the new frozen E0
+Guest plus two-heavy kernel FLOCK admission under the original authority lock.
+There is no arbitrary snapshot/root/restore list or absence/ACK override.
+
+`successor-c039-prestart-v1` is append-only. It records the delta intent and
+fsyncs `prestart-inherited80.json` with full retained12 + reserved68, then cancels
+only the two proved unstarted `canary:nodeA/B` reservations of2 MiB each. It
+fsyncs `prestart-resulting76.json` and the initial state before committing the
+successor result and admitting new canaries. Every partial boundary, missing or
+changed state, existing successor, restart or competing authority rejects.
+The original attempted CreationUnknown64 and six uncertain canaries12 remain
+protected; this cancellation is neither canary checked close nor native ACK.
+IDs108/109 are permanently fenced without claiming a backing and the next
+object/placement/binding high-water marks are at least110/10002/40002. Four old
+runtime generations, including the failed prestart boots, cannot be revived.
+
+The CPU matrix exercises the actual Rust transition and persisted snapshots,
+then the real C/SDK CPU mapping callback:80→76→80→128→76. Explicit isolated
+proof/import/canary/worker/platform/QEMU/Image doubles remain CPU evidence.
+The fixed CPU documents contain only the reviewed metadata/source inputs;
+their pure semantic functions and cfg(test) Rust restore never invoke the
+production verifier, real authority lock, cancellation or Guest. Real B stays
+at80 until separately reviewed execution of a new concrete runtime scope.
