@@ -64,6 +64,16 @@ def build(root, source, name):
     def git(path, *argv):
         return subprocess.check_output(['git', '-C', str(path), *argv]).decode().strip()
     generation=name.removeprefix('build-host')
+    # Fail fast before C or Cargo compilation. Preserve exact external bytes,
+    # including CRLF; read_text's universal newline conversion changes the pin.
+    early_pins=(source/'examples/mem_service_pool/terminal_domain/accepted-E-consumer-pins.json').read_bytes().decode('utf-8')
+    early=subprocess.run([sys.executable,'-B','-I','-S',str(source/'tools/phasec/terminal_domain_adapter.py')],
+        input=json.dumps({'action':'verify-current','consumer_pins':early_pins}).encode(),capture_output=True,timeout=120)
+    (out/'E-adapter-python-readonly.json').write_bytes(early.stdout)
+    (out/'E-adapter-python-readonly.stderr').write_bytes(early.stderr)
+    if early.returncode!=0:raise RuntimeError('precompile accepted E adapter rejected: '+early.stderr.decode()[:1200])
+    run([sys.executable,'-B',source/'tools/phasec/terminal_metadata_cpu.py','--directory',
+         root/('implementation/qemu-domain-v1/consumer-phase-c/host'+generation+'-metadata-cpu')],timeout=120)
     build_config=json.loads((root/'implementation'/('config-host'+generation)/'build.json').read_bytes())
     if build_config['kind']!='build' or not build_config['job'].startswith('cb'):raise RuntimeError('own admitted build probe root required')
     run([sys.executable,'-B',source/'examples/mem_service_pool/profile_consumer_cpu.py','--root',root,'--source',source,
@@ -150,15 +160,6 @@ def build(root, source, name):
     env = {**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),
            'CARGO_BUILD_JOBS':'4','CARGO_INCREMENTAL':'0','CARGO_TARGET_DIR':str(cargo_target),'UF_ACL_SHIM_LIB_DIR':str(shim),
            'LD_LIBRARY_PATH':str(shim),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(source/'sdk/python')}
-    # Reject adapter/metadata preparation mistakes before starting a Cargo tree.
-    early_pins=(source/'examples/mem_service_pool/terminal_domain/accepted-E-consumer-pins.json').read_text()
-    early=subprocess.run([sys.executable,'-B','-I','-S',str(source/'tools/phasec/terminal_domain_adapter.py')],
-        input=json.dumps({'action':'verify-current','consumer_pins':early_pins}).encode(),capture_output=True,timeout=120)
-    (out/'E-adapter-python-readonly.json').write_bytes(early.stdout)
-    (out/'E-adapter-python-readonly.stderr').write_bytes(early.stderr)
-    if early.returncode!=0:raise RuntimeError('precompile accepted E adapter rejected: '+early.stderr.decode()[:1200])
-    run([sys.executable,'-B',source/'tools/phasec/terminal_metadata_cpu.py','--directory',
-         root/('implementation/qemu-domain-v1/consumer-phase-c/host'+generation+'-metadata-cpu')],env=env,timeout=120)
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
