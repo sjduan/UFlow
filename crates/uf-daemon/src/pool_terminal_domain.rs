@@ -89,6 +89,7 @@ fn make_fences(state:&Value)->Value{
                     if let Some(s)=v.as_str().filter(|s|!s.is_empty()){strings.insert(s.into());}
                 }
                 if key=="incarnation"{if let Some(n)=v.as_u64(){inc.insert(n);}}
+                if key=="request"{if let Some(s)=v.as_str(){if let Ok(request)=serde_json::from_str::<Value>(s){visit(&request,strings,inc);}}}
                 visit(v,strings,inc);
             },_=>{}
         }
@@ -146,9 +147,10 @@ impl TerminalAuthority {
         let named=self.path.parent().unwrap().join("authority.lock").symlink_metadata().map_err(|e|e.to_string())?;
         if held.dev()!=named.dev()||held.ino()!=named.ino()||held.nlink()!=1{return Err("original authority no longer pinned".into());}Ok(())
     }
-    /// Consume only into a completely empty authority; retain the original lock
-    /// for the entire lifetime of the resulting service, as the other restores do.
-    pub(crate) fn attach(&mut self,st:&mut Catalog,new_context:&Value)->Result<(),String>{
+    /// Consume only into a completely empty authority. The returned original
+    /// lock guard must live in Service for its whole lifetime, just like the
+    /// other restore functions. It remains locked if this wrapper is dropped.
+    pub(crate) fn attach(&mut self,st:&mut Catalog,new_context:&Value)->Result<File,String>{
         self.validate_commit()?;
         if st.ddr_resources.limit!=128<<20 || st.ddr_resources.charged_bytes()!=0 || st.ddr_resources.reserved_bytes()!=0 ||
             !st.objects.is_empty() || !st.managed_pools.pools.is_empty() || !st.managed_pools.operations.is_empty() || !st.managed_pools.reconciliation.is_null(){return Err("fresh empty successor authority only".into());}
@@ -158,12 +160,13 @@ impl TerminalAuthority {
         if ids.len()!=2 || ids.iter().any(|v|["boot_id","agent_session"].iter().any(|k|v[*k].as_str().is_none_or(|s|s.is_empty())) || v["incarnation"].as_u64().is_none_or(|n|n==0)) {return Err("two fresh complete Guest identities required before any new admission".into());}
         if ids.iter().map(|v|v["node"].as_str().unwrap_or("")).collect::<BTreeSet<_>>()!=["nodeA","nodeB"].into_iter().collect() ||
             ids[0]["boot_id"]==ids[1]["boot_id"] || ids[0]["incarnation"]==ids[1]["incarnation"] {return Err("new identities must be independent".into());}
+        let lifetime=self._original_lock.try_clone().map_err(|e|e.to_string())?;
         st.ddr_resources=self.ledger.take().ok_or("terminal authority already consumed")?;
         st.managed_pools.reconciliation=self.reconciliation.clone();st.managed_pools.revision=154;
         st.next_object_id=st.next_object_id.max(113);st.next_placement_id=st.next_placement_id.max(10003);
         st.next_resource_binding_id=st.next_resource_binding_id.max(40003);st.next_access_binding_id=st.next_access_binding_id.max(50003);
         st.next_lease_id=st.next_lease_id.max(1008);st.next_client_id=st.next_client_id.max(1_000_000);st.next_block_id=st.next_block_id.max(1_000_000);
-        Ok(())
+        Ok(lifetime)
     }
     pub(crate) fn historical(&self)->Result<Value,String>{
         self.validate_commit()?;

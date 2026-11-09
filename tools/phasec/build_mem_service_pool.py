@@ -158,11 +158,11 @@ def build(root, source, name):
     with (out/'terminal-ledger-rust.log').open('xb') as log:
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4','pool_terminal_domain::tests','--','--nocapture'],
             cwd=source,env={**env,'UFLOW_TERMINAL_LEDGER_CPU_OUTPUT':str(out/'terminal-ledger-cpu')},stdout=log,timeout=120)
-    disabled=subprocess.run([str(cargo_target/'debug/uf-daemon'),'--pool-terminal-domain-loss'],capture_output=True,timeout=5)
-    if disabled.returncode!=1 or b'production-not-ready' not in disabled.stderr:
-        raise RuntimeError('production terminal command must refuse without accepted E pins, before backend or authority actions')
+    disabled=subprocess.run([str(cargo_target/'debug/uf-daemon'),'--pool-terminal-domain-loss'],env=env,capture_output=True,timeout=5)
     (out/'terminal-command-not-ready.json').write_text(json.dumps({'actual_exit':disabled.returncode,'stdout':disabled.stdout.decode(),
         'stderr':disabled.stderr.decode(),'production_ready':False,'original_authority_or_verifier_called':False},indent=2))
+    if disabled.returncode!=1 or b'production-not-ready' not in disabled.stderr:
+        raise RuntimeError('production terminal command must refuse without accepted E pins, before backend or authority actions')
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     # The fixture appends .external-ddr to its already nonce-qualified socket.
     # A compact generation label leaves that suffix within Linux SUN_LEN.

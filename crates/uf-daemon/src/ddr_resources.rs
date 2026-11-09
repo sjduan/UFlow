@@ -161,7 +161,7 @@ impl DdrResources {
 
     pub fn commit_backing(&mut self, operation: &str, object: u64,
                           backing: BackingId, nbytes: u64) -> Result<(), String> {
-        if self.retired_unstarted.contains(&object) || self.terminal_domains.contains_key(&object) ||
+        if self.retired_unstarted.contains(&object) || (!self.terminal_domains.is_empty() && object<113) || self.terminal_domains.contains_key(&object) ||
             self.terminal_domains.values().any(|(old,_,_)|old==&backing) || self.retained_reservations.contains_key(operation) ||
             self.retained_reservations.values().any(|r|r.object_id==object) {
             return Err("uncertain historical reservation has no confirmed backing/release".into());

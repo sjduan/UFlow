@@ -71,7 +71,7 @@ fn terminal_backings_and_all_old_ids_never_recommit_or_normal_release(){
     assert_eq!(ledger.charged_bytes(),12<<20);assert_eq!(ledger.reserved_bytes(),64<<20);
     let old=p.source_ledger()["reservations"].as_object().unwrap().keys().next().unwrap();ledger.cancel_uncreated(old);assert_eq!(ledger.reserved_bytes(),64<<20);
     assert!(ledger.apply_terminal_loss(&p).is_err());
-    for id in [107,108,109,110,111,112]{ledger.reserve_unique("reuse",1).unwrap();assert!(ledger.commit("reuse",id,1,2,1).is_err());ledger.cancel_uncreated("reuse");}
+    for id in 100..=112{ledger.reserve_unique("reuse",1).unwrap();assert!(ledger.commit("reuse",id,1,2,1).is_err());ledger.cancel_uncreated("reuse");}
     let row=rows(p.source_ledger()).unwrap()[&112].clone();let b=&row["backing"];
     ledger.reserve_unique("old-backing-new-id",48<<20).unwrap();assert!(ledger.commit_backing("old-backing-new-id",999,BackingId::Provider{
         realm:b["realm"].as_str().unwrap().into(),provider:"mem_service_obmm".into(),resource:b["resource"].as_str().unwrap().into(),generation:1},48<<20).is_err());
@@ -143,7 +143,7 @@ fn cross_process_original_authority_lock_is_held_through_attach(){
     let f=Fixture::new();let mut a=f.run("").unwrap();
     let check=|mode:&str|{assert!(Command::new(std::env::current_exe().unwrap()).args(["--exact","pool_terminal_domain::tests::child_original_authority_lock","--nocapture"])
         .env("UFLOW_TERMINAL_CPU_LOCK_DIR",&f.dir).env("UFLOW_TERMINAL_CPU_LOCK_EXPECT",mode).status().unwrap().success());};
-    check("busy");a.attach(&mut catalog(),&new_context()).unwrap();check("busy");drop(a);check("available");
+    check("busy");let lifetime=a.attach(&mut catalog(),&new_context()).unwrap();check("busy");drop(a);check("busy");drop(lifetime);check("available");
 }
 #[test]
 fn child_original_authority_lock(){
@@ -153,7 +153,7 @@ fn child_original_authority_lock(){
 }
 
 #[test]
-fn actual_kernel_live_then_stale_socket_reports_no_fake_Destroy_or_Shutdown(){
+fn actual_kernel_live_then_stale_socket_reports_no_fake_destroy_or_shutdown(){
     use std::os::unix::net::UnixListener;
     let f=Fixture::new();let state=parsed(STATE).unwrap();let socket=f.root.join("u.sock");let listener=UnixListener::bind(&socket).unwrap();
     let live=shutdown_report_at(&state,&f.root,&kernel_endpoints().unwrap());assert_eq!(live["status"],"LiveEndpointRequiresOwnedNormalDrain");
@@ -164,7 +164,7 @@ fn actual_kernel_live_then_stale_socket_reports_no_fake_Destroy_or_Shutdown(){
 }
 
 #[test]
-fn production_without_E_pins_fails_before_lock_or_verifier(){
+fn production_without_e_pins_fails_before_lock_or_verifier(){
     assert!(production_terminal_only().unwrap_err().contains("production-not-ready"));
 }
 
