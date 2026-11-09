@@ -7,6 +7,7 @@ Semantic helpers are separately exercised using isolated CPU documents.
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import sys
@@ -14,6 +15,9 @@ import time
 
 ROOT=Path('/workspace/uflow/runs/mem-service-shared-pool-20261108')
 ASSESSMENT_SHA='b283ec290bb2487d3e81380cc5dc8cd0b5fd9db34b76eb0488171f8066600151'
+RUNNER=ROOT/'env/runners/3d3616a3f5ac25ab2ab6f40aaea75c41c30518d590cf3c22fd7451382495decb/uflow_env_runner.py'
+RUNNER_SHA='c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727'
+LOCK_NAMES=('guest-execution.lock','heavy-0.lock','heavy-1.lock')
 C013_PHYSICAL_BINDINGS={'runs/c013/fm-carrier-active.json': {'bytes': 4252, 'sha256': '82045b4d78c0584f3913cf0ede23053e1020e44fd78627f87b307d0d06c9c551'}, 'runs/c013/post-close-audit.json': {'bytes': 5519, 'sha256': '711af4991e2ecaff2cad5f132d03b0885a7692d67a6beb4f1b115b81c4272cbb'}, 'runs/c013/control-endpoints-active.json': {'bytes': 612, 'sha256': '14f9e1ed1844d5f39c3791b561d2551784101c522aeec5637dfbd28970fdbaf9'}}
 OLD_PROOF='9f80af5f1dab8cce48e9b3853c8f0f4628b3b6e6697d31cd6cc24253a8796dfe'
 def require(ok,message):
@@ -31,6 +35,55 @@ def fm_namespace(paths,expected):
     # ignorable directory and must not disappear from this exact inventory.
     actual={str(p) for p in paths if not stat.S_ISDIR(p.lstat().st_mode)}
     require(actual==set(expected),'extra or missing FM, including directory symlinks')
+def admission_record(records,ancestors,authority):
+    require(len(records)==3 and records[0]==records[1]==records[2],'one E0 owner of Guest and both heavy locks')
+    row=records[0]
+    require(set(row)=={'pid','birth','job','state','kind'} and row['kind']=='guest' and row['state']=='held','live admitted Guest job only')
+    require(re.fullmatch(r'c[0-9]{3}',row['job']) is not None,'exact Guest job')
+    require(ancestors.get(row['pid'])==row['birth'],'Guest lock owner must be an exact current ancestor')
+    require(authority==ROOT/'runs'/row['job']/'state','authority belongs to current admitted Guest job')
+    return row
+def flock_info(text,pid):
+    for line in text.splitlines():
+        fields=line.split()
+        if '->' in fields:continue
+        if 'FLOCK' not in fields:continue
+        i=fields.index('FLOCK')
+        if fields[i:i+4]==['FLOCK','ADVISORY','WRITE',str(pid)] and fields[-2:]==['0','EOF']:return True
+    return False
+def held_file_lock(pid,path):
+    expected=path.stat();seen=0
+    with os.scandir(Path('/proc',str(pid),'fd')) as entries:
+        for e in entries:
+            seen+=1;require(seen<=1024,'bounded E0 owner fd table')
+            try:
+                info=e.stat()
+                if (info.st_dev,info.st_ino)!=(expected.st_dev,expected.st_ino):continue
+                # fdinfo is kernel-generated and binds the actual held FLOCK to
+                # this canonical FD inode, without assuming overlay dev aliases.
+                if flock_info(proc_read(Path('/proc',str(pid),'fdinfo',e.name),65536).decode(),pid):return True
+            except (FileNotFoundError,ProcessLookupError):continue
+    return False
+def guest_admission(authority):
+    ancestors={};pid=os.getppid()
+    for _ in range(64):
+        if pid<=1:break
+        fields=proc_read(Path('/proc',str(pid),'stat'),65536).decode().rsplit(')',1)[1].split()
+        ancestors[pid]=int(fields[19]);pid=int(fields[1])
+    else:raise ValueError('bounded ancestor chain')
+    paths=[ROOT/'coordination'/n for n in LOCK_NAMES]
+    records=[json.loads(read(p,1024)) for p in paths]
+    owner=admission_record(records,ancestors,authority);pid=owner['pid']
+    require(sha(read(RUNNER,65536))==RUNNER_SHA,'fixed admitted E0 runner source')
+    argv=proc_read(Path('/proc',str(pid),'cmdline'),16384).rstrip(b'\0').decode().split('\0')
+    require(len(argv)==5 and argv[:4]==['/usr/local/python3.11.14/bin/python3.11','-B','-s',str(RUNNER)],'actual fixed outer E0 runner command')
+    config=Path(argv[4]);require(config.is_relative_to(ROOT/'implementation') and config.name=='guest.json','controlled E0 Guest config')
+    value=json.loads(read(config,65536));require(value['root']==str(ROOT) and value['kind']=='guest' and value['job']==owner['job'],'actual admitted config/job')
+    for p in paths:require(held_file_lock(pid,p),'kernel E0 exclusive FLOCK not held by ancestor')
+    require(birth(pid)==owner['birth'],'E0 owner birth changed')
+    for n in ['guest-process-quarantine.json','heavy-process-quarantine.json']:
+        require(not (ROOT/'coordination'/n).exists(),'unresolved E0 quarantine')
+    return {'kind':'authenticated-frozen-E0-guest-admission','pid':pid,'birth':owner['birth'],'job':owner['job'],'exclusive_locks':3}
 def read(path,maximum=4<<20):
     require(path.is_file() and not path.is_symlink(),'regular bounded evidence required')
     require(path.stat().st_size<=maximum,'evidence size bound')
@@ -136,8 +189,7 @@ def holder_audit(inodes):
         # Permission/parse/read uncertainty is never a successful empty audit.
     return {'processes':processes,'FD_entries':descriptors,'maps_bytes':maps_bytes,'deadline_seconds':15,'holders':[]}
 
-def verify(old_assessment,old_bindings,assessment):
-    import fcntl
+def verify(old_assessment,old_bindings,assessment,authority):
     raw_a=read(assessment,32768);require(sha(raw_a)==ASSESSMENT_SHA,'pinned retained8 assessment')
     a=json.loads(raw_a);ns={'__name__':'fixed_old_verifier'};exec(ORIGINAL_SOURCE,ns)
     old=ns['verify'](old_assessment,old_bindings)
@@ -166,11 +218,12 @@ def verify(old_assessment,old_bindings,assessment):
         inodes.update(map(tuple,aliases))
     fm_namespace((p for j in ['c013','c027'] for p in (ROOT/'runs'/j/'fm').rglob('*')),(r['path'] for r in inventory))
     proof['fresh_physical_audit']=holder_audit(inodes)
-    with (ROOT/'coordination/guest-execution.lock').open('rb') as lock:
-        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB);fcntl.flock(lock,fcntl.LOCK_UN)
+    # E0 already holds the exclusive Guest lock before the matrix is launched.
+    # A second flock from this child would incorrectly reject that legal run.
+    proof['current_E0_guest_admission']=guest_admission(authority)
     proof['proof_sha256']=sha(json.dumps(proof,sort_keys=True,separators=(',',':')).encode())
     return proof
 
 if __name__=='__main__':
-    require(len(sys.argv)==4,'fixed old assessment/bindings and retained8 assessment required')
+    require(len(sys.argv)==5,'fixed old assessment/bindings, retained8 assessment and current authority required')
     print(json.dumps(verify(*map(Path,sys.argv[1:])),separators=(',',':')))

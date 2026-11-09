@@ -127,7 +127,7 @@ pub(crate) fn restore(st:&mut Catalog,c:&Value,authority:&Path)->Result<File,Str
     let paths=paths.into_iter().collect::<Result<Vec<_>,_>>()?;
     for p in &paths {if !p.is_absolute() || !p.starts_with(Path::new(ROOT).join("implementation")){return Err("controlled task assessment paths".into());}}
     let code=format!("ORIGINAL_SOURCE = {}\n{}",serde_json::to_string(OLD).map_err(|e|e.to_string())?,VERIFY);
-    let result=Command::new("/usr/local/python3.11.14/bin/python3.11").args(["-I","-S","-c",&code]).args(paths)
+    let result=Command::new("/usr/local/python3.11.14/bin/python3.11").args(["-I","-S","-c",&code]).args(paths).arg(authority)
         .output().map_err(|e|e.to_string())?;
     if !result.status.success() || result.stdout.len()>262144 {return Err(format!("retained8 verifier refused; keep predecessor8, no bootstrap: {}",String::from_utf8_lossy(&result.stderr).chars().take(1600).collect::<String>()));}
     let p:Value=serde_json::from_slice(&result.stdout).map_err(|e|e.to_string())?;

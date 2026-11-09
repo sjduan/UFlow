@@ -164,6 +164,7 @@ def build(root, source, name):
          '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=60)
     run([sys.executable,'-B',fixture/'launcher_cpu.py','--launcher',launcher_fixture,
          '--output',out/'launcher-cpu'],env=env,timeout=30)
+    run([sys.executable,'-B',fixture/'retained8_lock_cpu.py','--output',out/'retained8-admission-cpu'],env=env,timeout=30)
     for case in ('managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness',
                  'independent_owner_processes_compete_for_one_catalog_budget','t1_registration_and_clean_drain_use_the_fixture_authority'):
         run([test_bins[0],'--exact','external_ddr::managed_tests::'+case,
@@ -204,6 +205,7 @@ def build(root, source, name):
                  'host_tests':json.loads((out/'launcher-cpu/results.json').read_bytes()),
                  'PID1_handoff_ms':30000,'unbounded_park':False},
              'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
+             'retained8_admission_cpu':json.loads((out/'retained8-admission-cpu/results.json').read_bytes()),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
              'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),
                  'source_inputs':{str(p):digest(p) for p in fixture_inputs+[fixture/'fixture_worker.c',fixture/'startup_cpu_probe.py']},

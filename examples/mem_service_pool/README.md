@@ -143,6 +143,12 @@ replays descriptors or infers an SDK ACK. The original lineage lock is held
 through the entire successor Service. A new exclusive append-only
 `successor-c027-v1` contains fsynced intent/result; link-based publication refuses
 overwrite. Existing successors, half writes, drift or restart are refused.
+E0 already acquires the Guest execution lock before launching this matrix.
+The verifier authenticates the fixed E0 ancestor command/source, exact birth,
+current job/state root and its actual kernel FD-bound exclusive Guest and both
+heavy locks; it does not try to reacquire an ancestor's lock or trust a caller
+boolean. CPU tests use only three new fixture locks and never open real
+coordination/lineage locks.
 
 The four original BackingIds enter the same DdrResources as typed
 UnknownCanaryClose objects100/101/103/104, charged/retained8 and reserved0.

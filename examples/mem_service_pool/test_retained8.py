@@ -5,7 +5,7 @@ import sys,unittest
 from unittest.mock import MagicMock,patch
 from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
-from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,fm_namespace,ROOT,ASSESSMENT_SHA,sha
+from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,fm_namespace,admission_record,flock_info,ROOT,ASSESSMENT_SHA,sha
 import verify_retained8_pool as verifier
 
 class Retained8Semantics(unittest.TestCase):
@@ -74,6 +74,21 @@ class Retained8Semantics(unittest.TestCase):
         link.is_dir.return_value=True
         fm_namespace([file,directory],{'/exact/FM'})
         with self.assertRaises(ValueError):fm_namespace([file,directory,link],{'/exact/FM'})
+    def test_admitted_guest_and_two_heavy_locks_bound_to_ancestor_and_authority(self):
+        row={'pid':71,'birth':721,'kind':'guest','state':'held','job':'c900'};authority=ROOT/'runs/c900/state'
+        self.assertEqual(admission_record([dict(row) for _ in range(3)],{71:721},authority),row)
+        for key,value in [('kind','build'),('state','released'),('birth',722),('job','c901'),('pid',72)]:
+            bad={**row,key:value}
+            with self.assertRaises(ValueError):admission_record([dict(bad) for _ in range(3)],{71:721},authority)
+        with self.assertRaises(ValueError):admission_record([row,row],{71:721},authority)
+        with self.assertRaises(ValueError):admission_record([row,row,{**row,'state':'released'}],{71:721},authority)
+    def test_kernel_fdinfo_requires_actual_exclusive_flock_owner_not_waiter(self):
+        self.assertTrue(flock_info('lock: 1: FLOCK ADVISORY WRITE 71 00:3f:99 0 EOF\n',71))
+        for text in ['lock: 1: FLOCK ADVISORY WRITE 72 00:3f:99 0 EOF',
+                'lock: 1: FLOCK ADVISORY READ 71 00:3f:99 0 EOF',
+                'lock: 1: POSIX ADVISORY WRITE 71 00:3f:99 0 EOF',
+                'lock: 1: -> FLOCK ADVISORY WRITE 71 00:3f:99 0 EOF']:
+            self.assertFalse(flock_info(text,71))
     def test_unclosed_physical_tree_or_inconclusive_old_audit(self):
         self.change('runs/c027/monitor/result.json',lambda v:v.update(remaining={'71':123}))
         with self.assertRaises(ValueError):self.derive()
