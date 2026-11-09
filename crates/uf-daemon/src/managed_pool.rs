@@ -277,9 +277,12 @@ impl State {
                 value.insert("evidence_file_count".into(),json!(proof["evidence_sha256"].as_object().map(|v|v.len()).unwrap_or(0)));
             }
         }
-        json!({"schema":1,"scope":"current authority; only verified c013 uncreated reservation import supported",
+        json!({"schema":1,"scope":"current authority; historical closed-c033 obligations remain charged and reserved",
             "revision":self.revision,"charged_bytes":st.ddr_resources.charged_bytes(),
             "creation_reserved_bytes":st.ddr_resources.reserved_bytes(),"budget_bytes":st.ddr_resources.limit,
+            "retained_reserved_bytes":st.ddr_resources.retained_reserved_bytes(),
+            "active_reserved_bytes":st.ddr_resources.reserved_bytes()-st.ddr_resources.retained_reserved_bytes(),
+            "quarantined_pools":self.reconciliation["quarantined_creation"]["pool"].as_object().map(|_|vec![self.reconciliation["quarantined_creation"]["pool"].clone()]).unwrap_or_default(),
             "resource_ledger":st.ddr_resources.snapshot(),"retained_bytes":st.ddr_resources.retained_bytes(),
             "active_bytes":st.ddr_resources.charged_bytes()-st.ddr_resources.retained_bytes(),"reconciliation":reconciliation,
             "bootstrap_readiness":self.bootstrap_readiness,

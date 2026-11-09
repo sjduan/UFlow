@@ -1,6 +1,7 @@
 /* Real child process / neutral SDK refresh fixture; never opens an endpoint. */
 #define _GNU_SOURCE
 #include <mem_service_client.h>
+#include <mem_service_provider.h>
 #include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 #include <unistd.h>
 static volatile sig_atomic_t stop;
 static void stopping(int signo){(void)signo;stop=1;}
+#include "fixture_memory.h"
 int main(int argc,char **argv) {
     if(argc!=4||strcmp(argv[1],"serve-allocations")||strcmp(argv[2],"--config"))return 2;
     char connect[256]="",node[64]="",line[512];uint64_t inc=0,generation=0;
@@ -48,7 +50,9 @@ int main(int argc,char **argv) {
             if(view.directory_ready) {
                 struct mem_service_client_allocation empty;
                 int polled=mem_service_client_poll_allocation(&client,node,inc,0,&empty,&status);
-                if(polled<0||status!=MEM_SERVICE_WIRE_STATUS_NOT_FOUND) {
+                if(!polled && status==MEM_SERVICE_WIRE_STATUS_OK && fixture_data()) {
+                    if(fixture_publish(&client,node,inc,&empty,&status)||status!=MEM_SERVICE_WIRE_STATUS_OK)return 13;
+                } else if(polled<0||status!=MEM_SERVICE_WIRE_STATUS_NOT_FOUND) {
                     fprintf(stderr,"CPU fixture expected an empty actual SDK work queue\n");return 12;
                 }
             }

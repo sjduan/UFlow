@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "interface": "mem-service-private-kernel-profile-v1",
+  "producer": "phase-e-runner",
+  "consumer": "phase-c-runner host matrix launcher only; no platform headers in neutral SDK/core",
+  "profile_id": "mem-service-gsva-separated-v1",
+  "kernel_commit": "c2def7c931e6451d89727dec0c6f892abe28ba00",
+  "base_Image_sha256": "18f81737d7e2a7bdaa0b72a3c86bf5b2c7ff3fd742434437ffa8926be5deb4fd",
+  "base_embedded_config_sha256": "f0400a59db1d9eddecdc57a828b887075aa611a07f19e369371029af755152d8",
+  "intended_config_delta": {"CONFIG_UB_UMMU_SVA_SEPARATED_PAGES": "y"},
+  "required_builtin_config": ["CONFIG_UB_UMMU_CORE", "CONFIG_UB_UMMU_CORE_DRIVER", "CONFIG_UB_UMMU_SVA_SEPARATED_PAGES", "CONFIG_UB_UBUS", "CONFIG_IOMMU_API", "CONFIG_IKCONFIG"],
+  "unchanged": ["kernel Git source/UAPI", "page size and VA layout", "base Image and fixed E0/SDK/worker", "default execution pins"],
+  "manifest_required": ["schema", "interface", "profile_id", "kernel_commit", "base_Image_sha256", "base_embedded_config_sha256", "resolved_config_diff", "source_manifest_sha256", "compiler_and_build_argv", "outputs", "embedded_config_sha256", "required_builtin_config", "real_symbol_and_obmm_call_evidence", "old_baseline_unchanged", "runtime_tested"],
+  "outputs_required": ["Image path/bytes/SHA256", "vmlinux SHA256", "System.map SHA256", "resolved .config path/bytes/SHA256"],
+  "host_consumer_must": ["Validate producer manifest hash and versioned profile identity", "Hash the actual selected Image and boundedly extract its embedded IKCONFIG", "Require all named config values y, not caller ready=true", "Validate exact kernel source/config/build provenance and Image membership", "Reject missing/truncated/duplicate/oversized config, mismatched path/hash/profile and old disabled Image before starting lower/Catalog or mutating lineage", "Treat link/config capability as necessary host evidence, not actual Guest success"],
+  "publication": "Producer emits immutable artifact manifest and B private output paths; manager verifies then performs one dependency handoff. No WIP polling.",
+  "runtime_tested": false,
+  "authority_to_boot_or_replace_existing_Image": false
+}

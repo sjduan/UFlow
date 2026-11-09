@@ -16,6 +16,7 @@ static volatile sig_atomic_t stopped;
 static void signal_stop(int sig){(void)sig;stopped=1;}
 static unsigned long long ms(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return (unsigned long long)t.tv_sec*1000+t.tv_nsec/1000000;}
 static void tick(void){struct timespec t={0,10000000};nanosleep(&t,NULL);}
+#include "pool_journal.h"
 int main(int argc,char **argv) {
     unsigned term_ms=2000,kill_ms=2000,handoff_ms=30000;
     char *production[]={"/bin/uflow_pool_agent",NULL};char **command=production;
@@ -43,6 +44,7 @@ int main(int argc,char **argv) {
     }
     bool failed=stopped||info.si_code!=CLD_EXITED||info.si_status!=0;
     if(failed){fputs("UFPOOL_FAILURE_NOTICE\n",stdout);fflush(stdout);}
+    unsigned long long handoff_deadline=ms()+term_ms+kill_ms+handoff_ms;
     /* Keep the group leader unreaped until both signal phases are complete,
      * so its ID cannot be reused for another process group. */
     (void)kill(-child,SIGTERM);
@@ -57,13 +59,18 @@ int main(int argc,char **argv) {
         if(got<=0)tick();
     }
     if(!empty && !failed){fputs("UFPOOL_FAILURE_NOTICE\n",stdout);fflush(stdout);failed=true;}
+    /* Notice precedes diagnosis. Diagnostic time consumes, never extends, the
+     * original finite handoff; blocked serial output becomes incomplete. */
+    unsigned long long diagnostic_deadline=ms()+1000;
+    if(diagnostic_deadline>handoff_deadline)diagnostic_deadline=handoff_deadline;
+    journal_capture(diagnostic_deadline);
     printf("UFPOOL_LAUNCHER_CLOSED child=%d exit=%d signal=%d children_empty=%u logical_ACK_inferred=0\n",
         child,info.si_code==CLD_EXITED?info.si_status:-1,info.si_code==CLD_KILLED?info.si_status:0,empty);fflush(stdout);
     /* Normal: authenticated host QMP quits after actual SDK drain. Failure:
      * independent host monitor kills this exact QEMU. No indefinite PID1 park.
      * If that external handoff fails, deadline exit may panic PID1; it is an
      * explicit bounded fallback, never a normal drain/ACK. */
-    until=ms()+handoff_ms;
+    until=handoff_deadline;
     while(ms()<until && !stopped)tick();
     return failed?1:0;
 }

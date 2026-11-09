@@ -10,12 +10,21 @@ pub enum BackingId {
     Provider { realm: String, provider: String, resource: String, generation: u64 },
 }
 
+/// An attempted creation with no valid absence/release proof. This is not a
+/// backing and cannot be converted or cancelled by ordinary creation APIs.
+#[derive(Debug)]
+pub struct RetainedUncertainReservation {
+    pub object_id: u64,
+    pub witness: serde_json::Value,
+}
+
 #[derive(Debug)]
 pub struct DdrResources {
     pub limit: u64,
     reservations: HashMap<String, u64>,
     resources: HashMap<u64, (BackingId, u64)>, // one charge per real backing, not per view
     retained: HashMap<u64, serde_json::Value>, // lifecycle witness; capacity remains in resources
+    retained_reservations: HashMap<String, RetainedUncertainReservation>,
 }
 
 impl Default for DdrResources {
@@ -28,11 +37,26 @@ impl Default for DdrResources {
             reservations: HashMap::new(),
             resources: HashMap::new(),
             retained: HashMap::new(),
+            retained_reservations: HashMap::new(),
         }
     }
 }
 
 impl DdrResources {
+    pub fn retain_uncertain_reservation(&mut self, operation:&str, object_id:u64,
+                                      witness:serde_json::Value)->Result<(),String> {
+        let nbytes=witness["nbytes"].as_u64().filter(|n|*n>0).ok_or("positive reserved bytes required")?;
+        if self.reservations.get(operation).copied()!=Some(nbytes) ||
+            witness["key"]!=operation || witness["state"]!="CreationUnknown" || object_id==0 ||
+            self.resources.contains_key(&object_id) || self.retained_reservations.contains_key(operation) ||
+            self.retained_reservations.values().any(|r|r.object_id==object_id) {
+            return Err("complete unique uncertain creation reservation required".into());
+        }
+        self.retained_reservations.insert(operation.into(),RetainedUncertainReservation{object_id,witness});Ok(())
+    }
+    pub fn retained_reserved_bytes(&self)->u64 {
+        self.retained_reservations.keys().filter_map(|k|self.reservations.get(k)).copied().sum()
+    }
     pub fn retain_provider(&mut self, object:u64, witness:serde_json::Value) -> Result<(),String> {
         if !matches!(self.resources.get(&object),Some((BackingId::Provider{..},_))) || self.retained.contains_key(&object) {
             return Err("unique typed provider backing required for retained obligation".into());
@@ -45,6 +69,10 @@ impl DdrResources {
     pub fn snapshot(&self) -> serde_json::Value {
         use serde_json::json;
         json!({"charged_bytes":self.charged_bytes(),"reserved_bytes":self.reserved_bytes(),
+            "retained_reserved_bytes":self.retained_reserved_bytes(),
+            "active_reserved_bytes":self.reserved_bytes()-self.retained_reserved_bytes(),
+            "retained_uncertain_reservations":self.retained_reservations.iter().map(|(key,r)|
+                json!({"key":key,"object_id":r.object_id,"witness":r.witness})).collect::<Vec<_>>(),
             "retained_bytes":self.retained_bytes(),"active_bytes":self.charged_bytes()-self.retained_bytes(),
             "reservations":self.reservations,
             "resources":self.resources.iter().map(|(id,(backing,n))| {
@@ -77,6 +105,7 @@ impl DdrResources {
     }
 
     pub fn reserve(&mut self, operation: &str, nbytes: u64) -> Result<(), String> {
+        if self.retained_reservations.contains_key(operation){return Err("uncertain historical reservation cannot be replayed".into());}
         if let Some(old) = self.reservations.get(operation) {
             return if *old == nbytes {
                 Ok(())
@@ -98,6 +127,7 @@ impl DdrResources {
     }
 
     pub fn cancel_uncreated(&mut self, operation: &str) {
+        if self.retained_reservations.contains_key(operation){return;}
         self.reservations.remove(operation);
     }
 
@@ -114,6 +144,10 @@ impl DdrResources {
 
     pub fn commit_backing(&mut self, operation: &str, object: u64,
                           backing: BackingId, nbytes: u64) -> Result<(), String> {
+        if self.retained_reservations.contains_key(operation) ||
+            self.retained_reservations.values().any(|r|r.object_id==object) {
+            return Err("uncertain historical reservation has no confirmed backing/release".into());
+        }
         if let BackingId::Provider { realm, provider, resource, generation } = &backing {
             if realm.is_empty() || provider.is_empty() || resource.is_empty() || *generation == 0 {
                 return Err("complete provider backing identity required".into());

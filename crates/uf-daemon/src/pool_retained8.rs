@@ -16,7 +16,7 @@ const OLD:&str=include_str!("../../../tools/phasec/verify_original_pool.py");
 const VERIFY:&str=include_str!("../../../tools/phasec/verify_retained8_pool.py");
 const SUCCESSOR:&str="successor-c027-v1";
 
-fn atomic_record(dir:&Path,name:&str,value:&Value)->Result<(),String>{
+pub(crate) fn atomic_record(dir:&Path,name:&str,value:&Value)->Result<(),String>{
     let next=dir.join(format!("{name}.next"));
     let mut f=OpenOptions::new().write(true).create_new(true).mode(0o600).custom_flags(libc::O_NOFOLLOW)
         .open(&next).map_err(|e|e.to_string())?;
@@ -28,7 +28,7 @@ fn atomic_record(dir:&Path,name:&str,value:&Value)->Result<(),String>{
     fs::remove_file(next).map_err(|e|e.to_string())?;
     File::open(dir).and_then(|f|f.sync_all()).map_err(|e|e.to_string())
 }
-fn lock_lineage(dir:&Path)->Result<File,String>{
+pub(crate) fn lock_lineage(dir:&Path)->Result<File,String>{
     if dir.symlink_metadata().map_err(|e|e.to_string())?.file_type().is_symlink(){return Err("lineage symlink".into());}
     let lock=OpenOptions::new().read(true).write(true).custom_flags(libc::O_NOFOLLOW)
         .open(dir.join("authority.lock")).map_err(|e|e.to_string())?;

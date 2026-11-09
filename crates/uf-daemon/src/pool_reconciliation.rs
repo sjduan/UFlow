@@ -76,6 +76,7 @@ fn apply(st:&mut Catalog,proof:&Value,dir:&Path,authority:&Path) -> Result<(),St
 /// Called before reserving any new canary or listening for new work. The lock
 /// stays in Service until its entire current runtime closes. Original files RO.
 pub fn restore(st:&mut Catalog,config:&Value,authority:&Path) -> Result<File,String> {
+    if config.get("quarantine76_assessment").is_some(){return crate::pool_quarantine76::restore(st,config,authority);}
     if config.get("retained8_assessment").is_some(){return crate::pool_retained8::restore(st,config,authority);}
     let dir=Path::new(ROOT).join("implementation/responsibility-c013");
     fs::create_dir_all(&dir).map_err(|e|e.to_string())?;

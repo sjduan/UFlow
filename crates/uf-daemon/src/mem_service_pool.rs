@@ -254,6 +254,12 @@ impl MemServicePoolProvider {
             let original=&state.reconciliation["identity"];
             if op == "QueryPoolOperation" {
                 let target = text(req,"target_operation_id")?;
+                let historical=&state.reconciliation["quarantined_creation"];
+                if historical["operation"]["response"]["operation_id"]==target {
+                    return Ok(Some(envelope(id,Ok(json!({"state":"Unknown","context":"closed-c033-quarantined-inaccessible",
+                        "response":historical["operation"]["response"],"pool":historical["pool"],
+                        "reserved_bytes":historical["nbytes"],"SDK_ACK_Unmapped_or_canary_close_claimed":false})),false)));
+                }
                 if !original.is_null() && original["operation_id"]==target {
                     return Ok(Some(envelope(id,Ok(json!({"state":"VerifiedUncreatedTerminal",
                         "identity":original,"historical_unknown_response":state.reconciliation["historical_unknown_operation"]["response"],
@@ -266,6 +272,12 @@ impl MemServicePoolProvider {
             if !original.is_null() && (req["operation_id"]==original["operation_id"] ||
                 req.get("pool_id").is_some_and(|pool|pool==&original["pool_id"])) {
                 return Err("original c013 terminal history cannot be reused for admission or access".into());
+            }
+            let closed=&state.reconciliation["quarantined_creation"];
+            if !closed.is_null() && (req["operation_id"]==closed["operation"]["response"]["operation_id"] ||
+                req.get("pool_id").is_some_and(|v|v==&closed["pool"]["pool_id"]) ||
+                req.get("provider_session").is_some_and(|v|v==&closed["pool"]["provider_session"])) {
+                return Err("closed c033 CreationUnknown is inaccessible immutable history, not a replay/release target".into());
             }
             if read_only { return Ok(None); }
             if let Some(old) = state.operations.get(&key) {
@@ -379,7 +391,7 @@ impl MemServicePoolProvider {
                 if st.shutdown_requested {return Err("shutdown already in progress; query original operation".into());}
                 for pool in state.pools.values() {pool.confirm_closed(st)?;}
                 let baseline:u64=st.ddr_resources.retained_bytes()+self.bootstrap.values().filter_map(|id|st.ddr_resources.charged_object_bytes(*id)).sum::<u64>();
-                if state.pools.values().any(|p|p.state!="Released") || st.ddr_resources.charged_bytes()!=baseline || st.ddr_resources.reserved_bytes()!=0 {
+                if state.pools.values().any(|p|p.state!="Released") || st.ddr_resources.charged_bytes()!=baseline || st.ddr_resources.reserved_bytes()!=st.ddr_resources.retained_reserved_bytes() {
                     return Err("cannot shutdown with remaining backing/unknown".into());
                 }
                 st.shutdown_requested=true;
@@ -409,10 +421,11 @@ impl MemServicePoolProvider {
                 }
             }
             self.finish()?;
-            let retained=service.catalog(|_,st|if st.ddr_resources.charged_bytes()==st.ddr_resources.retained_bytes() && st.ddr_resources.reserved_bytes()==0 {Ok(st.ddr_resources.retained_bytes())} else {Err("current runtime not drained to retained-only ledger".into())})?;
+            let (retained,reserved)=service.catalog(|_,st|if st.ddr_resources.charged_bytes()==st.ddr_resources.retained_bytes() && st.ddr_resources.reserved_bytes()==st.ddr_resources.retained_reserved_bytes() {Ok((st.ddr_resources.retained_bytes(),st.ddr_resources.retained_reserved_bytes()))} else {Err("current runtime not drained to retained-only ledger".into())})?;
             self.bootstrap_unknown.store(false,Ordering::Release);
             service.stop.store(true,Ordering::Release);
-            return Ok(json!({"stopping":true,"bootstrap_closed":true,"charged_bytes":retained,"retained_bytes":retained,"active_bytes":0,"reserved_bytes":0}));
+            return Ok(json!({"stopping":true,"bootstrap_closed":true,"charged_bytes":retained,"retained_bytes":retained,"active_bytes":0,
+                "reserved_bytes":reserved,"retained_reserved_bytes":reserved,"active_reserved_bytes":0}));
         }
         let pool_id=text(req,"pool_id")?;
         // Validate incarnation on *every* operation, including metadata/cleanup.

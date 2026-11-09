@@ -19,8 +19,13 @@ from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
 from pool_peer_io import PeerIO
 from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
 from pool_startup import Startup
+from kernel_profile_gate import launch_gate
+from verify_quarantine76_pool import verify_new_fm
 
 U,M=65536,1024*1024
+CAPACITY=48*M
+RETAINED=12*M
+RETAINED_RESERVED=64*M
 
 
 def expected(seed,offset,n):
@@ -73,6 +78,7 @@ def matrix(root,config,build):
     if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('accepted E0 supervisor required')
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
+    capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
     for path,digest in ((Path(build['image']),build['image_sha256']),
                         (Path(build['daemon']),build['daemon_sha256']),
                         (Path(build['fence_shim']),build['fence_shim_sha256']),
@@ -110,9 +116,7 @@ def matrix(root,config,build):
     provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
-        'reconciliation':{'assessment':str(source/'examples/mem_service_pool/reconciliation/assessment.json'),
-                          'bindings':str(source/'examples/mem_service_pool/reconciliation/bindings.json'),
-                          'retained8_assessment':str(source/'examples/mem_service_pool/reconciliation/retained8-assessment.json')}},indent=2))
+        'reconciliation':{'quarantine76_assessment':str(source/'examples/mem_service_pool/reconciliation/quarantine76-assessment.json')}},indent=2))
     env={**os.environ,'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
          'LD_LIBRARY_PATH':str(Path(build['fence_shim']).parent)}
     daemon_log=(out/'catalog.log').open('xb')
@@ -121,9 +125,10 @@ def matrix(root,config,build):
         stdout=daemon_log,stderr=subprocess.STDOUT)
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
-    if imported['charged_bytes']!=8*M or imported['retained_bytes']!=8*M or imported['creation_reserved_bytes']!=4*M or imported['reconciliation']['phase']!='VerifiedUncreatedTerminal' or imported['reconciliation']['successor_phase']!='Retained8':
-        raise RuntimeError('single-ledger retained8 succession and new canary reservation not established; no Guest')
-    event({'event':'retained8-succession-established-before-Guest','charged_bytes':8*M,'retained_bytes':8*M,
+    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or imported['reconciliation']['phase']!='ClosedC033Quarantine76':
+        raise RuntimeError('single-ledger conservative76 quarantine and new canary reservation not established; no Guest')
+    event({'event':'quarantine76-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
+        'retained_reserved_bytes':RETAINED_RESERVED,'kernel_capability':capability,
         'current_canary_reserved_bytes':4*M,'predecessor_cancel64_repeated':False,
         'proof_sha256':imported['reconciliation']['proof_sha256'],'original_SDK_close_claimed':False})
     admin=(state/'admin.token').read_text()
@@ -133,6 +138,8 @@ def matrix(root,config,build):
         peers=[]
         pool=None
         try:
+            isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/quarantine76-assessment.json')
+            event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
                 name=identity['node']
                 nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm)
@@ -155,7 +162,11 @@ def matrix(root,config,build):
                                                    'home':'nodeA','nodes':bindings},indent=2))
             activated=exchange(endpoint,'ActivateManagedBootstrap',{'admin_token':admin})
             if activated['bootstrap_activated'] is not True:raise RuntimeError('actual current bootstrap not committed into one ledger')
-            pool=exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
+            try:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
+            except PoolV2Unknown:raise
+            except PoolV2Error:event({'event':'E1-negative64-capacity','known_rejected':True,'B_baseline':76*M,'new_canaries':4*M})
+            else:raise RuntimeError('64MiB replacement exceeded B128/global256 budget')
+            pool=exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':CAPACITY})
             base={key:pool[key] for key in ('pool_id','pool_epoch','provider_session')}
             event({'event':'E1-one-allocation','pool':pool,'provider':json.loads(prepared_config.read_text())})
             # Real server negatives, not local SDK-validator substitutes.
@@ -168,7 +179,7 @@ def matrix(root,config,build):
             if len({p.binding['receipt']['guest_pid'] for p in peers if p.node=='nodeA'})!=2:
                 raise RuntimeError('A/C are not independent Guest processes')
             a,b,c=peers
-            block=a.call('allocate',size=64*M)
+            block=a.call('allocate',size=CAPACITY)
             for field,value in [('backend','posix_shm_simpler'),('realm','physical:wrong'),('node','nodeB'),
                                  ('incarnation',0),('rights','r'),('offset',U)]:
                 stale={**a.binding,field:value}
@@ -183,10 +194,10 @@ def matrix(root,config,build):
                 except PoolV2Error:event({'event':'E1-negative','fields':change,'known_rejected':True})
                 else:raise RuntimeError('node/rights negative unexpectedly accepted')
             # Initialize and prove the entire backing in <=20MiB pieces; no payload on Host.
-            for off in range(0,64*M,16*M):
-                lease=a.call('acquire',block=block,mode='w',offset=off,nbytes=16*M)
+            for off in range(0,CAPACITY,16*M):
+                lease=a.call('acquire',block=block,mode='w',offset=off,nbytes=min(16*M,CAPACITY-off))
                 a.call('execute',lease=lease,pattern_id=0)
-            cases=[(a,b,U,20*M,17),(b,a,24*M+U,20*M,29),(a,b,48*M+U,2*U,41)]
+            cases=[(a,b,U,20*M,17),(b,a,24*M+U,20*M,29),(a,b,44*M+2*U,2*U,41)]
             written=[]
             for writer,reader,off,n,seed in cases:
                 started=time.monotonic_ns()
@@ -210,10 +221,10 @@ def matrix(root,config,build):
                 'block':block,'mode':'w','expected_generation':block['generation'],'byte_offset':0,'nbytes':U})
             event({'event':'E1-real-readonly-mapping','binding':readonly.binding,'close':readonly.close()})
             # Define all expected guard bytes before consulting returned segmentation.
-            planned_written=[(U,U+20*M),(24*M+U,44*M+U),(48*M+U,48*M+3*U)]
+            planned_written=[(U,U+20*M),(24*M+U,44*M+U),(44*M+2*U,44*M+4*U)]
             if written!=planned_written:raise RuntimeError('executed write intervals differ from independent plan')
-            guards=guard_intervals(64*M,planned_written)
-            event({'event':'E2-expected-guard-coverage','pool_bounds':[0,64*M],
+            guards=guard_intervals(CAPACITY,planned_written)
+            event({'event':'E2-expected-guard-coverage','pool_bounds':[0,CAPACITY],
                    'written':planned_written,'guards':guards,'nbytes':sum(end-begin for begin,end in guards)})
             snapshot=a.call('snapshot')
             segments=snapshot['pools'][0]['ranges']['allocations'][0]['segments']
@@ -227,15 +238,15 @@ def matrix(root,config,build):
                 event({'event':'E2-guard','offset':begin,'nbytes':count,'expected_checksum':digest,'result':result})
             if verified_guards!=sum(end-begin for begin,end in guards):raise RuntimeError('guard verification incomplete')
             # Same allocation: A and B keep real leases while C completes disjoint I/O.
-            la=a.call('acquire',block=block,mode='w',offset=52*M,nbytes=2*U)
-            lb=b.call('acquire',block=block,mode='w',offset=52*M+2*U,nbytes=2*U)
+            la=a.call('acquire',block=block,mode='w',offset=46*M,nbytes=2*U)
+            lb=b.call('acquire',block=block,mode='w',offset=46*M+2*U,nbytes=2*U)
             before=c.call('snapshot')
             for mode in ('r','w'):
-                c.call('acquire',expect_error=True,block=block,mode=mode,offset=52*M+U,nbytes=2*U)
-            lc=c.call('acquire',block=block,mode='w',offset=52*M+4*U,nbytes=U)
+                c.call('acquire',expect_error=True,block=block,mode=mode,offset=46*M+U,nbytes=2*U)
+            lc=c.call('acquire',block=block,mode='w',offset=46*M+4*U,nbytes=U)
             done=c.call('execute',lease=lc,pattern_id=73)
-            rc=c.call('acquire',block=block,mode='r',offset=52*M+4*U,nbytes=U)
-            same=a.call('acquire',block=block,mode='r',offset=52*M+4*U,nbytes=U)
+            rc=c.call('acquire',block=block,mode='r',offset=46*M+4*U,nbytes=U)
+            same=a.call('acquire',block=block,mode='r',offset=46*M+4*U,nbytes=U)
             c.call('execute',lease=rc,pattern_id=73)
             after=c.call('snapshot')
             tokens={lease['lease_id'] for lease in after['pools'][0]['ranges']['leases']}
@@ -245,11 +256,11 @@ def matrix(root,config,build):
                    'clock_domain':'B-host','cross_guest_clock_subtraction':False})
             c.call('release',lease=rc);a.call('release',lease=same)
             a.call('release',lease=la,write_not_started=True);b.call('release',lease=lb,write_not_started=True)
-            uncertain=c.call('acquire',block=block,mode='w',offset=52*M+8*U,nbytes=U)
+            uncertain=c.call('acquire',block=block,mode='w',offset=46*M+8*U,nbytes=U)
             c.call('raw',method='ReportPoolUnknown',values={'lease':uncertain,
                 'reason':'controlled client-reported uncertainty; no injected device or provider fault'})
             held=c.call('snapshot')
-            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M+bootstrap_bytes+8*M:
+            if not held['pools'][0]['frozen'] or held['charged_bytes']!=CAPACITY+bootstrap_bytes+RETAINED or held['creation_reserved_bytes']!=RETAINED_RESERVED:
                 raise RuntimeError('original pool and budget not retained by uncertainty')
             b.call('acquire',expect_error=True,expect_unknown=True,block=block,mode='r',offset=U,nbytes=U)
             try:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
@@ -259,10 +270,10 @@ def matrix(root,config,build):
                    'original_pool':pool['pool_id'],'replacement_pool_not_created':True})
             event({'event':'E4-first-client-unmapped','receipt':c.close()})
             reconciled=a.call('snapshot')
-            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M+bootstrap_bytes+8*M:
+            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=CAPACITY+bootstrap_bytes+RETAINED or reconciled['creation_reserved_bytes']!=RETAINED_RESERVED:
                 raise RuntimeError('actual same-context unmap did not reconcile only this client')
             invalid=[s for s in reconciled['pools'][0]['ranges']['allocations'][0]['segments'] if s['state']=='Invalid']
-            if not any(s['offset']==52*M+8*U and s['nbytes']==U for s in invalid):
+            if not any(s['offset']==46*M+8*U and s['nbytes']==U for s in invalid):
                 raise RuntimeError('uncertain content became committed instead of Invalid')
             if any(l['state']!='Closed' for l in reconciled['catalog_range_leases']
                    if l['client_session']==c.binding['client_session']):
@@ -272,19 +283,20 @@ def matrix(root,config,build):
             a.close();b.close()
             retired=exchange(endpoint,'DestroyManagedPool',{**base,'admin_token':admin})
             final=exchange(endpoint,'GetManagedPoolSnapshot',base)
-            if final['charged_bytes']!=bootstrap_bytes+8*M or final['creation_reserved_bytes']:
+            if final['charged_bytes']!=bootstrap_bytes+RETAINED or final['creation_reserved_bytes']!=RETAINED_RESERVED:
                 raise RuntimeError('business retire did not leave exactly the two owned canaries')
             shutdown=exchange(endpoint,'ShutdownManagedPool',{'admin_token':admin})
-            if shutdown['charged_bytes']!=8*M or shutdown['retained_bytes']!=8*M or shutdown['active_bytes']!=0 or shutdown['bootstrap_closed'] is not True:
+            if shutdown['charged_bytes']!=RETAINED or shutdown['retained_bytes']!=RETAINED or shutdown['reserved_bytes']!=RETAINED_RESERVED or shutdown['active_reserved_bytes']!=0 or shutdown['active_bytes']!=0 or shutdown['bootstrap_closed'] is not True:
                 raise RuntimeError('canary checked-close/final ledger not confirmed')
             if daemon.wait(timeout=10)!=0:raise RuntimeError('Catalog normal shutdown failed')
             event({'event':'E4-two-layer-release','retired':retired,'catalog_before_canary_close':final,'shutdown':shutdown})
             for server in servers:server.close()
             for node in nodes.values():node.prepare_close()
-            (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':True,
-                'pool_id':pool['pool_id'],'data_bytes_on_control_bridge':0,'capacity':64*M,
-                'bootstrap_bytes':bootstrap_bytes,'retained_predecessor_canary_bytes':8*M,
-                'peak_B_responsibility':64*M+bootstrap_bytes+8*M,'final_B_charged_bytes':8*M,
+            (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':all(i['engine']=='initramfs' for i in identities),
+                'pool_id':pool['pool_id'],'data_bytes_on_control_bridge':0,'capacity':CAPACITY,
+                'bootstrap_bytes':bootstrap_bytes,'retained_predecessor_canary_bytes':RETAINED,'retained_uncertain_reservation_bytes':RETAINED_RESERVED,
+                'peak_B_responsibility':CAPACITY+bootstrap_bytes+RETAINED+RETAINED_RESERVED,'final_B_charged_bytes':RETAINED,
+                'final_B_reserved_bytes':RETAINED_RESERVED,'final_B_total_bytes':RETAINED+RETAINED_RESERVED,
                 'A_historical_bytes_unqueried':128*M,'global_responsibility_zero_claimed':False},indent=2))
         except BaseException:
             notify_failure()  # Never perform potentially blocking state capture before notice.

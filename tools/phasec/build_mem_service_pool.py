@@ -138,7 +138,7 @@ def build(root, source, name):
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
-    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests','pool_retained8::tests'):
+    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests','pool_retained8::tests','pool_quarantine76::tests'):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     # The fixture appends .external-ddr to its already nonce-qualified socket.
@@ -161,9 +161,11 @@ def build(root, source, name):
     run([sys.executable,'-B',fixture/'matrix_entry_cpu.py','--agent',fixture_agent,'--worker',fixture_worker,
          '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('m'+out.name.removeprefix('build-host')),
          '--output',out/'matrix-entry-cpu','--rust-tests',test_bins[0],'--source',source,
-         '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=60)
+         '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=600)
     run([sys.executable,'-B',fixture/'launcher_cpu.py','--launcher',launcher_fixture,
          '--output',out/'launcher-cpu'],env=env,timeout=30)
+    run([sys.executable,'-B',fixture/'journal_cpu.py','--launcher',launcher_fixture,
+         '--output',out/'journal-cpu'],env=env,timeout=40)
     run([sys.executable,'-B',fixture/'retained8_lock_cpu.py','--output',out/'retained8-admission-cpu'],env=env,timeout=30)
     for case in ('managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness',
                  'independent_owner_processes_compete_for_one_catalog_budget','t1_registration_and_clean_drain_use_the_fixture_authority'):
@@ -203,6 +205,7 @@ def build(root, source, name):
              'launcher':{'path':str(launcher),'sha256':digest(launcher),'source_sha256':digest(own/'pool_guest_init.c'),
                  'image_member_sha256':digest(stage/'bin/uflow_env_payload'),
                  'host_tests':json.loads((out/'launcher-cpu/results.json').read_bytes()),
+                 'bounded_journal_CPU':json.loads((out/'journal-cpu/results.json').read_bytes()),
                  'PID1_handoff_ms':30000,'unbounded_park':False},
              'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
              'retained8_admission_cpu':json.loads((out/'retained8-admission-cpu/results.json').read_bytes()),

@@ -694,10 +694,22 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     let responsibility=restore_original(&mut catalog)?;
     #[cfg(test)]
     let responsibility=if let Some(proof)=fixture {
-        Some(if proof["kind"]=="verified-c027-retained8-succession" {
+        Some(if proof["kind"]=="verified-closed-c033-quarantine76" {
+            crate::pool_quarantine76::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
+        } else if proof["kind"]=="verified-c027-retained8-succession" {
             crate::pool_retained8::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
         } else {crate::pool_reconciliation::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?})
     } else {restore_original(&mut catalog)?};
+    if catalog.managed_pools.reconciliation["phase"]=="ClosedC033Quarantine76" {
+        // Persist full inherited 76 before reserving any new canaries.
+        catalog.managed_pools.revision=1;
+        let baseline=catalog.managed_pools.snapshot(&catalog);
+        let mut f=OpenOptions::new().write(true).create_new(true).mode(0o600).custom_flags(libc::O_NOFOLLOW)
+            .open(root.join("state.json")).map_err(|e|e.to_string())?;
+        serde_json::to_writer(&mut f,&baseline).map_err(|e|e.to_string())?;
+        f.write_all(b"\n").and_then(|_|f.sync_all()).map_err(|e|e.to_string())?;
+        File::open(root).and_then(|f|f.sync_all()).map_err(|e|e.to_string())?;
+    }
     if let Some(p)=&mut remote {p.admit_bootstrap(&mut catalog)?;}
     let (provider_session, provider_loaded) = if let Some(p) = &provider {
         (p.session.clone(), p.loaded.clone())
