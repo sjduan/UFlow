@@ -1,5 +1,74 @@
 # mem_service pool v2
 
+## Current HOST candidate: closed-c033 quarantine76 and48 MiB matrix
+
+The c033 run inherited retained8, started both Guests/workers and actually
+reserved a64 MiB GSVA segment before export failed. Its frozen Image disabled
+`CONFIG_UB_UMMU_SVA_SEPARATED_PAGES`; the corresponding kernel header function
+returned -EINVAL. That is CreationUnknown, not proof of absence or release.
+Real E1-E5 acceptance remains incomplete. c033/ca033 cannot be repeated.
+
+The new candidate retains six historical canaries (typed12 MiB) and the original
+attempted creation reservation (typed64 MiB). New4 MiB canaries and48 MiB business
+give B peak128 MiB; A historical unqueried128 gives global256. A new64 MiB request
+must be rejected. Normal current close ends charged=retained12, total reserved=
+retained reserved64, active and new reserved0: B still76 MiB, never0/8/12 total.
+
+Only the fixed closed c033 pure-CPU context may enter `pool_quarantine76`.
+The pinned assessment binds33 original records, all six canaries and the full
+original64 reservation key/pool/op/epoch/session. Its embedded verifier checks
+complete original and retained8 lineage, exact old births, quiet controls,
+bounded FD/VMA/FM holders, actual frozen E0 ancestor kernel FLOCK admissions
+and a fresh pure QEMU namespace. After new FM creation a further check requires
+all old30 identities retained and all new10 inode aliases disjoint, before any
+canary work. No production verifier or actual lineage is run by HOST fixtures.
+
+The original lock stays held for the whole Service. Only `successor-c033-v1`
+is appended by fsynced no-replace intent/result; the inherited76 state is
+fsynced before new reservations. Partial writes, drift, concurrency, re-entry
+and restart reject. The old SDK/store/Guest is neither replayed nor revived.
+CreationUnknown query returns original Unknown as inaccessible history. Old
+pool/op, resources100–107 and all three generations of boot/realm/session
+identities cannot be reused. Typed uncertainty blocks ordinary cancel/commit/
+backing conversion/release; shutdown reports it. New live Unknown still refuses
+admission through the default guard. No canonical backing or ACK is invented.
+
+`kernel_profile_gate.py` runs before lower/Catalog/lineage/Guest. The selected
+`kernel_profile` provides reviewed producer `manifest` and `manifest_sha256`.
+The gate hashes actual Image/outputs and bounded embedded IKCONFIG, requires
+the minimal separated-pages builtin delta and fixed kernel/source/build
+provenance, verifies old Image/config unchanged, actual linked System.map symbol
+and aarch64 vmlinux. Old disabled Image and missing/duplicate/truncated/oversized
+config or path/hash/profile drift reject. Producer outputs are named `Image`,
+`vmlinux`, `System.map`, `.config`, `source-manifest.json`, each with
+path/bytes/sha256. Source manifest declares kernel_commit/files; resolved delta
+is option→{before:"n",after:"y"}. Actual reviewed producer handoff is separate;
+synthetic fixtures do not certify a producer artifact or Guest behavior.
+
+`matrix_entry_cpu.py` runs the complete actual matrix/callback through real
+Rust/C/SDK sockets, independent client processes and a48 MiB CPU shared-file
+mmap provider. Import/canaries/platform/worker/QEMU/Image are explicit doubles
+linked only into CPU fixtures. It verifies76→80→128→76, two full20 MiB transfers
+in opposite directions at nonzero offsets, every byte/hash, independent full
+complement guards and A/B live leases while C completes real I/O. It also
+checks identity negatives, negative64, new live Unknown refusal and actual
+same-context current cleanup. It never claims real Guest/OBMM/64 MiB PASS.
+The third probe starts44 MiB+128 KiB and E3 starts46 MiB, within48 MiB.
+
+The private PID1 launcher captures only fixed `worker.conf.state` metadata,
+owned regular/nofollow/nlink1, at most64 KiB and1s within the existing finite
+handoff. Failure notice precedes diagnostics. Raw serial chunks can be
+reconstructed, checked by FNV and SHA256, or are marked missing/error/truncated/
+incomplete. Linux CPU tests cover symlink/hardlink/FIFO/oversize/blocked-output
+and actual child cleanup. No arbitrary path, secret/FM/payload read, frozen
+worker change, monitor extension or c033 lost-journal reconstruction occurs.
+
+## Historical implementation notes through9ca
+
+The following describes predecessor stages, their old64 MiB matrix and earlier
+CPU fixtures. Current behavior and responsibility are defined above; old
+snapshots are preserved as evidence, not current execution permission or PASS.
+
 This opt-in backend extends the existing UFlow Catalog and `pool_ranges` with
 one real managed allocation shared by two logical Guests on B. Legacy POSIX
 pool clients keep their schema1 FD/seal contract. Import the new client

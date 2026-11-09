@@ -303,17 +303,22 @@ def matrix(root,config,build):
             event({'event':'matrix-failure','original_pool':pool,'same_pool_retained':True,
                    'unknown_not_reconciled_by_process_death':True})
             raise
+    normal_closed=False
     try:
         run(config,control=callback)
         lower.send_signal(signal.SIGTERM)
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
+        normal_closed=True
     except BaseException:
         notify_failure()
         # External supervisor owns bounded TERM/KILL/wait for this exact subtree.
         raise
     finally:
-        log.close()
+        # On failure readers may still produce metadata until the independent
+        # monitor closes this process tree. Keep their sink alive for that
+        # finite interval; closing it first loses the last failure evidence.
+        if normal_closed:log.close()
 
 
 if __name__=='__main__':

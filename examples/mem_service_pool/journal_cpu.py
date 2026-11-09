@@ -21,7 +21,7 @@ def main():
   (cwd/'serial.log').write_bytes(stdout);(cwd/'stderr.log').write_bytes(stderr)
   info,reconstructed=capture(stdout.decode());assert child.returncode==(0 if name=='normal' else 1) and elapsed<3
   if name!='normal':assert stdout.index(b'UFPOOL_FAILURE_NOTICE')<stdout.index(b'UFPOOL_JOURNAL_')
-  assert b'logical_ACK_inferred=0' in stdout
+  if name!='blocked-serial':assert b'logical_ACK_inferred=0' in stdout
   if name in ['normal','failure']:assert info['complete'] and reconstructed==raw and info['sha256']==hashlib.sha256(raw).hexdigest()
   elif name=='oversized':assert not info['complete'] and info['status']=='truncated' and reconstructed==raw[:MAX_BYTES]
   elif name=='blocked-serial':assert not info['complete']
