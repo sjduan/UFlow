@@ -33,6 +33,12 @@ pub struct MemServicePoolProvider {
 
 const CANARY_BYTES: u64 = 2 << 20;
 const BUSINESS_SEQUENCE: u64 = 1u64 << 32;
+fn execution_bytes(op:&str,mode:&str,lease_bytes:u64,pattern:u64)->Result<u64,String>{
+    if op=="ProbePoolRead4KiB" {
+        if mode!="r"||lease_bytes!=65536||pattern!=0{return Err("private4KiB diagnostic requires a whole legal64KiB read lease and initialized pattern0".into());}
+        Ok(4096)
+    } else {Ok(lease_bytes)}
+}
 fn ready_receipts(identity: &Value, worker: &Value, status: &Value) -> Result<u64,String> {
     let expected=&identity["startup"]["worker"];
     let lease=number(status,"lease_ms")?;
@@ -271,7 +277,7 @@ impl MemServicePoolProvider {
             "RegisterPoolClient" => &["access","node"],
             "AllocatePoolRange" => &["nbytes","alignment"],
             "AcquirePoolRange" => &["block","mode","expected_generation","byte_offset","nbytes"],
-            "ExecutePoolRange" => &["lease","pattern_id"],
+            "ExecutePoolRange" | "ProbePoolRead4KiB" => &["lease","pattern_id"],
             "ReleasePoolLease" => &["lease","write_not_started"],
             "DescribeManagedPool" | "GetManagedPoolSnapshot" | "BeginPoolUnregister" => &[],
             "ReportPoolUnknown" => &["reason","lease"],
@@ -321,7 +327,7 @@ impl MemServicePoolProvider {
                 if old.request != fingerprint { return Err("operation identity replay mismatch".into()); }
                 return Ok(Some(old.response.clone()));
             }
-            let admission=matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange");
+            let admission=matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange"|"ProbePoolRead4KiB");
             if admission && st.shutdown_requested { return Err("Catalog closing; new admission forbidden".into()); }
             if state.operations.len() >= 8192 || admission && state.operations.len()>=4096 {
                 return Err("bounded journal admission; cleanup headroom retained".into());
@@ -382,7 +388,7 @@ impl MemServicePoolProvider {
             return Ok(json!({"bootstrap_activated":true,"current_canary_bytes":4<<20}));
         }
         if self.deferred_bootstrap {return Err("original responsibility imported; current canaries reserved but not activated".into());}
-        if matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange") {
+        if matches!(op,"CreateManagedPool"|"RegisterPoolClient"|"AllocatePoolRange"|"AcquirePoolRange"|"ExecutePoolRange"|"ProbePoolRead4KiB") {
             if let Err(error)=self.require_ready() {
                 self.bootstrap_unknown.store(true,Ordering::Release);
                 return Err(error); // No creation reservation or allocation RPC was made.
@@ -562,7 +568,7 @@ impl MemServicePoolProvider {
                 }
             });
         }
-        if matches!(op,"ExecutePoolRange"|"BeginPoolUnregister") {
+        if matches!(op,"ExecutePoolRange"|"ProbePoolRead4KiB"|"BeginPoolUnregister") {
             let client=text(req,"client_session")?;
             let (node,lease)=service.catalog(|state,st| {
                 let p=state.pools.get_mut(pool_id).unwrap();let session=p.clients.get(client).ok_or("client not found")?;
@@ -576,13 +582,14 @@ impl MemServicePoolProvider {
                 if session.closing || session.state!="Mapped" {return Err("mapped live client required".into());}
                 let lease=p.validate_lease(&req["lease"],client,session.access_id)?;
                 if p.ranges.leases[&lease.token].state!="Active" {return Err("range already executing/unknown/closed".into());}
-                number(req,"pattern_id")?;
+                execution_bytes(op,&lease.mode,lease.nbytes,number(req,"pattern_id")?)?;
                 p.ranges.leases.get_mut(&lease.token).unwrap().state="Executing";
                 Ok((node,Some(lease)))
             })?;
             if let Some(lease)=lease {
+                let executed_bytes=execution_bytes(op,&lease.mode,lease.nbytes,number(req,"pattern_id")?)?;
                 let done=self.call(&node,json!({"op":if lease.mode=="w"{"write"}else{"read"},"client_session":client,
-                    "offset":lease.offset,"nbytes":lease.nbytes,"pattern_id":req["pattern_id"],"lease_id":lease.token,
+                    "offset":lease.offset,"nbytes":executed_bytes,"pattern_id":req["pattern_id"],"lease_id":lease.token,
                     "content_version":lease.version}));
                 return service.catalog(|state,st| {
                     let p=state.pools.get_mut(pool_id).unwrap();
@@ -591,7 +598,7 @@ impl MemServicePoolProvider {
                         return Err("uncertainty/death during execution remains sticky; no commit".into());
                     }
                     match done {
-                        Ok(receipt) if receipt["nbytes"]==lease.nbytes && receipt["offset"]==lease.offset
+                        Ok(receipt) if receipt["nbytes"]==executed_bytes && receipt["offset"]==lease.offset
                             && receipt["all_bytes"]==true && receipt["pins"]==0 && receipt["visible"]==true
                             && receipt["pattern_id"]==req["pattern_id"] => {
                             p.ranges.leases.get_mut(&lease.token).unwrap().state="Active";
@@ -599,7 +606,9 @@ impl MemServicePoolProvider {
                                 let version=p.ranges.commit(&lease,text(&receipt,"checksum")?,lease.nbytes)?;
                                 st.leases.get_mut(&lease.catalog_id).unwrap().state="Closed".into();
                                 Ok(json!({"committed":true,"content_version":version,"receipt":receipt}))
-                            } else {Ok(json!({"verified":true,"content_version":lease.version,"receipt":receipt}))}
+                            } else if op=="ProbePoolRead4KiB" {Ok(json!({"diagnostic_verified":true,"diagnostic_bytes":executed_bytes,
+                                "lease_protected_bytes":lease.nbytes,"full_lease_verified":false,"content_version":lease.version,"receipt":receipt}))}
+                            else {Ok(json!({"verified":true,"content_version":lease.version,"receipt":receipt}))}
                         }
                         other=>{p.ranges.unknown(&lease);Err(format!("same lease/bytes outcome unknown: {other:?}"))}
                     }
@@ -639,6 +648,13 @@ impl MemServicePoolProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn diagnostic_read_keeps_original64k_lease_policy_and_never_claims_full_coverage(){
+        assert_eq!(execution_bytes("ProbePoolRead4KiB","r",65536,0).unwrap(),4096);
+        for (mode,n,pattern) in [("w",65536,0),("r",4096,0),("r",131072,0),("r",65536,17)]{assert!(execution_bytes("ProbePoolRead4KiB",mode,n,pattern).is_err());}
+        assert_eq!(execution_bytes("ExecutePoolRange","r",20<<20,17).unwrap(),20<<20);
+        assert_eq!(execution_bytes("ExecutePoolRange","w",20<<20,29).unwrap(),20<<20);
+    }
     #[test]
     fn admission_requires_real_worker_freshness_directory_and_boot_binding() {
         let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,

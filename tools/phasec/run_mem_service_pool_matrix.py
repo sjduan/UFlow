@@ -206,15 +206,17 @@ def matrix(root,config,build):
             diagnostic_start=time.monotonic_ns()
             event({'event':'stage-first-cross-node-read4KiB-start','node':'nodeB','offset':U,'nbytes':4096,
                    'start_host_ns':diagnostic_start,'clock_domain':'B-host'})
-            diagnostic=b.call('acquire',block=block,mode='r',offset=U,nbytes=4096)
-            diagnostic_read=b.call('execute',lease=diagnostic,pattern_id=0)
+            diagnostic=b.call('acquire',block=block,mode='r',offset=U,nbytes=U)
+            diagnostic_read=b.call('raw',method='ProbePoolRead4KiB',values={'lease':diagnostic,'pattern_id':0})
             receipt=diagnostic_read['receipt'];digest=expected(0,U,4096)
             if (receipt['checksum']!=digest or receipt['offset']!=U or receipt['nbytes']!=4096 or
-                    receipt['all_bytes'] is not True or receipt['visible'] is not True or receipt['pins']!=0):
+                    receipt['all_bytes'] is not True or receipt['visible'] is not True or receipt['pins']!=0 or
+                    diagnostic_read['lease_protected_bytes']!=U or diagnostic_read['full_lease_verified'] is not False):
                 raise RuntimeError('first same-backing cross-node 4KiB diagnostic failed; full matrix not started')
             diagnostic_release=b.call('release',lease=diagnostic)
             event({'event':'stage-first-cross-node-read4KiB-completed','node':'nodeB','offset':U,'nbytes':4096,
                    'read':diagnostic_read,'release':diagnostic_release,'expected_checksum':digest,
+                   'lease_protected_bytes':U,'full_lease_verified':False,
                    'start_host_ns':diagnostic_start,'end_host_ns':time.monotonic_ns(),'clock_domain':'B-host',
                    'full20MiB_acceptance_replaced':False})
             cases=[(a,b,U,20*M,17),(b,a,24*M+U,20*M,29),(a,b,44*M+2*U,2*U,41)]
