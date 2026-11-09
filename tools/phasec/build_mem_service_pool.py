@@ -185,6 +185,10 @@ def build(root, source, name):
          '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('m'+out.name.removeprefix('build-host')),
          '--output',out/'matrix-entry-cpu','--rust-tests',test_bins[0],'--source',source,
          '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=600)
+    run([sys.executable,'-B',fixture/'matrix_entry_cpu.py','--terminal-domain','--agent',fixture_agent,'--worker',fixture_worker,
+         '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('t'+generation),
+         '--output',out/'terminal-staged-matrix-cpu','--rust-tests',test_bins[0],'--source',source,
+         '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=600)
     run([sys.executable,'-B',fixture/'launcher_cpu.py','--launcher',launcher_fixture,
          '--output',out/'launcher-cpu'],env=env,timeout=30)
     run([sys.executable,'-B',fixture/'journal_cpu.py','--launcher',launcher_fixture,
@@ -234,6 +238,7 @@ def build(root, source, name):
              'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
              'serial_rx_cpu':json.loads((out/'serial-rx-cpu/results.json').read_bytes()),
              'terminal_domain_host':json.loads((out/'terminal-ledger-cpu/results.json').read_bytes()),
+             'terminal_staged_matrix_cpu':json.loads((out/'terminal-staged-matrix-cpu/results.json').read_bytes()),
              'retained8_admission_cpu':json.loads((out/'retained8-admission-cpu/results.json').read_bytes()),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
              'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),

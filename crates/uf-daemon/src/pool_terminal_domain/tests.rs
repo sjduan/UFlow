@@ -2,16 +2,20 @@ use super::*;
 use crate::ddr_resources::BackingId;
 use std::{process::Command,sync::atomic::{AtomicU64,Ordering}};
 static N:AtomicU64=AtomicU64::new(0);
-struct Fixture{root:PathBuf,dir:PathBuf,state:PathBuf,proof:Value,pins:BTreeMap<String,String>}
+struct Fixture{root:PathBuf,dir:PathBuf,state:PathBuf,proof:Value,pins:BTreeMap<String,String>,cleanup:bool}
 impl Fixture {
     fn new()->Self{
         let root=std::env::temp_dir().join(format!("uf-td-{}-{}",std::process::id(),N.fetch_add(1,Ordering::Relaxed)));
+        Self::at(root,true)
+    }
+    fn at(root:PathBuf,cleanup:bool)->Self{
         fs::create_dir(&root).unwrap();let dir=root.join("lineage");fs::create_dir(&dir).unwrap();File::create(dir.join("authority.lock")).unwrap();
         let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/mem_service_pool/terminal_domain/lineage");
         let predecessors:Value=serde_json::from_str(PINS).unwrap();
         for (name,_) in predecessors.as_object().unwrap(){let dest=dir.join(name);fs::create_dir_all(dest.parent().unwrap()).unwrap();fs::copy(source.join(name),dest).unwrap();}
         let state=root.join("original-state.json");fs::write(&state,STATE).unwrap();let external=parsed(SEMANTICS).unwrap();
         let mut proof=json!({"CPU_fixture_only_not_real_platform_proof":true,"interface":"mem-service-private-qemu-domain-v1",
+            "applies_to_current_domain":true,"evidence_mode":"fixed-launch-source",
             "status":"PASS_HOST_CANDIDATE_ONLY","state_sha256":STATE_SHA,"external_semantics_sha256":SEMANTICS_SHA,
             "scope":external["candidate_scope"],"source_runtime":external["fixed_source_and_runtime"],
             "required_output_truths":external["required_output_truths"],"missing_evidence":[],
@@ -25,7 +29,14 @@ impl Fixture {
             let data=format!("CPU SYNTHETIC EVIDENCE ONLY: {key}\n");fs::write(root.join(key),data.as_bytes()).unwrap();
             let pin=digest(data.as_bytes());proof[key]=json!(pin);pins.insert(key.into(),pin);
         }
-        Self{root,dir,state,proof,pins}
+        fs::write(root.join("CPU-proof.json"),serde_json::to_vec(&proof).unwrap()).unwrap();
+        fs::write(root.join("CPU-pins.json"),serde_json::to_vec(&pins).unwrap()).unwrap();
+        Self{root,dir,state,proof,pins,cleanup}
+    }
+    fn existing(root:PathBuf)->Self{
+        let proof=parsed(&fs::read(root.join("CPU-proof.json")).unwrap()).unwrap();
+        let pins=serde_json::from_slice(&fs::read(root.join("CPU-pins.json")).unwrap()).unwrap();
+        Self{dir:root.join("lineage"),state:root.join("original-state.json"),root,proof,pins,cleanup:false}
     }
     fn verify(&self,bytes:&[u8])->Result<VerifiedCandidate,String>{
         if self.proof["CPU_fixture_only_not_real_platform_proof"]!=true{return Err("only explicit CPU fixture".into());}
@@ -36,7 +47,7 @@ impl Fixture {
     }
     fn run(&self,crash:&str)->Result<TerminalAuthority,String>{transact(&self.dir,&self.state,|bytes|self.verify(bytes),crash)}
 }
-impl Drop for Fixture{fn drop(&mut self){assert_eq!(self.root.parent().unwrap(),std::env::temp_dir());fs::remove_dir_all(&self.root).unwrap();}}
+impl Drop for Fixture{fn drop(&mut self){if self.cleanup{assert_eq!(self.root.parent().unwrap(),std::env::temp_dir());fs::remove_dir_all(&self.root).unwrap();}}}
 fn catalog()->Catalog{let mut c=Catalog::new(-1,vec![]);c.ddr_resources.limit=128<<20;c}
 fn new_context()->Value{json!({"realm":"simulated:future-terminal-cpu","session":"new-terminal-session",
     "nodes":[{"node":"nodeA","boot_id":"new-A-boot","agent_session":"new-A-agent","incarnation":41},
@@ -90,7 +101,7 @@ fn every_persistent_boundary_crash_and_replay_refuses_admission(){
 
 #[test]
 fn missing_wrong_source_state_producer_metadata_or_holder_refuses_before_intent(){
-    for key in ["interface","status","scope","source_runtime","state_sha256","external_semantics_sha256","closure","required_output_truths"]{
+    for key in ["interface","status","scope","source_runtime","state_sha256","external_semantics_sha256","closure","required_output_truths","applies_to_current_domain","evidence_mode"]{
         let mut f=Fixture::new();f.proof[key]=Value::Null;assert!(f.run("").is_err());assert!(!f.dir.join(NEXT).exists());
     }
     for key in ["producer_manifest_sha256","validator_sha256","source_closure_sha256","runtime_closure_sha256","metadata_union_sha256","physical_closure_sha256"]{
@@ -102,6 +113,13 @@ fn missing_wrong_source_state_producer_metadata_or_holder_refuses_before_intent(
     }
     let mut f=Fixture::new();f.proof["missing_evidence"]=json!(["actual backing owners"]);assert!(f.run("").is_err());
     let f=Fixture::new();fs::write(&f.state,b"{}").unwrap();assert!(f.run("").is_err());
+}
+
+#[test]
+fn both_real_evidence_methods_are_supported_but_synthetic_mode_never_consumes(){
+    let mut f=Fixture::new();f.proof["evidence_mode"]=json!("captured-runtime");assert!(f.run("").is_ok());
+    let mut f=Fixture::new();f.proof["evidence_mode"]=json!("synthetic-fixture");assert!(f.run("").is_err());assert!(!f.dir.join(NEXT).exists());
+    let mut f=Fixture::new();f.proof["applies_to_current_domain"]=json!(false);assert!(f.run("").is_err());assert!(!f.dir.join(NEXT).exists());
 }
 
 #[test]
@@ -237,4 +255,58 @@ fn evidence_or_source_drift_after_verified_intent_never_commits(){
     assert!(result.is_err());assert!(f.dir.join(NEXT).join("intent.json").exists());assert!(!f.dir.join(NEXT).join("commit.json").exists());assert!(f.run("").is_err());
     let f=Fixture::new();let result=transact(&f.dir,&f.state,|bytes|{let p=f.verify(bytes)?;fs::write(&f.state,b"late state drift").unwrap();Ok(p)},"");
     assert!(result.is_err());assert!(!f.dir.join(NEXT).join("commit.json").exists());
+}
+
+#[test]
+fn recover_complete_commit_then_staged_claim_never_drops_new_obligations(){
+    let f=Fixture::new();drop(f.run("").unwrap());let mut a=recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).unwrap();
+    let namespace=json!({"realm":"simulated:new-staged","session":"new-staged-session","nodes":[
+        {"node":"nodeA","socket":f.root.join("a.sock")},{"node":"nodeB","socket":f.root.join("b.sock")}]});
+    let mut st=catalog();let guard=a.attach_staged(&mut st,&namespace).unwrap();drop(a);
+    assert_eq!(st.ddr_resources.charged_bytes(),12<<20);assert_eq!(st.ddr_resources.reserved_bytes(),68<<20);
+    assert_eq!(st.managed_pools.reconciliation["terminal_bootstrap_phase"],"AwaitingNewGuestReadiness");
+    assert_eq!(st.next_object_id,115);assert!(recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).is_err());drop(guard);
+    assert!(recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).is_err());
+    for point in ["intent","historical128","before128","fences","terminal52","resulting76"]{
+        let f=Fixture::new();assert!(f.run(point).is_err());assert!(recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).is_err());
+    }
+}
+
+#[test]
+fn fresh_namespace_native_generation_one_is_legal_old_tuple_is_fenced(){
+    let f=Fixture::new();let mut a=f.run("").unwrap();let mut st=catalog();let _guard=a.attach(&mut st,&new_context()).unwrap();
+    st.ddr_resources.reserve_unique("fresh-generation-one",48<<20).unwrap();
+    st.ddr_resources.commit_backing("fresh-generation-one",113,BackingId::Provider{realm:"simulated:brand-new".into(),provider:"mem_service_obmm".into(),resource:"new-pool-UUID".into(),generation:1},48<<20).unwrap();
+    assert!(reject_fenced(&st.managed_pools.reconciliation,&json!({"pool_id":"brand-new-pool","realm":"simulated:brand-new","resource_id":113,"generation":1})).is_ok());
+    let old=parsed(STATE).unwrap();assert!(reject_fenced(&st.managed_pools.reconciliation,&json!({"pool_id":old["pools"][0]["pool_id"],"generation":1})).is_err());
+    assert!(st.managed_pools.reconciliation["terminal_domain_fences"].get("minimum_resource_generation").is_none());
+}
+
+#[test]
+fn terminal_commit_process(){
+    if let Ok(config)=std::env::var("UFLOW_TERMINAL_STAGED_CPU_CONFIG"){
+        let c=parsed(&fs::read(config).unwrap()).unwrap();let root=PathBuf::from(c["terminal_origin"].as_str().unwrap());
+        assert!(root.is_absolute() && root.starts_with(ROOT) && root.file_name().unwrap()=="terminal-origin");
+        let f=Fixture::at(root,false);let a=f.run("").unwrap();assert_eq!(a.closure_report().unwrap()["B_at_terminal_commit_bytes"],76<<20);
+        assert!(!a.path.join("service-admission-claim.json").exists());
+    }
+}
+
+#[test]
+fn staged_terminal_service_process(){
+    if let Ok(config)=std::env::var("UFLOW_TERMINAL_STAGED_CPU_CONFIG"){
+        let c=parsed(&fs::read(config).unwrap()).unwrap();let f=Fixture::existing(PathBuf::from(c["terminal_origin"].as_str().unwrap()));
+        let mut a=recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).unwrap();
+        crate::pool_service::run_terminal_staged_fixture(c["endpoint"].as_str().unwrap(),Path::new(c["state"].as_str().unwrap()),Path::new(c["provider_config"].as_str().unwrap()),&mut a).unwrap();
+    }
+}
+
+#[test]
+fn coherent_rewritten_commit_cannot_erase_unknown_or_historical_responsibility(){
+    let f=Fixture::new();drop(f.run("").unwrap());let path=f.dir.join(NEXT);
+    let mut result=parsed(&fs::read(path.join("resulting76.json")).unwrap()).unwrap();result["reconciliation"]["retained_canaries"]=json!([]);
+    fs::write(path.join("resulting76.json"),serde_json::to_vec(&result).unwrap()).unwrap();
+    let mut commit=parsed(&fs::read(path.join("commit.json")).unwrap()).unwrap();commit["resulting76_sha256"]=json!(digest(&fs::read(path.join("resulting76.json")).unwrap()));
+    fs::write(path.join("commit.json"),serde_json::to_vec(&commit).unwrap()).unwrap();
+    assert!(recover_committed(&f.dir,&f.state,|bytes|f.verify(bytes)).is_err());
 }

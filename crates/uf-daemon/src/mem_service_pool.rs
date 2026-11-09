@@ -129,7 +129,9 @@ impl MemServicePoolProvider {
     }
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
-        let old=&st.managed_pools.reconciliation;
+        self.reject_history(&st.managed_pools.reconciliation)
+    }
+    fn reject_history(&self,old:&Value)->Result<(),String>{
         crate::pool_terminal_domain::reject_fenced(old,&json!({"realm":self.realm,"session":self.session,"nodes":self.nodes}))?;
         if let Some(contexts)=old["historical_prestart_contexts"].as_array(){
             for c in contexts {
@@ -162,6 +164,20 @@ impl MemServicePoolProvider {
     }
     pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
         self.reject_retained_reuse(st)?;
+        let terminal=&st.managed_pools.reconciliation;
+        if terminal["terminal_bootstrap_phase"]=="AwaitingNewGuestReadiness" {
+            let namespace=&terminal["terminal_staged_namespace"];
+            if namespace["realm"]!=self.realm || namespace["session"]!=self.session || st.ddr_resources.active_reserved_bytes_for_terminal()!=4<<20 {
+                return Err("staged terminal namespace/reserved4 mismatch".into());
+            }
+            for (node,identity) in &self.nodes {
+                let expected=namespace["nodes"].as_array().ok_or("staged nodes")?.iter().find(|v|v["node"]==*node).ok_or("staged node")?;
+                if expected["socket"]!=identity["socket"]{return Err("staged terminal endpoint changed".into());}
+                let id=terminal["terminal_canary_charge_objects"][node].as_u64().ok_or("staged canary id")?;
+                if id!=if node=="nodeA"{113}else{114} || self.bootstrap.get(node).is_some_and(|old|*old!=id){return Err("staged canary charge identity mismatch".into());}
+                self.bootstrap.insert(node.clone(),id);
+            }
+        }
         // Real, already-live canary exports share the one physical capacity ledger.
         // No charges for temporary peer verification views or application endpoints.
         for (node,identity) in &self.nodes {
@@ -174,6 +190,9 @@ impl MemServicePoolProvider {
                 resource:format!("canary:{node}:{}",text(identity,"boot_id")?),
                 generation:number(identity,"incarnation")?},CANARY_BYTES)?;
             self.bootstrap.insert(node.clone(),id);
+        }
+        if !self.deferred_bootstrap && st.managed_pools.reconciliation["terminal_bootstrap_phase"]=="AwaitingNewGuestReadiness" {
+            st.managed_pools.reconciliation["terminal_bootstrap_phase"]=json!("ActiveNewNamespace");
         }
         Ok(())
     }
@@ -344,10 +363,21 @@ impl MemServicePoolProvider {
                 active.nodes.iter().any(|(name,node)|node["socket"]!=self.nodes[name]["socket"]) {
                 return Err("prepared readiness does not bind this pending authority".into());
             }
-            service.catalog(|_,st|active.reject_retained_reuse(st))?;
+            service.catalog(|state,st|{
+                active.reject_history(&state.reconciliation)?;
+                if state.reconciliation["terminal_bootstrap_phase"]=="AwaitingNewGuestReadiness" {
+                    let namespace=&state.reconciliation["terminal_staged_namespace"];
+                    if namespace["realm"]!=active.realm || namespace["session"]!=active.session || st.ddr_resources.active_reserved_bytes_for_terminal()!=4<<20 ||
+                        active.nodes.iter().any(|(name,node)|namespace["nodes"].as_array().is_none_or(|nodes|!nodes.iter().any(|n|n["node"]==*name&&n["socket"]==node["socket"]))) {
+                        return Err("terminal prepared identities do not bind reserved staged namespace".into());
+                    }
+                }Ok(())
+            })?;
             active.require_ready()?;
             active.bootstrap=self.bootstrap.clone();
-            service.catalog(|state,st| {active.admit_bootstrap(st)?;state.bootstrap_readiness=active.loaded();Ok(())})?;
+            service.catalog(|state,st| {active.reject_history(&state.reconciliation)?;active.admit_bootstrap(st)?;
+                if state.reconciliation["terminal_bootstrap_phase"]=="AwaitingNewGuestReadiness"{state.reconciliation["terminal_bootstrap_phase"]=json!("ActiveNewNamespace");}
+                state.bootstrap_readiness=active.loaded();Ok(())})?;
             self.active.set(Box::new(active)).map_err(|_|"activation already set")?;
             return Ok(json!({"bootstrap_activated":true,"current_canary_bytes":4<<20}));
         }

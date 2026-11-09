@@ -55,6 +55,11 @@ impl VerifiedCandidate {
 // Internal consumer schema is intentionally not presented as E's final public
 // API. Only cfg(test) may mint this interim candidate until that API is accepted.
 fn validate_candidate(bytes:&[u8],proof:&Value)->Result<VerifiedCandidate,String>{
+    #[cfg(not(test))]
+    if proof["CPU_fixture_only_not_real_platform_proof"]==true{return Err("synthetic fixture can never authorize production terminal loss".into());}
+    if proof["applies_to_current_domain"]!=true || !matches!(proof["evidence_mode"].as_str(),Some("captured-runtime"|"fixed-launch-source")) {
+        return Err("accepted real current-domain evidence method required; synthetic/non-current candidates cannot be consumed".into());
+    }
     if digest(bytes)!=STATE_SHA || digest(SEMANTICS)!=SEMANTICS_SHA{return Err("fixed state/source semantics mismatch".into());}
     let state=parsed(bytes)?;let pool=&state["pools"][0];let external=parsed(SEMANTICS)?;
     if state["revision"]!=153 || state["charged_bytes"]!=64<<20 || state["creation_reserved_bytes"]!=64<<20 ||
@@ -101,7 +106,7 @@ fn make_fences(state:&Value)->Value{
     for name in ["u.sock","l.sock","a.sock","b.sock","nodeA.qmp","nodeA.serial","nodeB.qmp","nodeB.serial"]{strings.insert(format!("{ROOT}/runs/c044/{name}"));}
     json!({"schema":1,"strings":strings,"incarnations":inc,"retired_object_ids":(100..=112).collect::<Vec<_>>(),
         "minimum_next_object_id":113,"minimum_next_placement_id":10003,"minimum_next_binding_id":40003,
-        "minimum_next_access_id":50003,"minimum_next_lease_id":1008,"minimum_resource_generation":2})
+        "minimum_next_access_id":50003,"minimum_next_lease_id":1008})
 }
 
 /// Applied before provider bootstrap/RPC and to every nested control identity.
@@ -150,6 +155,7 @@ impl TerminalAuthority {
     /// Consume only into a completely empty authority. The returned original
     /// lock guard must live in Service for its whole lifetime, just like the
     /// other restore functions. It remains locked if this wrapper is dropped.
+    #[cfg(test)]
     pub(crate) fn attach(&mut self,st:&mut Catalog,new_context:&Value)->Result<File,String>{
         self.validate_commit()?;
         if st.ddr_resources.limit!=128<<20 || st.ddr_resources.charged_bytes()!=0 || st.ddr_resources.reserved_bytes()!=0 ||
@@ -161,12 +167,41 @@ impl TerminalAuthority {
         if ids.iter().map(|v|v["node"].as_str().unwrap_or("")).collect::<BTreeSet<_>>()!=["nodeA","nodeB"].into_iter().collect() ||
             ids[0]["boot_id"]==ids[1]["boot_id"] || ids[0]["incarnation"]==ids[1]["incarnation"] {return Err("new identities must be independent".into());}
         let lifetime=self._original_lock.try_clone().map_err(|e|e.to_string())?;
+        atomic_record(&self.path,"service-admission-claim.json",&json!({"kind":"CPUFullIdentityServiceAdmissionPending","namespace":new_context,
+            "source_terminal_commit_sha256":digest(&bounded(&self.path.join("commit.json"),1<<20)?),"native_SDK_ACK":false}))?;
         st.ddr_resources=self.ledger.take().ok_or("terminal authority already consumed")?;
         st.managed_pools.reconciliation=self.reconciliation.clone();st.managed_pools.revision=154;
         st.next_object_id=st.next_object_id.max(113);st.next_placement_id=st.next_placement_id.max(10003);
         st.next_resource_binding_id=st.next_resource_binding_id.max(40003);st.next_access_binding_id=st.next_access_binding_id.max(50003);
         st.next_lease_id=st.next_lease_id.max(1008);st.next_client_id=st.next_client_id.max(1_000_000);st.next_block_id=st.next_block_id.max(1_000_000);
         Ok(lifetime)
+    }
+    /// Launcher ordering: admit only the two metadata reservations before Guest
+    /// identities exist. A durable one-time claim prevents replaying the base76
+    /// after a service has acquired any responsibility in a new namespace.
+    pub(crate) fn attach_staged(&mut self,st:&mut Catalog,namespace:&Value)->Result<File,String>{
+        self.validate_commit()?;reject_fenced(&self.reconciliation,namespace)?;
+        if st.ddr_resources.limit!=128<<20 || st.ddr_resources.charged_bytes()!=0 || st.ddr_resources.reserved_bytes()!=0 ||
+            !st.objects.is_empty()||!st.managed_pools.pools.is_empty()||!st.managed_pools.operations.is_empty()||!st.managed_pools.reconciliation.is_null(){return Err("empty staged successor only".into());}
+        for k in ["realm","session"]{if namespace[k].as_str().is_none_or(|s|s.is_empty()){return Err("fresh staged realm/session required".into());}}
+        let nodes=namespace["nodes"].as_array().ok_or("two staged nodes")?;
+        if nodes.len()!=2 || nodes.iter().map(|v|v["node"].as_str().unwrap_or("")).collect::<BTreeSet<_>>()!=["nodeA","nodeB"].into_iter().collect() ||
+            nodes.iter().any(|v|v.as_object().is_none_or(|o|o.len()!=2)||v["socket"].as_str().is_none_or(|s|!Path::new(s).is_absolute())) {
+            return Err("staged nodes require only real future node/socket, never invented boot identity".into());
+        }
+        let lifetime=self._original_lock.try_clone().map_err(|e|e.to_string())?;
+        let mut ledger=self.ledger.take().ok_or("terminal authority already consumed")?;
+        ledger.reserve_unique("canary:nodeA",2<<20)?;ledger.reserve_unique("canary:nodeB",2<<20)?;
+        let claim=json!({"kind":"SuccessorServiceAdmissionPending","namespace":namespace,"source_terminal_commit_sha256":digest(&bounded(&self.path.join("commit.json"),1<<20)?),
+            "conservative_B_bytes":80<<20,"resource_ledger":ledger.snapshot(),"canary_charge_objects":{"nodeA":113,"nodeB":114},
+            "Guest_identity_known":false,"business_admission_enabled":false,"native_SDK_ACK":false});
+        atomic_record(&self.path,"service-admission-claim.json",&claim)?;
+        let mut reconciliation=self.reconciliation.clone();reconciliation["terminal_bootstrap_phase"]=json!("AwaitingNewGuestReadiness");
+        reconciliation["terminal_staged_namespace"]=namespace.clone();reconciliation["terminal_canary_charge_objects"]=claim["canary_charge_objects"].clone();
+        st.ddr_resources=ledger;st.managed_pools.reconciliation=reconciliation;st.managed_pools.revision=154;
+        st.next_object_id=st.next_object_id.max(115);st.next_placement_id=st.next_placement_id.max(10003);st.next_resource_binding_id=st.next_resource_binding_id.max(40003);
+        st.next_access_binding_id=st.next_access_binding_id.max(50003);st.next_lease_id=st.next_lease_id.max(1008);
+        st.next_client_id=st.next_client_id.max(1_000_000);st.next_block_id=st.next_block_id.max(1_000_000);Ok(lifetime)
     }
     pub(crate) fn historical(&self)->Result<Value,String>{
         self.validate_commit()?;
@@ -181,11 +216,12 @@ impl TerminalAuthority {
     }
 }
 
-fn original_pins(dir:&Path)->Result<Value,String>{
+fn original_pins(dir:&Path,committed:bool)->Result<Value,String>{
     let pins:Value=serde_json::from_str(PINS).map_err(|e|e.to_string())?;
     let want:[&str;6]=["authority.lock","intent.json","result.json","successor-c027-v1","successor-c033-v1","successor-c039-prestart-v1"];
     let names=fs::read_dir(dir).map_err(|e|e.to_string())?.map(|v|v.map(|v|v.file_name().to_string_lossy().into_owned())).collect::<Result<BTreeSet<_>,_>>().map_err(|e|e.to_string())?;
-    if names!=want.into_iter().map(String::from).collect(){return Err("original lineage already has successor/partial/extra; no repeat or recovery".into());}
+    let mut wanted=want.into_iter().map(String::from).collect::<BTreeSet<_>>();if committed{wanted.insert(NEXT.into());}
+    if names!=wanted{return Err("original lineage has unexpected successor/partial/extra".into());}
     for (name,row) in pins.as_object().unwrap(){
         let relative=Path::new(name);if let Some(parent)=relative.parent().filter(|p|!p.as_os_str().is_empty()) {
             let metadata=dir.join(parent).symlink_metadata().map_err(|e|e.to_string())?;
@@ -199,13 +235,21 @@ fn original_pins(dir:&Path)->Result<Value,String>{
 }
 fn fault(point:&str,crash:&str)->Result<(),String>{if point==crash{Err(format!("injected HOST crash after {point}; no new admission"))}else{Ok(())}}
 
+fn terminal_reconciliation(p:&VerifiedCandidate,path:&Path)->Value{
+    let mut value=p.state["reconciliation"].clone();value["terminal_domain_fences"]=p.fences.clone();
+    value["previous_reconciliation_phase"]=value["phase"].clone();value["phase"]=json!("TerminalDomainDataLostC04476");
+    value["terminal_proof_sha256"]=json!(p.proof_sha);
+    value["terminal_domain_history"]=json!({"path":path.join("historical-state.json"),"sha256":STATE_SHA,"outcome":"TerminalDomainDataLost","normal_SDK_ACK":false});
+    value
+}
+
 // No public/config-selected root or crash switch: production adapter currently
 // cannot call this. Faults and alternate roots are exposed only to cfg(test).
 fn transact(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCandidate,String>,crash:&str)->Result<TerminalAuthority,String>{
     let lock=lock_lineage(dir)?;let identity=lock.metadata().map_err(|e|e.to_string())?;
     let named=dir.join("authority.lock").symlink_metadata().map_err(|e|e.to_string())?;
     if identity.dev()!=named.dev()||identity.ino()!=named.ino()||identity.nlink()!=1{return Err("original authority replaced".into());}
-    let pins=original_pins(dir)?;let original=bounded(state_path,1<<20)?;let p=verify(&original)?;
+    let pins=original_pins(dir,false)?;let original=bounded(state_path,1<<20)?;let p=verify(&original)?;
     let mut ledger=DdrResources::inherit_terminal_source(&p)?;
     let path=dir.join(NEXT);fs::DirBuilder::new().mode(0o700).create(&path).map_err(|e|e.to_string())?;
     File::open(dir).and_then(|f|f.sync_all()).map_err(|e|e.to_string())?;
@@ -220,9 +264,7 @@ fn transact(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCan
     atomic_record(&path,"before128.json",&ledger.snapshot())?;fault("before128",crash)?;
     atomic_record(&path,"permanent-fences.json",&p.fences)?;fault("fences",crash)?;
     ledger.apply_terminal_loss(&p)?;fault("terminal52",crash)?;
-    let mut reconciliation=p.state["reconciliation"].clone();reconciliation["terminal_domain_fences"]=p.fences.clone();
-    reconciliation["previous_reconciliation_phase"]=reconciliation["phase"].clone();reconciliation["phase"]=json!("TerminalDomainDataLostC04476");
-    reconciliation["terminal_domain_history"]=json!({"path":path.join("historical-state.json"),"sha256":STATE_SHA,"outcome":"TerminalDomainDataLost","normal_SDK_ACK":false});
+    let reconciliation=terminal_reconciliation(&p,&path);
     let state=json!({"schema":1,"kind":"TerminalDomainDataLost","revision":154,"resource_ledger":ledger.snapshot(),
         "charged_bytes":12<<20,"retained_bytes":12<<20,"creation_reserved_bytes":64<<20,"active_bytes":0,"budget_bytes":128<<20,
         "B_conservative_bytes":76<<20,"A_historical_unqueried_bytes":128<<20,"global_conservative_bytes":204<<20,
@@ -235,9 +277,47 @@ fn transact(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCan
     let commitment=json!({"kind":"TerminalDomainAuthorityCommitted","proof_consumed_once":p.proof_sha,
         "original_state_sha256":STATE_SHA,"resulting76_sha256":digest(&bounded(&path.join("resulting76.json"),1<<20)?),
         "fences_sha256":digest(&bounded(&path.join("permanent-fences.json"),1<<20)?),"new_authority":path,
-        "old_state_untouched":true,"normal_SDK_ACK":false,"next_generation_minimum":2});
+        "old_state_untouched":true,"normal_SDK_ACK":false});
     atomic_record(&path,"commit.json",&commitment)?;fault("commit",crash)?;
     Ok(TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation,path})
+}
+
+/// Reopen the complete terminal-only commit after its writer process exits.
+/// This rebuilds the already committed accounting decision; it never writes a
+/// second terminal result or discounts the old52 twice. Any subsequent service
+/// claim, partial output or drift requires separate reconciliation instead.
+fn recover_committed(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCandidate,String>)->Result<TerminalAuthority,String>{
+    let lock=lock_lineage(dir)?;let pins=original_pins(dir,true)?;let path=dir.join(NEXT);
+    let names=fs::read_dir(&path).map_err(|e|e.to_string())?.map(|v|v.map(|v|v.file_name().to_string_lossy().into_owned())).collect::<Result<BTreeSet<_>,_>>().map_err(|e|e.to_string())?;
+    if names!=["intent.json","historical-state.json","before128.json","permanent-fences.json","resulting76.json","commit.json"].into_iter().map(String::from).collect(){return Err("only complete unclaimed terminal commit may resume; partial or service claim blocks".into());}
+    let original=bounded(state_path,1<<20)?;let p=verify(&original)?;
+    if original!=bounded(&path.join("historical-state.json"),1<<20)?{return Err("historical state changed".into());}
+    let intent=parsed(&bounded(&path.join("intent.json"),1<<20)?)?;
+    if intent["proof_sha256"]!=p.proof_sha || intent["verified_candidate"]!=p.proof || intent["predecessor_files"]!=pins || intent["source_state_sha256"]!=STATE_SHA ||
+        intent["kind"]!="TerminalDomainLossPending" || intent["source_revision"]!=153 || intent["resource_ids"]!=json!([110,111,112]) ||
+        intent["terminal_bytes"]!=52<<20 || intent["before_B_bytes"]!=128<<20 || intent["after_B_bytes"]!=76<<20 || intent["native_SDK_ACK"]!=false || intent["original_Unknown_history_preserved"]!=true {
+        return Err("committed source/proof/predecessor mismatch".into());
+    }
+    let before=parsed(&bounded(&path.join("before128.json"),1<<20)?)?;p.matches_ledger(&before)?;
+    let mut ledger=DdrResources::inherit_terminal_source(&p)?;ledger.apply_terminal_loss(&p)?;
+    let durable=parsed(&bounded(&path.join("resulting76.json"),1<<20)?)?;let expected=ledger.snapshot();
+    if rows(&durable["resource_ledger"])?!=rows(&expected)? || ["charged_bytes","reserved_bytes","retained_uncertain_reservations","reservations","retired_unstarted_object_ids","terminal_domain_loss_tombstones"].iter().any(|k|durable["resource_ledger"][*k]!=expected[*k]) ||
+        durable["kind"]!="TerminalDomainDataLost" || durable["B_conservative_bytes"]!=76<<20 || durable["normal_SDK_ACK"]!=false ||
+        durable["reconciliation"]!=terminal_reconciliation(&p,&path) || durable["new_admission_enabled"]!=false ||
+        durable["historical_clients_leases_operations_unchanged"]!=true || durable["historical_data_valid"]!=false || durable["revision"]!=154 ||
+        durable["normal_destroy_or_shutdown_succeeded"]!=false || durable["charged_bytes"]!=12<<20 || durable["creation_reserved_bytes"]!=64<<20 || durable["budget_bytes"]!=128<<20 {
+        return Err("committed terminal ledger differs from original protected76 and typed tombstones".into());
+    }
+    let authority=TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation:durable["reconciliation"].clone(),path};
+    authority.validate_commit()?;
+    if authority.reconciliation["terminal_domain_fences"]!=p.fences{return Err("committed permanent fences differ".into());}
+    Ok(authority)
+}
+
+#[cfg(test)]
+pub(crate) fn staged_fixture_attach(a:&mut TerminalAuthority,st:&mut Catalog,loaded:&Value)->Result<File,String>{
+    let nodes=loaded["nodes"].as_object().ok_or("deferred fixture nodes")?.values().cloned().collect::<Vec<_>>();
+    a.attach_staged(st,&json!({"realm":loaded["realm"],"session":loaded["session"],"nodes":nodes}))
 }
 
 /// No RPC is sent to missing/stale endpoints. Live endpoints still require the

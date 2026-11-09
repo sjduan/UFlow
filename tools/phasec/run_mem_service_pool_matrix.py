@@ -19,6 +19,7 @@ from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
 from pool_peer_io import PeerIO
 from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
 from pool_startup import Startup
+from pool_matrix_preflight import worker_serial_preflight
 from kernel_profile_gate import launch_gate
 from verify_c039_prestart import verify_new_fm
 
@@ -125,12 +126,13 @@ def matrix(root,config,build):
         stdout=daemon_log,stderr=subprocess.STDOUT)
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
-    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or imported['reconciliation']['phase']!='ClosedC039Prestart76':
+    import_phase=imported['reconciliation']['phase']
+    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476'):
         raise RuntimeError('single-ledger conservative76 quarantine and new canary reservation not established; no Guest')
-    event({'event':'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
+    event({'event':'terminal-domain-succession-established-before-Guest' if import_phase=='TerminalDomainDataLostC04476' else 'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
         'retained_reserved_bytes':RETAINED_RESERVED,'kernel_capability':capability,
         'current_canary_reserved_bytes':4*M,'predecessor_cancel64_repeated':False,
-        'proof_sha256':imported['reconciliation']['proof_sha256'],'original_SDK_close_claimed':False})
+        'proof_sha256':imported['reconciliation'].get('terminal_proof_sha256',imported['reconciliation']['proof_sha256']),'original_SDK_close_claimed':False})
     admin=(state/'admin.token').read_text()
     def callback(channels,identities):
         nodes={}
@@ -149,6 +151,7 @@ def matrix(root,config,build):
                 if not node.started.wait(10) or node.failure:raise RuntimeError('Guest agent start failed')
             startup=Startup(nodes,realm,event)
             bootstrap,readiness=startup.run()
+            worker_serial_preflight(startup,readiness,event)
             bootstrap_bytes=len(bootstrap)*CANARY_BYTES
             bindings=[]
             for name,node in nodes.items():
@@ -166,6 +169,7 @@ def matrix(root,config,build):
             except PoolV2Unknown:raise
             except PoolV2Error:event({'event':'E1-negative64-capacity','known_rejected':True,'B_baseline':76*M,'new_canaries':4*M})
             else:raise RuntimeError('64MiB replacement exceeded B128/global256 budget')
+            event({'event':'stage-business48-create-start','nbytes':CAPACITY,'clock_domain':'B-host'})
             pool=exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':CAPACITY})
             base={key:pool[key] for key in ('pool_id','pool_epoch','provider_session')}
             event({'event':'E1-one-allocation','pool':pool,'provider':json.loads(prepared_config.read_text())})
@@ -194,13 +198,31 @@ def matrix(root,config,build):
                 except PoolV2Error:event({'event':'E1-negative','fields':change,'known_rejected':True})
                 else:raise RuntimeError('node/rights negative unexpectedly accepted')
             # Initialize and prove the entire backing in <=20MiB pieces; no payload on Host.
+            event({'event':'stage-pattern0-initialize-start','nbytes':CAPACITY,'clock_domain':'B-host'})
             for off in range(0,CAPACITY,16*M):
                 lease=a.call('acquire',block=block,mode='w',offset=off,nbytes=min(16*M,CAPACITY-off))
                 a.call('execute',lease=lease,pattern_id=0)
+            event({'event':'stage-pattern0-initialize-completed','nbytes':CAPACITY,'clock_domain':'B-host'})
+            diagnostic_start=time.monotonic_ns()
+            event({'event':'stage-first-cross-node-read4KiB-start','node':'nodeB','offset':U,'nbytes':4096,
+                   'start_host_ns':diagnostic_start,'clock_domain':'B-host'})
+            diagnostic=b.call('acquire',block=block,mode='r',offset=U,nbytes=4096)
+            diagnostic_read=b.call('execute',lease=diagnostic,pattern_id=0)
+            receipt=diagnostic_read['receipt'];digest=expected(0,U,4096)
+            if (receipt['checksum']!=digest or receipt['offset']!=U or receipt['nbytes']!=4096 or
+                    receipt['all_bytes'] is not True or receipt['visible'] is not True or receipt['pins']!=0):
+                raise RuntimeError('first same-backing cross-node 4KiB diagnostic failed; full matrix not started')
+            diagnostic_release=b.call('release',lease=diagnostic)
+            event({'event':'stage-first-cross-node-read4KiB-completed','node':'nodeB','offset':U,'nbytes':4096,
+                   'read':diagnostic_read,'release':diagnostic_release,'expected_checksum':digest,
+                   'start_host_ns':diagnostic_start,'end_host_ns':time.monotonic_ns(),'clock_domain':'B-host',
+                   'full20MiB_acceptance_replaced':False})
             cases=[(a,b,U,20*M,17),(b,a,24*M+U,20*M,29),(a,b,44*M+2*U,2*U,41)]
             written=[]
             for writer,reader,off,n,seed in cases:
                 started=time.monotonic_ns()
+                event({'event':'stage-full-direction-start','writer':writer.node,'reader':reader.node,'offset':off,'nbytes':n,
+                       'start_host_ns':started,'clock_domain':'B-host'})
                 lease=writer.call('acquire',block=block,mode='w',offset=off,nbytes=n)
                 done=writer.call('execute',lease=lease,pattern_id=seed)
                 read=reader.call('acquire',block=block,mode='r',offset=off,nbytes=n)

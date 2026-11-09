@@ -47,6 +47,7 @@ impl Default for DdrResources {
 }
 
 impl DdrResources {
+    pub(crate) fn active_reserved_bytes_for_terminal(&self)->u64{self.reserved_bytes()-self.retained_reserved_bytes()}
     pub(crate) fn protect_c039_unstarted_ids(&mut self)->Result<(),String>{
         if self.reservations.get("canary:nodeA")!=Some(&(2<<20)) || self.reservations.get("canary:nodeB")!=Some(&(2<<20)) ||
             !self.retired_unstarted.is_empty() || [108,109].iter().any(|id|self.resources.contains_key(id)) {

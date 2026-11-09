@@ -637,12 +637,17 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
     #[cfg(not(test))]
     return run_inner(endpoint,root,python,budget,mem_service_config);
     #[cfg(test)]
-    return run_inner(endpoint,root,python,budget,mem_service_config,None);
+    return run_inner(endpoint,root,python,budget,mem_service_config,None,None);
 }
 
 #[cfg(test)]
 pub(crate) fn run_reconciliation_fixture(endpoint:&str,root:&Path,config:&Path,proof:&Value) -> Result<(),String> {
-    run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),Some(proof))
+    run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),Some(proof),None)
+}
+
+#[cfg(test)]
+pub(crate) fn run_terminal_staged_fixture(endpoint:&str,root:&Path,config:&Path,authority:&mut crate::pool_terminal_domain::TerminalAuthority)->Result<(),String>{
+    run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),None,Some(authority))
 }
 
 /// Real SO_PEERCRED/control/persistence test seam. No provider executor,
@@ -678,7 +683,7 @@ pub(crate) fn terminal_control_fixture(catalog:Catalog,responsibility:File,confi
 }
 
 fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:Option<&Path>,
-    #[cfg(test)] fixture:Option<&Value>) -> Result<(),String> {
+    #[cfg(test)] fixture:Option<&Value>,#[cfg(test)] terminal:Option<&mut crate::pool_terminal_domain::TerminalAuthority>) -> Result<(),String> {
     if budget == 0 || budget > 256 * 1024 * 1024 || budget % 65536 != 0 {
         return Err("bounded aligned host budget required".into());
     }
@@ -724,7 +729,9 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     #[cfg(not(test))]
     let responsibility=restore_original(&mut catalog)?;
     #[cfg(test)]
-    let responsibility=if let Some(proof)=fixture {
+    let responsibility=if let Some(authority)=terminal {
+        Some(crate::pool_terminal_domain::staged_fixture_attach(authority,&mut catalog,&remote.as_ref().ok_or("terminal fixture remote config")?.loaded())?)
+    } else if let Some(proof)=fixture {
         Some(if proof["kind"]=="verified-closed-c039-prestart" {
             crate::pool_c039_prestart::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
         } else if proof["kind"]=="verified-closed-c033-quarantine76" {
