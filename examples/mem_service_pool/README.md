@@ -33,17 +33,23 @@ identities cannot be reused. Typed uncertainty blocks ordinary cancel/commit/
 backing conversion/release; shutdown reports it. New live Unknown still refuses
 admission through the default guard. No canonical backing or ACK is invented.
 
-`kernel_profile_gate.py` runs before lower/Catalog/lineage/Guest. The selected
-`kernel_profile` provides reviewed producer `manifest` and `manifest_sha256`.
-The gate hashes actual Image/outputs and bounded embedded IKCONFIG, requires
-the minimal separated-pages builtin delta and fixed kernel/source/build
-provenance, verifies old Image/config unchanged, actual linked System.map symbol
-and aarch64 vmlinux. Old disabled Image and missing/duplicate/truncated/oversized
-config or path/hash/profile drift reject. Producer outputs are named `Image`,
-`vmlinux`, `System.map`, `.config`, `source-manifest.json`, each with
-path/bytes/sha256. Source manifest declares kernel_commit/files; resolved delta
-is option→{before:"n",after:"y"}. Actual reviewed producer handoff is separate;
-synthetic fixtures do not certify a producer artifact or Guest behavior.
+`kernel_profile_gate.py` runs before lower/Catalog/lineage/Guest. Its explicit
+opt-in `kernel_profile` binds the reviewed `manifest`/`manifest_sha256` and
+`validator`/`validator_sha256` at the fixed additional release. All four values
+must equal the externally reviewed pins. The gate reads an actual regular
+validator file, hashes it before compiling, and executes those exact bytes
+without re-importing its path. The reviewed public API validates the actual
+Image/embedded IKCONFIG, builtin delta, source Git object manifest/ls-tree,
+compiler/build commands/recipe, objects and linked Matt/OBMM call evidence.
+It consumes producer output keys `source_manifest`/`source_ls_tree`; the source
+closure is kernel_commit/tree/tracked_objects/git_ls_tree_sha256/source_root.
+No synthetic files array or ready flag is manufactured. Old default Image18f
+is checked unchanged; selected `config.kernel` must be the same reviewed95165f
+Image returned by the validator. Missing, malformed, duplicate, truncated,
+oversized or mismatched profile/hash/path input rejects before runtime state.
+`profile_consumer_cpu.py` exercises this actual release, private malformed
+negative fixtures, and failed-gate/no-Popen/no-Catalog ordering on B. Host
+capability success remains `runtime_tested=false` and grants no boot authority.
 
 `matrix_entry_cpu.py` runs the complete actual matrix/callback through real
 Rust/C/SDK sockets, independent client processes and a48 MiB CPU shared-file

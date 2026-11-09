@@ -63,6 +63,11 @@ def build(root, source, name):
             log.write(json.dumps({'phase':'completed','argv':argv,'exit':result.returncode})+'\n')
     def git(path, *argv):
         return subprocess.check_output(['git', '-C', str(path), *argv]).decode().strip()
+    generation=name.removeprefix('build-host')
+    build_config=json.loads((root/'implementation'/('config-host'+generation)/'build.json').read_bytes())
+    if build_config['kind']!='build' or not build_config['job'].startswith('cb'):raise RuntimeError('own admitted build probe root required')
+    run([sys.executable,'-B',source/'examples/mem_service_pool/profile_consumer_cpu.py','--root',root,'--source',source,
+         '--output',out/'profile-consumer-cpu','--probe-root',root/'runs'/build_config['job']/'profile-consumer-probes'],timeout=180)
     if git(lower, 'rev-parse', 'HEAD') != PIN or git(lower, 'status', '--porcelain', '-uno'):
         raise RuntimeError('frozen mem_service pin/clean check failed')
     if git(lower / 'vendor/obmm', 'rev-parse', 'HEAD') != OBMM:
@@ -199,6 +204,7 @@ def build(root, source, name):
         shutil.copyfileobj(src,dest)
     daemon=cargo_target/'debug/uf-daemon'
     receipt={'schema':2,'source_commit':manifest['commit'],'source_manifest_sha256':digest(source/'.uflow-source.json'),
+             'actual_kernel_profile_consumer':json.loads((out/'profile-consumer-cpu/results.json').read_bytes()),
              'compiler_argv':command,'agent_sha256':digest(out/'pool-agent'),
              'image':str(image),'image_sha256':digest(image),'base_sha256':digest(base),
              'platform_gva_inputs':{str(p):digest(p) for p in gva_inputs},

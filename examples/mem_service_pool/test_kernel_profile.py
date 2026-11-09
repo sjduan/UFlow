@@ -1,5 +1,5 @@
-"""Synthetic Image/profile fixtures; no actual producer/runtime PASS claim."""
-import copy,gzip,json,os,sys,tempfile,unittest
+"""Lightweight launcher boundary tests; actual producer validation runs on B."""
+import os,sys,tempfile,types,unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
@@ -7,50 +7,39 @@ import kernel_profile_gate as g
 class KernelProfile(unittest.TestCase):
     def setUp(self):
         allowed=Path(os.environ.get('UFLOW_POOL_CPU_TMP_ROOT',tempfile.gettempdir())).resolve()
-        self.tmp=tempfile.TemporaryDirectory(dir=allowed);self.root=Path(self.tmp.name).resolve()
-        self.assertEqual(self.root.parent,allowed);self.addCleanup(self.tmp.cleanup)
-        self.before=''.join(k+'=y\n' for k in g.REQUIRED if k!='CONFIG_UB_UMMU_SVA_SEPARATED_PAGES')+'# CONFIG_UB_UMMU_SVA_SEPARATED_PAGES is not set\n'
-        self.after=self.before.replace('# CONFIG_UB_UMMU_SVA_SEPARATED_PAGES is not set','CONFIG_UB_UMMU_SVA_SEPARATED_PAGES=y')
-        self.image=lambda raw:b'SYNTHETIC-CPU-IMAGE\0IKCFG_ST'+gzip.compress(raw)+b'IKCFG_ED'
-        self.base=self.root/'base';self.base.write_bytes(self.image(self.before.encode()))
-        files={'Image':self.image(self.after.encode()),'.config':self.after.encode(),'vmlinux':b'\x7fELF'+bytes(14)+bytes([183,0])+bytes(12),
-            'System.map':b'ffffffc000001000 T ummu_sva_matt_map\n','source-manifest.json':json.dumps({'kernel_commit':g.KERNEL,'files':{'synthetic':'CPU-fixture-only'}}).encode()}
-        self.outputs={}
-        for n,b in files.items():
-            p=self.root/n;p.write_bytes(b);self.outputs[n]={'path':str(p),'bytes':len(b),'sha256':g.sha(b)}
-        self.m={'schema':1,'interface':'mem-service-private-kernel-profile-v1','profile_id':'mem-service-gsva-separated-v1','kernel_commit':g.KERNEL,
-            'base_Image_sha256':g.sha(self.base.read_bytes()),'base_embedded_config_sha256':g.sha(self.before.encode()),
-            'resolved_config_diff':{'CONFIG_UB_UMMU_SVA_SEPARATED_PAGES':{'before':'n','after':'y'}},'source_manifest_sha256':self.outputs['source-manifest.json']['sha256'],
-            'compiler_and_build_argv':[['CPU-synthetic-not-a-build']], 'outputs':self.outputs,'embedded_config_sha256':g.sha(self.after.encode()),
-            'required_builtin_config':list(g.REQUIRED),'real_symbol_and_obmm_call_evidence':{'synthetic-fixture':True},'old_baseline_unchanged':True,'runtime_tested':False}
-        self.manifest=self.root/'manifest.json'
-    def check(self):
-        self.manifest.write_text(json.dumps(self.m))
-        with patch.object(g,'BASE',g.sha(self.base.read_bytes())),patch.object(g,'BASE_CONFIG',g.sha(self.before.encode())):
-            return g.check(self.root/'Image',self.manifest,g.sha(self.manifest.read_bytes()),self.base,allowed_root=self.root)
-    def test_actual_embedded_config_and_link_symbol(self):self.assertFalse(self.check()['runtime_tested'])
-    def test_disabled_old_Image_refused_even_with_manifest_ready_flag(self):
-        (self.root/'Image').write_bytes(self.base.read_bytes());self.m['ready']=True
-        with self.assertRaises(ValueError):self.check()
-    def test_wrong_version_profile_source_provenance_or_runtime_claim(self):
-        for key,value in [('schema',2),('profile_id','wrong'),('kernel_commit','wrong'),('source_manifest_sha256','0'*64),('runtime_tested',True),('old_baseline_unchanged',False)]:
-            old=self.m[key];self.m[key]=value
-            with self.assertRaises(ValueError):self.check()
-            self.m[key]=old
-    def test_missing_required_config_and_output(self):
-        self.m['required_builtin_config']=list(g.REQUIRED[:-1])
-        with self.assertRaises(ValueError):self.check()
-        self.m['required_builtin_config']=list(g.REQUIRED);self.m['outputs'].pop('vmlinux')
-        with self.assertRaises(ValueError):self.check()
-    def test_actual_file_hash_and_selected_path_membership(self):
-        (self.root/'System.map').write_bytes(b'wrong')
-        with self.assertRaises(ValueError):self.check()
-    def test_corrupt_truncated_duplicate_or_oversized_embedded_config(self):
-        valid=self.image(self.after.encode())
-        for b in [b'no-config',valid[:-8],valid+valid,self.image(b'A'*(g.MAX_CONFIG+1)),b'IKCFG_STbadgzipIKCFG_ED']:
-            with self.assertRaises(ValueError):g.embedded(b)
-    def test_duplicate_config_or_json_key(self):
-        with self.assertRaises(ValueError):g.values(b'CONFIG_FOO=y\n# CONFIG_FOO is not set\n')
-        with self.assertRaises(ValueError):json.loads('{"x":1,"x":2}',object_pairs_hook=g.unique)
-    def test_no_profile_before_any_launch_side_effect(self):
-        with self.assertRaises(ValueError):g.launch_gate(self.root,{'kernel':str(self.root/'Image')})
+        self.tmp=tempfile.TemporaryDirectory(dir=allowed);self.root=Path(self.tmp.name).resolve();self.assertEqual(self.root.parent,allowed);self.addCleanup(self.tmp.cleanup)
+        self.config={'kernel':str(self.root/g.RELEASE/'Image'),'kernel_profile':g.binding(self.root)}
+    def result(self):return {'status':'PASS_HOST_PROFILE_ONLY','interface':g.INTERFACE,'profile_id':g.PROFILE,'producer_manifest_sha256':g.MANIFEST_SHA,
+        'Image':self.config['kernel'],'Image_sha256':g.IMAGE_SHA,'embedded_config_sha256':g.CONFIG_SHA,'runtime_tested':False,'authority_to_boot_or_replace_existing_Image':False}
+    def test_mocked_API_seam_preserves_external_pins_and_no_boot_authority(self):
+        calls=[];module=types.SimpleNamespace(validate=lambda *a:calls.append(a) or self.result())
+        with patch.object(g,'_load_validator',return_value=module),patch.object(g,'_base_digest',return_value=g.BASE):value=g.launch_gate(self.root,self.config)
+        self.assertEqual(calls,[(Path(self.config['kernel_profile']['manifest']),g.MANIFEST_SHA,Path(self.config['kernel']))]);self.assertEqual(value['external_validator_sha256'],g.VALIDATOR_SHA);self.assertFalse(value['runtime_tested'])
+    def test_absent_or_extra_ready_fields_are_not_authority(self):
+        for selected in [None,{},dict(g.binding(self.root),ready=True)]:
+            with self.subTest(selected=selected),self.assertRaises(ValueError):g.launch_gate(self.root,{'kernel':self.config['kernel'],'kernel_profile':selected})
+    def test_changed_manifest_or_validator_pin_refused_before_load(self):
+        for key in ['manifest_sha256','validator_sha256','manifest','validator']:
+            c={'kernel':self.config['kernel'],'kernel_profile':dict(g.binding(self.root),**{key:'wrong'})}
+            with patch.object(g,'_load_validator') as load,self.assertRaises(ValueError):g.launch_gate(self.root,c)
+            load.assert_not_called()
+    def test_old_or_unbound_Image_refused_before_load(self):
+        for image in [str(self.root/'src/ub_sim/guest-linux/aarch64/out/Image'),self.config['kernel']+'.other']:
+            with patch.object(g,'_load_validator') as load,self.assertRaises(ValueError):g.launch_gate(self.root,dict(self.config,kernel=image))
+            load.assert_not_called()
+    def test_unreviewed_validator_bytes_never_execute(self):
+        p=self.root/'bad-validator.py';p.write_bytes(b'raise RuntimeError("unreviewed code executed")\n')
+        with self.assertRaisesRegex(ValueError,'external reviewed validator hash'):g._load_validator(p)
+    def test_inconsistent_actual_validator_result_cannot_claim_ready(self):
+        for key,value in [('runtime_tested',True),('authority_to_boot_or_replace_existing_Image',True),('Image_sha256','0'*64),('Image','other'),('status','ready')]:
+            result=dict(self.result(),**{key:value});module=types.SimpleNamespace(validate=lambda *a:result)
+            with patch.object(g,'_load_validator',return_value=module),patch.object(g,'_base_digest',return_value=g.BASE),self.assertRaises(ValueError):g.launch_gate(self.root,self.config)
+    def test_changed_old_default_pin_is_not_replaced(self):
+        module=types.SimpleNamespace(validate=lambda *a:self.fail('validator should not be called'))
+        with patch.object(g,'_load_validator',return_value=module),patch.object(g,'_base_digest',return_value='0'*64),self.assertRaises(ValueError):g.launch_gate(self.root,self.config)
+    def test_failed_gate_precedes_lower_Catalog_or_lineage_side_effects(self):
+        import run_mem_service_pool_matrix as driver
+        out=self.root/'runs/cpu-probe';out.mkdir(parents=True)
+        c=dict(self.config,output=str(out));c['kernel_profile']={}
+        with patch.dict(os.environ,{'UFLOW_ENV_CLOSE_FD':'999'}),patch.object(driver.subprocess,'Popen') as popen,self.assertRaises(ValueError):driver.matrix(self.root,c,{'source':str(self.root/'source')})
+        popen.assert_not_called();self.assertEqual(list(out.iterdir()),[]);self.assertFalse((self.root/'implementation/responsibility-c013').exists())
