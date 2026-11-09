@@ -58,7 +58,7 @@ def main():
    assert inherited['charged_bytes']==64<<20 and inherited['reserved_bytes']==64<<20
    assert resulting['B_conservative_bytes']==76<<20 and initial['reconciliation']['terminal_bootstrap_phase']=='AwaitingNewGuestReadiness'
    admin=(out/'state/admin.token').read_text()
-   try:real_exchange(out/'u.sock','CreateManagedPool',{'admin_token':admin,'nbytes':48<<20})
+   try:real_exchange(str(out/'u.sock'),'CreateManagedPool',{'admin_token':admin,'nbytes':48<<20})
    except PoolV2Unknown:raise
    except PoolV2Error as e:assert e.response['code']=='Rejected'
    else:raise AssertionError('business admitted before actual Guest identities/worker readiness')
