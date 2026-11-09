@@ -694,7 +694,9 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     let responsibility=restore_original(&mut catalog)?;
     #[cfg(test)]
     let responsibility=if let Some(proof)=fixture {
-        Some(crate::pool_reconciliation::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?)
+        Some(if proof["kind"]=="verified-c027-retained8-succession" {
+            crate::pool_retained8::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?
+        } else {crate::pool_reconciliation::restore_fixture(&mut catalog,proof,&root.join("fixture-lineage"),root)?})
     } else {restore_original(&mut catalog)?};
     if let Some(p)=&mut remote {p.admit_bootstrap(&mut catalog)?;}
     let (provider_session, provider_loaded) = if let Some(p) = &provider {

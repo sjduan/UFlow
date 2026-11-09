@@ -111,7 +111,8 @@ def matrix(root,config,build):
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
         'reconciliation':{'assessment':str(source/'examples/mem_service_pool/reconciliation/assessment.json'),
-                          'bindings':str(source/'examples/mem_service_pool/reconciliation/bindings.json')}},indent=2))
+                          'bindings':str(source/'examples/mem_service_pool/reconciliation/bindings.json'),
+                          'retained8_assessment':str(source/'examples/mem_service_pool/reconciliation/retained8-assessment.json')}},indent=2))
     env={**os.environ,'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
          'LD_LIBRARY_PATH':str(Path(build['fence_shim']).parent)}
     daemon_log=(out/'catalog.log').open('xb')
@@ -120,10 +121,10 @@ def matrix(root,config,build):
         stdout=daemon_log,stderr=subprocess.STDOUT)
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
-    if imported['charged_bytes']!=4*M or imported['retained_bytes']!=4*M or imported['creation_reserved_bytes']!=4*M or imported['reconciliation']['phase']!='VerifiedUncreatedTerminal':
-        raise RuntimeError('single-ledger c013 import/cancel and new canary reservation not established; no Guest')
-    event({'event':'original-responsibility-imported-before-Guest','charged_bytes':4*M,'retained_bytes':4*M,
-        'current_canary_reserved_bytes':4*M,'original_uncreated_cancelled_bytes':64*M,
+    if imported['charged_bytes']!=8*M or imported['retained_bytes']!=8*M or imported['creation_reserved_bytes']!=4*M or imported['reconciliation']['phase']!='VerifiedUncreatedTerminal' or imported['reconciliation']['successor_phase']!='Retained8':
+        raise RuntimeError('single-ledger retained8 succession and new canary reservation not established; no Guest')
+    event({'event':'retained8-succession-established-before-Guest','charged_bytes':8*M,'retained_bytes':8*M,
+        'current_canary_reserved_bytes':4*M,'predecessor_cancel64_repeated':False,
         'proof_sha256':imported['reconciliation']['proof_sha256'],'original_SDK_close_claimed':False})
     admin=(state/'admin.token').read_text()
     def callback(channels,identities):
@@ -248,7 +249,7 @@ def matrix(root,config,build):
             c.call('raw',method='ReportPoolUnknown',values={'lease':uncertain,
                 'reason':'controlled client-reported uncertainty; no injected device or provider fault'})
             held=c.call('snapshot')
-            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M+bootstrap_bytes+4*M:
+            if not held['pools'][0]['frozen'] or held['charged_bytes']!=64*M+bootstrap_bytes+8*M:
                 raise RuntimeError('original pool and budget not retained by uncertainty')
             b.call('acquire',expect_error=True,expect_unknown=True,block=block,mode='r',offset=U,nbytes=U)
             try:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64*M})
@@ -258,7 +259,7 @@ def matrix(root,config,build):
                    'original_pool':pool['pool_id'],'replacement_pool_not_created':True})
             event({'event':'E4-first-client-unmapped','receipt':c.close()})
             reconciled=a.call('snapshot')
-            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M+bootstrap_bytes+4*M:
+            if reconciled['pools'][0]['frozen'] or reconciled['charged_bytes']!=64*M+bootstrap_bytes+8*M:
                 raise RuntimeError('actual same-context unmap did not reconcile only this client')
             invalid=[s for s in reconciled['pools'][0]['ranges']['allocations'][0]['segments'] if s['state']=='Invalid']
             if not any(s['offset']==52*M+8*U and s['nbytes']==U for s in invalid):
@@ -271,10 +272,10 @@ def matrix(root,config,build):
             a.close();b.close()
             retired=exchange(endpoint,'DestroyManagedPool',{**base,'admin_token':admin})
             final=exchange(endpoint,'GetManagedPoolSnapshot',base)
-            if final['charged_bytes']!=bootstrap_bytes+4*M or final['creation_reserved_bytes']:
+            if final['charged_bytes']!=bootstrap_bytes+8*M or final['creation_reserved_bytes']:
                 raise RuntimeError('business retire did not leave exactly the two owned canaries')
             shutdown=exchange(endpoint,'ShutdownManagedPool',{'admin_token':admin})
-            if shutdown['charged_bytes']!=4*M or shutdown['retained_bytes']!=4*M or shutdown['active_bytes']!=0 or shutdown['bootstrap_closed'] is not True:
+            if shutdown['charged_bytes']!=8*M or shutdown['retained_bytes']!=8*M or shutdown['active_bytes']!=0 or shutdown['bootstrap_closed'] is not True:
                 raise RuntimeError('canary checked-close/final ledger not confirmed')
             if daemon.wait(timeout=10)!=0:raise RuntimeError('Catalog normal shutdown failed')
             event({'event':'E4-two-layer-release','retired':retired,'catalog_before_canary_close':final,'shutdown':shutdown})
@@ -282,8 +283,8 @@ def matrix(root,config,build):
             for node in nodes.values():node.prepare_close()
             (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':True,
                 'pool_id':pool['pool_id'],'data_bytes_on_control_bridge':0,'capacity':64*M,
-                'bootstrap_bytes':bootstrap_bytes,'retained_original_canary_bytes':4*M,
-                'peak_B_responsibility':64*M+bootstrap_bytes+4*M,'final_B_charged_bytes':4*M,
+                'bootstrap_bytes':bootstrap_bytes,'retained_predecessor_canary_bytes':8*M,
+                'peak_B_responsibility':64*M+bootstrap_bytes+8*M,'final_B_charged_bytes':8*M,
                 'A_historical_bytes_unqueried':128*M,'global_responsibility_zero_claimed':False},indent=2))
         except BaseException:
             notify_failure()  # Never perform potentially blocking state capture before notice.

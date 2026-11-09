@@ -34,7 +34,7 @@ def main():
   if argv[0]==str(daemon):
    control=h.path/'rust.json';control.write_text(json.dumps({'provider_config':str(out/'provider.json'),'state':str(out/'state'),'endpoint':str(out/'u.sock')}))
    kwargs['env']={**kwargs['env'],'UFLOW_RECON_CATALOG_CPU_CONFIG':str(control)}
-   argv=[str(a.rust_tests),'--exact','pool_reconciliation::tests::staged_catalog_fixture','--nocapture','--test-threads=1']
+   argv=[str(a.rust_tests),'--exact','pool_retained8::tests::staged_retained8_fixture','--nocapture','--test-threads=1']
    child=real_popen(argv,**kwargs);catalog.append(child)
   else:child=real_popen(argv,**kwargs)
   h.children.append((child,birth(child.pid)));return child
@@ -59,10 +59,10 @@ def main():
   assert str(endpoint)==str(out/'u.sock'),'Catalog control was routed to a Guest bridge'
   if method=='CreateManagedPool':
    state=json.loads((out/'state/state.json').read_bytes())
-   assert state['charged_bytes']==8<<20 and state['retained_bytes']==4<<20 and state['creation_reserved_bytes']==0
+   assert state['charged_bytes']==12<<20 and state['retained_bytes']==8<<20 and state['creation_reserved_bytes']==0
    assert state['pools']==[]
    closed=real_exchange(endpoint,'ShutdownManagedPool',values={'admin_token':values['admin_token']})
-   assert closed['charged_bytes']==closed['retained_bytes']==4<<20 and closed['active_bytes']==closed['reserved_bytes']==0
+   assert closed['charged_bytes']==closed['retained_bytes']==8<<20 and closed['active_bytes']==closed['reserved_bytes']==0
    assert catalog[0].wait(timeout=5)==0
    for s in servers:s.close()
    for n in h.nodes.values():n.prepare_close()
@@ -80,7 +80,7 @@ def main():
   assert len([e for e in events if e['event']=='worker-platform-bootstrap'])==2
   assert any(e['event']=='managed-admission-ready' for e in events)
   result={'pass':True,'actual_matrix_function_and_callback':True,'actual_Rust_C_SDK_sockets':True,
-   'Catalog_endpoint_after_both_bridges':observed,'actual_canary_activation_and_normal_shutdown':True,
+   'Catalog_endpoint_after_both_bridges':observed,'actual_canary_activation_and_normal_shutdown':True,'retained8_before_new4_and_current12':True,
    'CPU_import_canary_worker_QEMU_doubles':True,'business_call_intercepted_before_allocation':True,
    'real_original_authorities_read_or_modified':False}
   (a.output/'results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))

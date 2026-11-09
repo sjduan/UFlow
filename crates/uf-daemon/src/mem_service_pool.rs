@@ -128,12 +128,23 @@ impl MemServicePoolProvider {
             active:OnceLock::new(),activation:Mutex::new(()) })
     }
 
-    pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
+    fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
         let old=&st.managed_pools.reconciliation;
-        if !old.is_null() && (old["identity"]["provider_session"]==self.session ||
-            old["retained_canaries"][0]["backing"]["realm"]==self.realm) {
-            return Err("current runtime must not reuse original provider session or realm".into());
+        if let Some(canaries)=old["retained_canaries"].as_array() {
+            for c in canaries {
+                if c["provider_session"]==self.session || c["backing"]["realm"]==self.realm ||
+                    self.nodes.values().any(|n|["boot_id","agent_session","incarnation"].iter().any(|key|
+                        n.get(*key).is_some_and(|v|!v.is_null() && (Some(v)==c.get(*key) ||
+                            (matches!(*key,"boot_id"|"agent_session") && (Some(v)==c.get("boot_id") || Some(v)==c.get("agent_session"))) ||
+                            (*key=="incarnation" && *v==c["backing"]["generation"]))))){
+                    return Err("current runtime cannot reuse any retained boot/incarnation/session/realm identity".into());
+                }
+            }
         }
+        Ok(())
+    }
+    pub fn admit_bootstrap(&mut self, st: &mut Catalog) -> Result<(), String> {
+        self.reject_retained_reuse(st)?;
         // Real, already-live canary exports share the one physical capacity ledger.
         // No charges for temporary peer verification views or application endpoints.
         for (node,identity) in &self.nodes {
@@ -303,6 +314,7 @@ impl MemServicePoolProvider {
                 active.nodes.iter().any(|(name,node)|node["socket"]!=self.nodes[name]["socket"]) {
                 return Err("prepared readiness does not bind this pending authority".into());
             }
+            service.catalog(|_,st|active.reject_retained_reuse(st))?;
             active.require_ready()?;
             active.bootstrap=self.bootstrap.clone();
             service.catalog(|state,st| {active.admit_bootstrap(st)?;state.bootstrap_readiness=active.loaded();Ok(())})?;
@@ -597,6 +609,28 @@ mod tests {
         for value in [json!("a"),json!("zz"),json!("ab".repeat(193)),json!(123)] {
             assert!(canary_descriptor(&json!({"canary_descriptor":value})).is_err());
         }
+    }
+    #[test]
+    fn all_retained_generations_forbid_runtime_identity_reuse_before_rpc(){
+        let mut st=Catalog::new(-1,Vec::new());st.managed_pools.reconciliation=json!({
+            "retained_canaries":crate::pool_retained8::fixture_proof()["retained_canaries"]});
+        let fresh=||MemServicePoolProvider {session:"fresh-session".into(),realm:"simulated:fresh".into(),
+            nodes:[("nodeA".into(),json!({"boot_id":"fresh-a","agent_session":"fresh-a","incarnation":17})),
+                ("nodeB".into(),json!({"boot_id":"fresh-b","agent_session":"fresh-b","incarnation":19}))].into_iter().collect(),
+            home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),
+            bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:true,readiness_file:None,reconciliation:None,
+            active:OnceLock::new(),activation:Mutex::new(())};
+        assert!(fresh().reject_retained_reuse(&st).is_ok());
+        for c in st.managed_pools.reconciliation["retained_canaries"].as_array().unwrap(){
+            let mut p=fresh();p.realm=c["backing"]["realm"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
+            let mut p=fresh();p.session=c["provider_session"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
+            for (key,value) in [("boot_id",c["boot_id"].clone()),("agent_session",c["boot_id"].clone()),
+                    ("incarnation",c["backing"]["generation"].clone())]{
+                let mut p=fresh();p.nodes.get_mut("nodeA").unwrap()[key]=value;
+                assert!(p.reject_retained_reuse(&st).is_err(),"{key}");
+            }
+        }
+        assert_eq!(st.ddr_resources.charged_bytes(),0);
     }
     #[test]
     fn both_canary_backings_share_physical_budget_with_business_not_each_view() {

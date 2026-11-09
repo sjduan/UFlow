@@ -138,7 +138,7 @@ def build(root, source, name):
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
-    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests'):
+    for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests','pool_retained8::tests'):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     # The fixture appends .external-ddr to its already nonce-qualified socket.

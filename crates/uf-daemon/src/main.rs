@@ -26,6 +26,7 @@ mod external_ddr;
 mod managed_pool;
 mod mem_service_pool;
 mod pool_reconciliation;
+mod pool_retained8;
 mod object_service;
 mod pool_provider;
 mod pool_ranges;
