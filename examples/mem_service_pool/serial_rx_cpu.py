@@ -14,6 +14,7 @@ from pathlib import Path
 import time
 
 from startup_cpu_probe import Harness
+from uflow._pool_bridge_v2 import metadata
 
 
 class CostHarness(Harness):
@@ -34,9 +35,10 @@ def run(args,agent,index,legacy):
         assert before['worker_ready'] and before['lease_ms']==1000
         marker=h.path/'read-cost-enabled';marker.touch(exist_ok=False)
         # Legal flat V2 request just below the existing 1800-byte body bound.
-        body={'op':'worker_state',**{'padding'+str(i):'a'*350 for i in range(4)}}
+        body={'op':'worker_state',**{'padding'+str(i):'a'*230 for i in range(6)}}
         encoded=json.dumps({'schema':2,**body},separators=(',',':')).encode()
         assert 1400<len(encoded)<=1800
+        metadata(encoded)  # Exercise both frozen Python and C token bounds.
         started=time.monotonic();failure=None;reply=None
         try:reply=startup.control.call('nodeA',body)
         except (RuntimeError,TimeoutError,OSError) as exc:failure=str(exc)
