@@ -115,11 +115,11 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         struct uflow_pool_startup_diagnostic d;
         int rc=uflow_pool_platform_worker_bootstrap(c->platform,!strcmp(c->node,"nodeA")?0:1,&d);
         snprintf(c->startup_diagnostic,sizeof(c->startup_diagnostic),
-            "{\"scope\":\"platform-preflight-not-worker-errno\",\"stage\":\"%s\",\"errno\":%u,\"registration_attempted\":%s,\"aperture_base\":%" PRIu64 ",\"virtual_span_bytes\":%" PRIu64 ",\"generation\":%" PRIu64 ",\"node_id\":%u,\"node_count\":%u,\"backing_allocation_attempted\":false}",
+            "\"startup_scope\":\"platform-preflight-not-worker-errno\",\"startup_stage\":\"%s\",\"startup_errno\":%u,\"registration_attempted\":%s,\"aperture_base\":%" PRIu64 ",\"virtual_span_bytes\":%" PRIu64 ",\"generation\":%" PRIu64 ",\"node_id\":%u,\"node_count\":%u,\"backing_allocation_attempted\":false",
             d.stage,(unsigned)d.error,d.registration_attempted?"true":"false",d.base,d.size,d.generation,d.node_id,d.node_count);
         if(rc)return -1;
         c->worker_bootstrapped=true;
-        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"worker_bootstrap_ready\":true,\"diagnostic\":%s}",c->startup_diagnostic);return 0;
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"worker_bootstrap_ready\":true,%s}",c->startup_diagnostic);return 0;
     }
     if(!strcmp(op,"bootstrap_prepare")) {
         uint64_t seed;char descriptor[UFLOW_POOL_CANARY_HEX];uint64_t checksum;
@@ -256,8 +256,8 @@ int uflow_pool_client(int fd,const char *connect,const char *node,const char *bo
         if(!strchr(line,'\n')||pool_parse(line,&req)||pool_u64(&req,"schema",&schema)||schema!=2||execute(&c,&req,reply)) {
             unsigned saved_errno=(unsigned)errno;
             fprintf(output,"UFPOOL_FAILURE_NOTICE\n");fflush(output);
-            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s,\"startup_diagnostic\":%s}",
-                saved_errno,c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false",*c.startup_diagnostic?c.startup_diagnostic:"null");
+            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s%s%s}",
+                saved_errno,c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false",*c.startup_diagnostic?",":"",c.startup_diagnostic);
         }
         fprintf(output,"%s\n",reply);fflush(output);
     }

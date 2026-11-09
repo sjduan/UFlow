@@ -8,6 +8,12 @@ int uflow_pool_platform_worker_bootstrap(struct uflow_pool_platform *p,unsigned 
     struct uflow_pool_startup_diagnostic *d) {
     *d=(struct uflow_pool_startup_diagnostic){.stage="ready",.base=0x700000000000ULL,
         .size=256ULL<<20,.generation=1,.node_id=node_id,.node_count=2};
+    const char *mode=getenv("UFLOW_POOL_FIXTURE_MODE");
+    if(mode && !strncmp(mode,"bootstrap-",10)) {
+        d->stage=!strcmp(mode,"bootstrap-open")?"device-open":!strcmp(mode,"bootstrap-query")?"aperture-query":"segment-enumerate";
+        d->error=!strcmp(mode,"bootstrap-open")?ENOENT:!strcmp(mode,"bootstrap-query")?ENOTTY:EAGAIN;
+        errno=d->error;return -1;
+    }
     return !p||!p->ready||node_id>=2?-1:0;
 }
 static uint64_t checksum(uint8_t seed) {

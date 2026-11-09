@@ -153,6 +153,14 @@ def packet(request,op,body,status=0,error=0):
 
 def run_case(h,kind):
     startup=h.start()
+    if kind.startswith('bootstrap-'):
+        rejected(startup.bootstrap_and_register)
+        assert not any(e.get('event') in ('worker-start','directory-registered-after-canary') for e in h.events)
+        replies=[e['receipt'] for e in h.events if e.get('event')=='guest-completion' and e.get('op')=='worker_bootstrap']
+        assert len(replies)==1 and replies[0]['phase']=='unknown'
+        assert replies[0]['startup_errno']==replies[0]['errno']>0 and replies[0]['backing_allocation_attempted'] is False
+        assert any(e.get('event')=='first-notice' for e in h.events)
+        return
     if kind=='before-canary':
         rejected(lambda:startup.control.call('nodeA',{'op':'provider_register'}));return
     if kind=='worker-before-register':
@@ -262,11 +270,12 @@ def main():
     if ctypes.CDLL(None).prctl(36,1,0,0,0):raise RuntimeError('fixture subreaper required')
     a.scratch.mkdir(exist_ok=False);a.output.mkdir(exist_ok=False)
     cases=['positive','before-canary','worker-before-register','generic-only','missing-node','expired-node',
-           'exit','no-refresh','wrong-inc','wrong-generation','stale','wrong-directory-inc','burst']
+           'exit','no-refresh','wrong-inc','wrong-generation','stale','wrong-directory-inc','burst',
+           'bootstrap-open','bootstrap-query','bootstrap-enumerate']
     modes=['eof','truncated','timeout','checksum','identity','internal','store-uncertain']
     results=[]
     for index,kind in enumerate(cases+modes):
-        h=Harness(a,index,kind if kind in ('exit','no-refresh','wrong-inc','wrong-generation','stale','burst') else 'normal',lower=kind not in modes)
+        h=Harness(a,index,kind if kind in ('exit','no-refresh','wrong-inc','wrong-generation','stale','burst') or kind.startswith('bootstrap-') else 'normal',lower=kind not in modes)
         try:
             if kind in modes:transport_case(h,kind)
             else:run_case(h,kind)
