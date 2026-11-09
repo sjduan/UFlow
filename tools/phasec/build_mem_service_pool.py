@@ -77,10 +77,18 @@ def build(root, source, name):
     neutral_inputs=list(inputs)
     inputs.extend([lower / 'components/mem_service/providers/mem_service_provider_obmm.c',
                    lower / 'vendor/obmm/src/libobmm/libobmm.c', lower / 'common/obmm_vendor_adaptor_sim.c'])
+    platform=lower.parent;gva=platform/'guest-linux/aarch64/libs/gva_manager'
+    gva_inputs=[gva/'gva_manager.c',gva/'gva_manager.h']
+    for path in gva_inputs:
+        rel=path.relative_to(platform).as_posix()
+        if hashlib.sha256(subprocess.check_output(['git','-C',str(platform),'show',
+                'abeec108a1607feb37218d0d89987e37c579d567:'+rel])).hexdigest()!=digest(path):
+            raise RuntimeError('locked platform GVA library changed')
+    inputs.append(gva/'gva_manager.c')
     own = source / 'crates/uf-ub-sim-agent/c'
     common_inputs=[own/name for name in ('pool_agent.c','pool_client.c','pool_worker.c','pool_agent_io.c')]
     agent_inputs = common_inputs+[own/'pool_platform_obmm.c']
-    includes = [sdk/'include/lingqu/mem_service',root/'env/kernel-uapi/include',own,lower,
+    includes = [sdk/'include/lingqu/mem_service',root/'env/kernel-uapi/include',own,lower,gva,
                 lower/'libs/obmm_queue',lower/'vendor/obmm/src/libobmm',
                 lower/'kernel_ub/include/uapi',lower/'kernel_ub/include']
     # CPU facade contract with the real neutral SDK and explicit endpoint doubles.
@@ -88,11 +96,16 @@ def build(root, source, name):
     platform_test=out/'platform-contract'
     run(['/usr/bin/gcc','-O0','-Wall','-Wextra']+['-I'+str(p) for p in includes]+[
         source/'examples/mem_service_pool/test_platform.c',sdk/'src/lingqu/mem_service/mem_service_provider.c',
+        gva/'gva_manager.c','-Wl,--wrap=open','-Wl,--wrap=close','-Wl,--wrap=ioctl',
         '-o',platform_test])
     run([platform_test])
     compiler = ['/usr/local/bin/aarch64-linux-gnu-gcc','-O2','-Wall','-Wextra','-static','-pthread','-D__EXPORTED_HEADERS__']
     command = compiler + ['-I'+str(p) for p in includes] + [str(p) for p in agent_inputs+inputs] + ['-o',str(out/'pool-agent')]
     run(command)
+    launcher=out/'pool-guest-init';launcher_fixture=out/'cpu-guest-init'
+    run(compiler+[own/'pool_guest_init.c','-o',launcher])
+    run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-DUFLOW_POOL_LAUNCHER_FIXTURE',
+         own/'pool_guest_init.c','-o',launcher_fixture])
     from build_pool_worker import build_worker
     official_worker,worker_receipt=build_worker(root,out,run)
     binary = (out/'pool-agent').read_bytes()
@@ -145,6 +158,12 @@ def build(root, source, name):
     run([sys.executable,'-B',fixture/'staged_catalog_cpu.py','--agent',fixture_agent,'--worker',fixture_worker,
          '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('z'+out.name.removeprefix('build-host')),
          '--output',out/'staged-catalog-cpu','--rust-tests',test_bins[0]],env=env,timeout=60)
+    run([sys.executable,'-B',fixture/'matrix_entry_cpu.py','--agent',fixture_agent,'--worker',fixture_worker,
+         '--controller',sdk/'bin/linqu_mem_service','--scratch',root/('m'+out.name.removeprefix('build-host')),
+         '--output',out/'matrix-entry-cpu','--rust-tests',test_bins[0],'--source',source,
+         '--image',out/'pool-agent','--shim',shim/'libuf_acl_shim.so'],env=env,timeout=60)
+    run([sys.executable,'-B',fixture/'launcher_cpu.py','--launcher',launcher_fixture,
+         '--output',out/'launcher-cpu'],env=env,timeout=30)
     for case in ('managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness',
                  'independent_owner_processes_compete_for_one_catalog_budget','t1_registration_and_clean_drain_use_the_fixture_authority'):
         run([test_bins[0],'--exact','external_ddr::managed_tests::'+case,
@@ -159,7 +178,8 @@ def build(root, source, name):
     with gzip.open(base,'rb') as archive:
         run(['cpio','-idm','--quiet','--no-absolute-filenames'],cwd=stage,input=archive.read())
     for name,p in {'bin/run_app':root/'env/guest-kit004/uflow_env_guest_entry.sh',
-                   'bin/uflow_env_payload':out/'pool-agent',
+                   'bin/uflow_env_payload':launcher,
+                   'bin/uflow_pool_agent':out/'pool-agent',
                    'bin/linqu_mem_service_provider_obmm':official_worker}.items():
         shutil.copy2(p,stage/name);(stage/name).chmod(0o755)
     # Keep standard linqu_init --resume and existing official managed worker.
@@ -178,6 +198,12 @@ def build(root, source, name):
     receipt={'schema':2,'source_commit':manifest['commit'],'source_manifest_sha256':digest(source/'.uflow-source.json'),
              'compiler_argv':command,'agent_sha256':digest(out/'pool-agent'),
              'image':str(image),'image_sha256':digest(image),'base_sha256':digest(base),
+             'platform_gva_inputs':{str(p):digest(p) for p in gva_inputs},
+             'launcher':{'path':str(launcher),'sha256':digest(launcher),'source_sha256':digest(own/'pool_guest_init.c'),
+                 'image_member_sha256':digest(stage/'bin/uflow_env_payload'),
+                 'host_tests':json.loads((out/'launcher-cpu/results.json').read_bytes()),
+                 'PID1_handoff_ms':30000,'unbounded_park':False},
+             'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
              'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),
                  'source_inputs':{str(p):digest(p) for p in fixture_inputs+[fixture/'fixture_worker.c',fixture/'startup_cpu_probe.py']},

@@ -4,6 +4,12 @@
 #include "pool_control.h"
 #include <stdlib.h>
 struct uflow_pool_platform {bool prepared,ready;};
+int uflow_pool_platform_worker_bootstrap(struct uflow_pool_platform *p,unsigned node_id,
+    struct uflow_pool_startup_diagnostic *d) {
+    *d=(struct uflow_pool_startup_diagnostic){.stage="ready",.base=0x700000000000ULL,
+        .size=256ULL<<20,.generation=1,.node_id=node_id,.node_count=2};
+    return !p||!p->ready||node_id>=2?-1:0;
+}
 static uint64_t checksum(uint8_t seed) {
     uint8_t bytes[4096];for(unsigned i=0;i<4096;i++)bytes[i]=(uint8_t)(seed+i*29);
     return mem_service_provider_checksum64(bytes,sizeof(bytes));

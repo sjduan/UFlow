@@ -3,13 +3,54 @@
 #include "pool_control.h"
 #include "components/mem_service/providers/mem_service_provider_obmm.h"
 #include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include "gva_manager.h"
 
 struct uflow_pool_platform {
     struct mem_service_provider_obmm_endpoint endpoint;
     struct mem_service_provider_registry registry;
     struct mem_service_provider_registration registration;
-    bool prepared, activated;
+    bool prepared, activated, worker_bootstrapped;
 };
+
+int uflow_pool_platform_worker_bootstrap(struct uflow_pool_platform *p,
+    unsigned node_id, struct uflow_pool_startup_diagnostic *d)
+{
+    if (!d) return -1;
+    *d=(struct uflow_pool_startup_diagnostic){.stage="identity",.base=0x700000000000ULL,
+        .size=256ULL<<20,.generation=1,.node_id=node_id,.node_count=2};
+    int fd=-1, result=-1;
+    if (!p || !p->activated || p->worker_bootstrapped || node_id>=2) {errno=EINVAL;goto done;}
+    struct obmm_cmd_gsva_aperture expected={.base=d->base,.size=d->size,.generation=d->generation,
+        .node_id=node_id,.node_count=2}, observed={0};
+    struct obmm_cmd_gsva_enumerate_v1 inventory={.version=OBMM_GSVA_ABI_VERSION};
+    d->stage="device-open";
+    fd=open("/dev/obmm",O_RDWR|O_CLOEXEC);if(fd<0)goto done;
+    d->stage="aperture-query";
+    if(ioctl(fd,OBMM_CMD_GSVA_APERTURE_QUERY,&observed))goto done;
+    if(observed.flags & OBMM_GSVA_APERTURE_F_ACTIVE) {
+        /* Never overwrite or clear another active profile, even on mismatch. */
+        d->stage="aperture-validate";
+        if(gva_manager_validate_aperture(fd,&expected,&observed))goto done;
+    } else {
+        d->stage="aperture-register-validate";d->registration_attempted=true;
+        if(gva_manager_register_aperture(fd,&expected,&observed))goto done;
+    }
+    d->stage="segment-enumerate";
+    if(gva_manager_enumerate_segments(fd,&inventory))goto done;
+    /* Only a fresh, empty kernel inventory is supported here. A nonempty
+     * inventory is a separate recovery obligation, never an empty success. */
+    if(inventory.flags!=OBMM_GSVA_ENUM_END){errno=EBUSY;goto done;}
+    p->worker_bootstrapped=true;d->stage="ready";result=0;
+done:
+    d->error=result ? errno : 0;
+    if(fd>=0)close(fd);
+    errno=d->error;
+    return result;
+}
 
 int uflow_pool_platform_open(const char *instance, struct uflow_pool_platform **out)
 {

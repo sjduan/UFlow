@@ -21,7 +21,8 @@ struct context {
     char session[64], node[64], boot[96];
     char owner_release_operation[80], retire_operation[80];
     uint64_t incarnation, sequence;
-    bool holder, writable, bootstrap, ready, directory_registered;
+    bool holder, writable, bootstrap, ready, directory_registered, worker_bootstrapped;
+    char startup_diagnostic[768];
 };
 
 static uint64_t now_ms(void) {
@@ -88,7 +89,7 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
     if(!strcmp(op,"provider_register") || !strcmp(op,"provider_status") || !strcmp(op,"provider_drain")) {
         /* The public wire has node/incarnation, not an invented boot field.
          * The actual boot binds that incarnation in this process and C02. */
-        if(!c->bootstrap || !c->ready)return -1;
+        if(!c->bootstrap || !c->ready || !c->worker_bootstrapped)return -1;
         struct mem_service_client_provider_directory directory;
         if(!strcmp(op,"provider_register")) {
             if(c->directory_registered || mem_service_client_provider_register(&c->client,c->node,c->incarnation,
@@ -108,6 +109,17 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
             directory.directory_epoch,directory.lease_ms,directory.required_count,directory.active_count,
             directory.directory_ready?"true":"false",directory.data_plane_ready?"true":"false",directory.refresh_ok_count,directory.deregister_ok_count);
         return 0;
+    }
+    if(!strcmp(op,"worker_bootstrap")) {
+        if(!c->bootstrap || !c->ready || c->directory_registered || c->worker_bootstrapped)return -1;
+        struct uflow_pool_startup_diagnostic d;
+        int rc=uflow_pool_platform_worker_bootstrap(c->platform,!strcmp(c->node,"nodeA")?0:1,&d);
+        snprintf(c->startup_diagnostic,sizeof(c->startup_diagnostic),
+            "{\"scope\":\"platform-preflight-not-worker-errno\",\"stage\":\"%s\",\"errno\":%u,\"registration_attempted\":%s,\"aperture_base\":%" PRIu64 ",\"virtual_span_bytes\":%" PRIu64 ",\"generation\":%" PRIu64 ",\"node_id\":%u,\"node_count\":%u,\"backing_allocation_attempted\":false}",
+            d.stage,(unsigned)d.error,d.registration_attempted?"true":"false",d.base,d.size,d.generation,d.node_id,d.node_count);
+        if(rc)return -1;
+        c->worker_bootstrapped=true;
+        snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"worker_bootstrap_ready\":true,\"diagnostic\":%s}",c->startup_diagnostic);return 0;
     }
     if(!strcmp(op,"bootstrap_prepare")) {
         uint64_t seed;char descriptor[UFLOW_POOL_CANARY_HEX];uint64_t checksum;
@@ -239,11 +251,13 @@ int uflow_pool_client(int fd,const char *connect,const char *node,const char *bo
     FILE *input=fdopen(dup(fd),"r"),*output=fdopen(fd,"w");if(!input||!output)return 2;setvbuf(output,NULL,_IOLBF,0);
     char line[4096],reply[4096];
     while(fgets(line,sizeof(line),input)) {
+        c.startup_diagnostic[0]=0;
         struct pool_control req;uint64_t schema=0;
         if(!strchr(line,'\n')||pool_parse(line,&req)||pool_u64(&req,"schema",&schema)||schema!=2||execute(&c,&req,reply)) {
+            unsigned saved_errno=(unsigned)errno;
             fprintf(output,"UFPOOL_FAILURE_NOTICE\n");fflush(output);
-            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s}",
-                (unsigned)errno,c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false");
+            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s,\"startup_diagnostic\":%s}",
+                saved_errno,c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false",*c.startup_diagnostic?c.startup_diagnostic:"null");
         }
         fprintf(output,"%s\n",reply);fflush(output);
     }

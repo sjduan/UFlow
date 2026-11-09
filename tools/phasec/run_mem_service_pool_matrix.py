@@ -144,11 +144,11 @@ def matrix(root,config,build):
             bootstrap_bytes=len(bootstrap)*CANARY_BYTES
             bindings=[]
             for name,node in nodes.items():
-                endpoint=out/('a.sock' if name=='nodeA' else 'b.sock')
-                server=BridgeServer(endpoint,node);servers.append(server);server.thread.start()
+                bridge_endpoint=out/('a.sock' if name=='nodeA' else 'b.sock')
+                server=BridgeServer(bridge_endpoint,node);servers.append(server);server.thread.start()
                 identity=node.identity
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
-                                 'incarnation':identity['incarnation'],'socket':str(endpoint),**bootstrap[name],
+                                 'incarnation':identity['incarnation'],'socket':str(bridge_endpoint),**bootstrap[name],
                                  'startup':readiness[name]})
             prepared_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
                                                    'home':'nodeA','nodes':bindings},indent=2))

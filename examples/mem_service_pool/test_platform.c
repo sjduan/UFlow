@@ -5,6 +5,35 @@
 #include "pool_platform_obmm.c"
 #include <assert.h>
 #include <stdio.h>
+#include <stdarg.h>
+static struct obmm_cmd_gsva_aperture aperture;
+static unsigned opens,queries,registers,enums;
+static const char *fault;
+int __wrap_open(const char *path,int flags,...) {
+    assert(!strcmp(path,"/dev/obmm") && flags==(O_RDWR|O_CLOEXEC));opens++;
+    if(fault && !strcmp(fault,"open")){errno=ENOENT;return -1;}return 42;
+}
+int __wrap_close(int fd){assert(fd==42);return 0;}
+int __wrap_ioctl(int fd,unsigned long op,...) {
+    assert(fd==42);va_list a;va_start(a,op);void *arg=va_arg(a,void*);va_end(a);
+    if(op==OBMM_CMD_GSVA_APERTURE_QUERY) {
+        queries++;if(fault && !strcmp(fault,"query")){errno=ENOTTY;return -1;}
+        *(struct obmm_cmd_gsva_aperture*)arg=aperture;return 0;
+    }
+    if(op==OBMM_CMD_GSVA_APERTURE_REGISTER) {
+        registers++;if(fault && !strcmp(fault,"register")){errno=EBUSY;return -1;}
+        aperture=*(struct obmm_cmd_gsva_aperture*)arg;
+        if(fault && !strcmp(fault,"post-register-drift"))aperture.generation++;
+        return 0;
+    }
+    if(op==OBMM_CMD_GSVA_ENUMERATE) {
+        enums++;if(fault && !strcmp(fault,"enumerate")){errno=EAGAIN;return -1;}
+        struct obmm_cmd_gsva_enumerate_v1 *v=arg;
+        if(fault && !strcmp(fault,"malformed-enumeration"))return 0;
+        v->revision=1;v->kernel_instance[0]=7;v->flags=OBMM_GSVA_ENUM_END;return 0;
+    }
+    assert(!"bootstrap attempted backing/export/allocation/clear or unknown ioctl");return -1;
+}
 
 struct fixture {const struct mem_service_provider_obmm_endpoint *endpoint;const char *instance;bool ready,exported,closed;};
 static struct fixture endpoints[8];static unsigned count,verifies,closes;static bool fail_verify,fail_close;
@@ -58,11 +87,30 @@ int main(void) {
     assert(!uflow_pool_platform_prepare(root,17,descriptor,&checksum));
     assert(!uflow_pool_platform_activate(root,descriptor,checksum,&channel));assert(verifies==1);
     assert(channel.provider && channel.provider->state==MEM_SERVICE_PROVIDER_STATE_READY);
+    struct uflow_pool_startup_diagnostic d;
+    for(unsigned i=0;i<6;i++) {
+        static const char *faults[]={"open","query","register","post-register-drift","enumerate","malformed-enumeration"};
+        static const char *stages[]={"device-open","aperture-query","aperture-register-validate","aperture-register-validate","segment-enumerate","segment-enumerate"};
+        static const int errors[]={ENOENT,ENOTTY,EBUSY,EPROTO,EAGAIN,EPROTO};
+        aperture=(struct obmm_cmd_gsva_aperture){0};fault=faults[i];
+        assert(uflow_pool_platform_worker_bootstrap(root,0,&d));
+        assert(!strcmp(d.stage,stages[i]) && d.error==errors[i] && errno==errors[i]);
+    }
+    fault=NULL;aperture=(struct obmm_cmd_gsva_aperture){.flags=OBMM_GSVA_APERTURE_F_ACTIVE,.generation=99};
+    unsigned before=registers;assert(uflow_pool_platform_worker_bootstrap(root,0,&d));
+    assert(!strcmp(d.stage,"aperture-validate") && d.error==EPROTO && registers==before);
+    aperture=(struct obmm_cmd_gsva_aperture){0};
+    assert(!uflow_pool_platform_worker_bootstrap(root,0,&d));
+    assert(d.registration_attempted && !strcmp(d.stage,"ready") && !d.error);
+    assert(d.base==0x700000000000ULL && d.size==256ULL<<20 && d.node_count==2 && d.node_id==0);
+    before=opens;assert(uflow_pool_platform_worker_bootstrap(root,0,&d) && opens==before);
     /* A second actual endpoint must verify itself; root readiness cannot bind it. */
     assert(!uflow_pool_platform_open("app",&app));channel=(struct mem_service_provider_channel){0};
     fail_verify=true;assert(uflow_pool_platform_activate(app,descriptor,checksum,&channel));
     assert(!channel.provider);assert(verifies==2);
     fail_verify=false;assert(!uflow_pool_platform_activate(app,descriptor,checksum,&channel));assert(verifies==3);
+    /* An identical existing aperture is validated, never re-registered. */
+    before=registers;assert(!uflow_pool_platform_worker_bootstrap(app,0,&d));assert(!d.registration_attempted && registers==before);
     assert(!uflow_pool_platform_close(&app));assert(!app);
     /* Owned export is handled by checked-close, not an impossible zero-export precheck. */
     fail_close=true;struct uflow_pool_platform *original=root;

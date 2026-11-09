@@ -29,7 +29,8 @@ class Control:
         if not frame.matches(reply):raise RuntimeError('startup completion identity mismatch')
         receipt=json.loads(reply.body)
         if receipt.get('schema')!=2 or receipt.get('phase')!='completed':
-            raise RuntimeError('startup operation unconfirmed; original context retained')
+            raise RuntimeError('startup operation unconfirmed; original context retained; bounded receipt: '+
+                               json.dumps(receipt,separators=(',',':'))[:2048])
         self.last[(name,body['op'])]=frame.request
         return receipt
 
@@ -96,6 +97,13 @@ class Startup:
         from pool_matrix_contract import bootstrap_nodes
         self.bootstrap=bootstrap_nodes(self.nodes,self.control.realm,self.event,control=self.control)
         for name in self.nodes:
+            receipt=self.control.call(name,{'op':'worker_bootstrap'})
+            diagnostic=receipt.get('diagnostic',{})
+            if (receipt.get('worker_bootstrap_ready') is not True or diagnostic.get('stage')!='ready' or
+                    diagnostic.get('errno')!=0 or diagnostic.get('node_id')!=(0 if name=='nodeA' else 1) or
+                    diagnostic.get('node_count')!=2 or diagnostic.get('backing_allocation_attempted') is not False):
+                raise NotReady('platform worker preflight receipt invalid')
+            self.event({'event':'worker-platform-bootstrap','node':name,'receipt':receipt})
             receipt=self.control.call(name,{'op':'provider_register'})
             self.registrations[name]=receipt
             self.event({'event':'directory-registered-after-canary','node':name,'receipt':receipt})

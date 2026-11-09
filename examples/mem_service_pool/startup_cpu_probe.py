@@ -173,6 +173,7 @@ def run_case(h,kind):
         assert not any(e.get('event')=='managed-admission-ready' for e in h.events);return
     if kind=='missing-node':
         bootstrap_nodes(h.nodes,startup.control.realm,h.event,control=startup.control)
+        startup.control.call('nodeA',{'op':'worker_bootstrap'})
         startup.registrations['nodeA']=startup.control.call('nodeA',{'op':'provider_register'})
         startup.registrations['nodeB']={}
         rejected(startup.check_once);return
@@ -243,6 +244,7 @@ def transport_case(h,mode):
                 connection.sendall(response)
     server=threading.Thread(target=serve);server.start()
     startup=h.start();bootstrap_nodes(h.nodes,startup.control.realm,h.event,control=startup.control)
+    startup.control.call('nodeA',{'op':'worker_bootstrap'})
     rejected(lambda:startup.control.call('nodeA',{'op':'provider_register'}))
     server.join(2);assert not server.is_alive()
     bad=[e for e in h.events if e.get('event') in ('lower-control','lower-control-unconfirmed')]
