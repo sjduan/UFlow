@@ -186,3 +186,55 @@ fn terminal_serialized_cpu_fixture(){
             "normal_SDK_ACK":false,"new_Guest_or_production_authority_or_ledger_touched":false})).unwrap();
     }
 }
+
+#[test]
+fn actual_independent_control_client_cannot_revive_terminal_history(){
+    use std::os::unix::net::UnixListener;
+    let f=Fixture::new();let mut a=f.run("").unwrap();let original=a.historical().unwrap();let mut st=catalog();
+    let guard=a.attach(&mut st,&new_context()).unwrap();drop(a);
+    let service_root=f.root.join("service");fs::create_dir(&service_root).unwrap();let socket=service_root.join("u.sock");
+    let listener=UnixListener::bind(&socket).unwrap();let config=service_root.join("provider.json");let mut context=new_context();
+    context["nodes"]=json!([{"node":"nodeA","socket":service_root.join("a.sock")},{"node":"nodeB","socket":service_root.join("b.sock")}]);
+    let cfg=json!({"schema":2,"backend":"mem_service_obmm","realm":context["realm"],"session":context["session"],"home":"nodeA",
+        "nodes":context["nodes"],"deferred_bootstrap":true,"readiness_file":service_root.join("never-activated.json"),"reconciliation":{"CPU_only":true}});
+    fs::write(&config,serde_json::to_vec(&cfg).unwrap()).unwrap();
+    let endpoint=socket.clone();let server=std::thread::spawn(move||crate::pool_service::terminal_control_fixture(st,guard,&config,&service_root,listener));
+    let pool=&original["pools"][0];let requests=[
+        json!({"schema":2,"op":"DescribeManagedPool","operation_id":"cpu-query-old-pool","pool_id":pool["pool_id"],"pool_epoch":pool["pool_epoch"],"provider_session":pool["provider_session"]}),
+        json!({"schema":2,"op":"QueryPoolOperation","operation_id":"cpu-query-old-operation","target_operation_id":"0cac199b-84d9-4deb-b3d7-1693d0604983"}),
+        json!({"schema":2,"op":"QueryPoolOperation","operation_id":"cpu-query-fresh-operation","target_operation_id":"fresh-never-executed"})];
+    for (i,request) in requests.iter().enumerate(){
+        let output=f.root.join(format!("control-{i}.json"));
+        assert!(Command::new(std::env::current_exe().unwrap()).args(["--exact","pool_terminal_domain::tests::child_terminal_control_client","--nocapture"])
+            .env("UFLOW_TERMINAL_CPU_CLIENT_SOCKET",&endpoint).env("UFLOW_TERMINAL_CPU_CLIENT_REQUEST",request.to_string())
+            .env("UFLOW_TERMINAL_CPU_CLIENT_OUTPUT",&output).status().unwrap().success());
+        let reply=parsed(&fs::read(output).unwrap()).unwrap();
+        if i<2{assert_eq!(reply["status"],"error");assert!(reply["detail"].as_str().unwrap().contains("terminal-domain"));}
+        else{assert_eq!(reply["status"],"ok");assert_eq!(reply["result"]["state"],"NotFound");}
+    }
+    let result=server.join().unwrap().unwrap();assert_eq!(result["charged_bytes"],12<<20);assert_eq!(result["creation_reserved_bytes"],64<<20);
+    assert_eq!(fs::read(&f.state).unwrap(),STATE);assert!(lock_lineage(&f.dir).is_ok());
+}
+
+#[test]
+fn child_terminal_control_client(){
+    if let Ok(endpoint)=std::env::var("UFLOW_TERMINAL_CPU_CLIENT_SOCKET"){
+        use std::os::unix::net::UnixStream;
+        let mut stream=UnixStream::connect(endpoint).unwrap();stream.set_read_timeout(Some(std::time::Duration::from_secs(3))).unwrap();
+        let request:Value=serde_json::from_str(&std::env::var("UFLOW_TERMINAL_CPU_CLIENT_REQUEST").unwrap()).unwrap();
+        crate::pool_wire::send(&mut stream,&request,None).unwrap();let(reply,fds)=crate::pool_wire::receive(&mut stream).unwrap();assert!(fds.is_empty());
+        fs::write(std::env::var("UFLOW_TERMINAL_CPU_CLIENT_OUTPUT").unwrap(),serde_json::to_vec(&reply).unwrap()).unwrap();
+    }
+}
+
+#[test]
+fn evidence_or_source_drift_after_verified_intent_never_commits(){
+    let f=Fixture::new();let count=AtomicU64::new(0);
+    let result=transact(&f.dir,&f.state,|bytes|{
+        if count.fetch_add(1,Ordering::Relaxed)==1{fs::write(f.root.join("metadata_union_sha256"),b"late metadata alias drift").unwrap();}
+        f.verify(bytes)
+    },"");
+    assert!(result.is_err());assert!(f.dir.join(NEXT).join("intent.json").exists());assert!(!f.dir.join(NEXT).join("commit.json").exists());assert!(f.run("").is_err());
+    let f=Fixture::new();let result=transact(&f.dir,&f.state,|bytes|{let p=f.verify(bytes)?;fs::write(&f.state,b"late state drift").unwrap();Ok(p)},"");
+    assert!(result.is_err());assert!(!f.dir.join(NEXT).join("commit.json").exists());
+}

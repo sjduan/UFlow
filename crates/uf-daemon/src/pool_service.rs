@@ -645,6 +645,38 @@ pub(crate) fn run_reconciliation_fixture(endpoint:&str,root:&Path,config:&Path,p
     run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),Some(proof))
 }
 
+/// Real SO_PEERCRED/control/persistence test seam. No provider executor,
+/// bootstrap RPC, Guest, production root or caller-selected production proof.
+#[cfg(test)]
+pub(crate) fn terminal_control_fixture(catalog:Catalog,responsibility:File,config:&Path,root:&Path,listener:UnixListener)->Result<Value,String>{
+    let remote=crate::mem_service_pool::MemServicePoolProvider::load(config)?;
+    let service=Service{shared:Arc::new((Mutex::new(catalog),Condvar::new())),provider:Mutex::new(None),
+        provider_session:remote.session.clone(),provider_loaded:remote.loaded(),remote:Some(remote),root:root.into(),
+        admin:"CPU-TERMINAL-CONTROL-ONLY".into(),persisted:Mutex::new(0),stop:AtomicBool::new(false),
+        drop_reply_once:AtomicBool::new(false),durability_unknown:AtomicBool::new(false),_responsibility_authority:Some(responsibility)};
+    listener.set_nonblocking(true).map_err(|e|e.to_string())?;
+    let deadline=std::time::Instant::now()+Duration::from_secs(10);let mut completed=0;
+    while completed<3 {
+        if std::time::Instant::now()>deadline{return Err("terminal CPU control fixture deadline".into());}
+        match listener.accept(){
+            Ok((mut stream,_))=>{
+                stream.set_read_timeout(Some(Duration::from_secs(2))).map_err(|e|e.to_string())?;
+                stream.set_write_timeout(Some(Duration::from_secs(2))).map_err(|e|e.to_string())?;
+                let owner=peer(&stream)?;let(request,fds)=pool_wire::receive(&mut stream)?;
+                if !fds.is_empty(){return Err("metadata-only terminal fixture".into());}
+                let response=service.handle(&owner,&request).unwrap_or_else(|error|{
+                    let mut value=envelope(request["operation_id"].as_str().unwrap(),Err(error),false);value["schema"]=json!(2);(value,None)});
+                if response.1.is_some(){return Err("terminal fixture may not export a descriptor".into());}
+                pool_wire::send(&mut stream,&response.0,None)?;completed+=1;
+            },
+            Err(error) if error.kind()==std::io::ErrorKind::WouldBlock=>thread::sleep(Duration::from_millis(5)),
+            Err(error)=>return Err(error.to_string()),
+        }
+    }
+    let st=service.shared.0.lock().map_err(|_|"terminal CPU Catalog poisoned")?;
+    Ok(st.managed_pools.snapshot(&st))
+}
+
 fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:Option<&Path>,
     #[cfg(test)] fixture:Option<&Value>) -> Result<(),String> {
     if budget == 0 || budget > 256 * 1024 * 1024 || budget % 65536 != 0 {

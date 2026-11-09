@@ -175,7 +175,8 @@ impl TerminalAuthority {
     pub(crate) fn closure_report(&self)->Result<Value,String>{
         self.validate_commit()?;
         Ok(json!({"status":"AdministrativelyClosedTerminalDomainDataLost","normal_Destroy_RPC_succeeded":false,
-            "normal_Shutdown_RPC_succeeded":false,"native_SDK_ACK":false,"B_conservative_bytes":76<<20,
+            "normal_Shutdown_RPC_succeeded":false,"native_SDK_ACK":false,"B_at_terminal_commit_bytes":76<<20,
+            "scope":"terminal commit before later new-domain admission; query the live Catalog for later responsibility",
             "A_historical_unqueried_bytes":128<<20,"historical_Unknown_data_valid":false,"history_sha256":STATE_SHA}))
     }
 }
@@ -200,7 +201,7 @@ fn fault(point:&str,crash:&str)->Result<(),String>{if point==crash{Err(format!("
 
 // No public/config-selected root or crash switch: production adapter currently
 // cannot call this. Faults and alternate roots are exposed only to cfg(test).
-fn transact(dir:&Path,state_path:&Path,verify:impl FnOnce(&[u8])->Result<VerifiedCandidate,String>,crash:&str)->Result<TerminalAuthority,String>{
+fn transact(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCandidate,String>,crash:&str)->Result<TerminalAuthority,String>{
     let lock=lock_lineage(dir)?;let identity=lock.metadata().map_err(|e|e.to_string())?;
     let named=dir.join("authority.lock").symlink_metadata().map_err(|e|e.to_string())?;
     if identity.dev()!=named.dev()||identity.ino()!=named.ino()||identity.nlink()!=1{return Err("original authority replaced".into());}
@@ -230,6 +231,7 @@ fn transact(dir:&Path,state_path:&Path,verify:impl FnOnce(&[u8])->Result<Verifie
     atomic_record(&path,"resulting76.json",&state)?;fault("resulting76",crash)?;
     // Recheck unchanged source and authority before the one durable commit.
     if bounded(state_path,1<<20)?!=original || dir.join("authority.lock").metadata().map_err(|e|e.to_string())?.ino()!=identity.ino(){return Err("source or original authority drift before commit".into());}
+    if verify(&original)?.proof_sha!=p.proof_sha{return Err("source/runtime/backing/metadata/physical proof changed before commit".into());}
     let commitment=json!({"kind":"TerminalDomainAuthorityCommitted","proof_consumed_once":p.proof_sha,
         "original_state_sha256":STATE_SHA,"resulting76_sha256":digest(&bounded(&path.join("resulting76.json"),1<<20)?),
         "fences_sha256":digest(&bounded(&path.join("permanent-fences.json"),1<<20)?),"new_authority":path,
