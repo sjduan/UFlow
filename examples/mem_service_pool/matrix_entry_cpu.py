@@ -2,7 +2,7 @@
 QEMU, old import, canaries, platform, worker and Image are isolated CPU doubles.
 No production verifier/lineage/Guest/OBMM/device is executed.
 """
-import argparse,ctypes,hashlib,json,os,subprocess,sys,time,types
+import argparse,copy,ctypes,hashlib,json,os,subprocess,sys,time,types
 from pathlib import Path
 from unittest.mock import patch
 from startup_cpu_probe import Harness,Channel,birth
@@ -87,6 +87,20 @@ def main():
  def routed(endpoint,method,values,**kwargs):
   observed.append({'endpoint':str(endpoint),'method':method,'nbytes':values.get('nbytes')})
   assert str(endpoint)==str(out/'u.sock'),'Catalog endpoint shadowed by Guest bridge'
+  if a.terminal_domain and method=='ActivateManagedBootstrap':
+   prepared=out/'prepared-provider.json';good=json.loads(prepared.read_bytes());bad=copy.deepcopy(good)
+   old=json.loads((out/'terminal-origin/original-state.json').read_bytes())['bootstrap_readiness']['nodes']['nodeA']
+   node=next(v for v in bad['nodes'] if v['node']=='nodeA')
+   for key in ('boot_id','agent_session','incarnation'):node[key]=old[key]
+   for key in ('registration','directory'):
+    node['startup'][key]['boot_id']=old['boot_id'];node['startup'][key]['incarnation']=old['incarnation']
+   node['startup']['worker']['incarnation']=old['incarnation'];prepared.write_text(json.dumps(bad))
+   try:real_exchange(endpoint,method,values,operation_id='CPU-old-c044-boot-fence')
+   except PoolV2Unknown:raise
+   except PoolV2Error as e:assert e.response['code']=='Rejected' and 'terminal-domain' in e.response['detail']
+   else:raise AssertionError('old Guest boot identity entered staged fresh namespace')
+   assert not any(n.failure for n in h.nodes.values()),'old identity must be fenced before any Guest RPC'
+   prepared.write_text(json.dumps(good))
   if method=='CreateManagedPool' and values['nbytes']==48<<20:
    s=state();assert s['charged_bytes']==16<<20 and s['creation_reserved_bytes']==64<<20 and s['pools']==[]
    if a.terminal_domain:
@@ -107,6 +121,7 @@ def main():
     else:raise AssertionError('old Unknown accessible or operation replayed')
   result=real_exchange(endpoint,method,values,**kwargs)
   if method=='CreateManagedPool':
+   if a.terminal_domain:assert result['resource_generation']==1 and result['resource_id']>=115,'fresh namespace uses real native generation1'
    s=state();assert total(s)==128<<20 and s['retained_reserved_bytes']==64<<20;states.append({'point':'business-allocated','total':total(s)})
   return result
  def capability(*args):gate.append(True);return {'CPU_synthetic_capability_seam':True,'runtime_tested':False}
@@ -138,6 +153,7 @@ def main():
   result={'pass':True,'actual_matrix_and_nested_callback':True,'actual_Rust_C_SDK_sockets':True,'actual_CPU_shared_mapping_all_bytes':True,
    'budget_sequence':states,'strict_prestart_cancel_before_new_reservation':not a.terminal_domain,'terminal_commit_then_separate_service_process':a.terminal_domain,
    'reserve4_before_real_Guest_identity_then_activate_before48':a.terminal_domain,'new_native_generation_one_allowed':a.terminal_domain,
+   'old_c044_boot_fenced_before_actual_activation_RPC':a.terminal_domain,
    'large_serial_preflight_before48':True,'first_cross_node_4KiB_before_full_directions':True,
    'both20MiB_directions':True,'independent_full_guards':True,'three_client_lifetime_barrier':True,
    'negative64_and_new_live_Unknown_guard':True,'historical_Unknown_query_and_retry_denied':True,'normal_current_drain_keeps_reserved64':True,

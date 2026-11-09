@@ -148,7 +148,7 @@ def build(root, source, name):
     cargo_target=out.parent/out.name.replace('build-','cargo-',1)
     if cargo_target.exists():raise RuntimeError('fresh per-generation Cargo output required')
     env = {**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),
-           'CARGO_BUILD_JOBS':'4','CARGO_TARGET_DIR':str(cargo_target),'UF_ACL_SHIM_LIB_DIR':str(shim),
+           'CARGO_BUILD_JOBS':'4','CARGO_INCREMENTAL':'0','CARGO_TARGET_DIR':str(cargo_target),'UF_ACL_SHIM_LIB_DIR':str(shim),
            'LD_LIBRARY_PATH':str(shim),'PYTHONDONTWRITEBYTECODE':'1','PYTHONPATH':str(source/'sdk/python')}
     # No libascend/libnpu is linked into this explicitly fail-closed host artifact.
     run([cargo,'build','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=1800)
@@ -225,7 +225,7 @@ def build(root, source, name):
     with packed.open('rb') as src,gzip.open(image,'xb',compresslevel=6) as dest:
         shutil.copyfileobj(src,dest)
     daemon=cargo_target/'debug/uf-daemon'
-    receipt={'schema':2,'source_commit':manifest['commit'],'source_manifest_sha256':digest(source/'.uflow-source.json'),
+    receipt={'schema':2,'source_commit':manifest['commit'],'source_manifest_sha256':digest(source/'.uflow-source.json'),'Cargo_incremental_cache_enabled':False,
              'actual_kernel_profile_consumer':json.loads((out/'profile-consumer-cpu/results.json').read_bytes()),
              'compiler_argv':command,'agent_sha256':digest(out/'pool-agent'),
              'image':str(image),'image_sha256':digest(image),'base_sha256':digest(base),
