@@ -143,7 +143,14 @@ def verify_new_fm(out,assessment):
     seen=set()
     for row in current:
         p=Path(row['path']);require(p.is_relative_to(out/'fm'),'new FM namespace')
-        m=p.lstat();identity=(m.st_dev,m.st_ino);require(stat.S_ISREG(m.st_mode) and identity==(row['dev'],row['inode']),'actual new regular FM identity')
+        m=p.lstat();identity=(m.st_dev,m.st_ino)
+        # Frozen E0 registers regular carriers and notification FIFOs (and may
+        # register Unix sockets). Bind the actual type and owner as well as the
+        # inode; regular-only rejects the real, valid FIFO before any canary.
+        kind=stat.S_IFMT(m.st_mode)
+        require(kind in (stat.S_IFREG,stat.S_IFIFO,stat.S_IFSOCK) and kind==row['file_type'] and
+            m.st_uid==row['uid']==os.geteuid() and identity==(row['dev'],row['inode']),
+            'actual new typed FM identity and owner')
         aliases=set(map(tuple,row['kernel_inode_aliases']));require(identity in aliases and not aliases.intersection(old|seen),'new FM independent inode/alias')
         seen.update(aliases)
     fm_namespace((out/'fm').rglob('*'),(r['path'] for r in current));return {'old_files':30,'new_files':10,'independent':True}

@@ -19,6 +19,11 @@ class IndependentFiles(unittest.TestCase):
         for i in range(10):
             p=self.out/'fm'/str(i);p.write_bytes(b'fresh-CPU-file');self.current.append(p)
         self.assessment=self.root/'assessment.json';self.assessment.write_text(json.dumps(self.a));self.write_current()
+        if os.name=='nt':
+            # Only the portable fixture seam: production runs under Linux E0
+            # and always checks the real effective UID without a fallback.
+            uid=patch.object(q.os,'geteuid',return_value=self.out.stat().st_uid,create=True)
+            uid.start();self.addCleanup(uid.stop)
     def row(self,p):
         m=p.lstat();return {'path':str(p),'dev':m.st_dev,'inode':m.st_ino,'uid':m.st_uid,'file_type':stat.S_IFMT(m.st_mode),'kernel_inode_aliases':[[m.st_dev,m.st_ino]]}
     def write_current(self,rows=None):(self.out/'fm-carrier-active.json').write_text(json.dumps({'files':rows if rows is not None else [self.row(p) for p in self.current]}))
