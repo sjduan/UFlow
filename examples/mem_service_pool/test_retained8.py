@@ -5,7 +5,7 @@ import sys,unittest
 from unittest.mock import MagicMock,patch
 from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
-from verify_retained8_pool import documents,store_family,nonlive,ASSESSMENT_SHA,sha
+from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,ROOT,ASSESSMENT_SHA,sha
 import verify_retained8_pool as verifier
 
 class Retained8Semantics(unittest.TestCase):
@@ -63,6 +63,10 @@ class Retained8Semantics(unittest.TestCase):
         with self.assertRaises(ValueError):nonlive({'71':123},lambda pid:123)
         nonlive({'71':123},lambda pid:124)
         self.assertIs(self.derive()['SDK_ACK_Unmapped_or_canary_close_claimed'],False)
+    def test_both_generations_catalog_lower_bridge_and_qmp_endpoints(self):
+        endpoints_quiet([{'path':'/original/qmp'}],set())
+        for name in ['/original/qmp',*[str(ROOT/'runs'/j/n) for j in ['c013','c027'] for n in ['u.sock','l.sock','a.sock','b.sock']]]:
+            with self.assertRaises(ValueError):endpoints_quiet([{'path':'/original/qmp'}],{name})
     def test_unclosed_physical_tree_or_inconclusive_old_audit(self):
         self.change('runs/c027/monitor/result.json',lambda v:v.update(remaining={'71':123}))
         with self.assertRaises(ValueError):self.derive()

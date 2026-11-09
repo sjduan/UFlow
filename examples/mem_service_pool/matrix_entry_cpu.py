@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 from startup_cpu_probe import Harness,Channel,birth
 from mem_service_pool_bridge import GuestNode,BridgeServer
-from uflow.mem_service_pool_v2 import exchange
+from uflow.mem_service_pool_v2 import exchange,PoolV2Error,PoolV2Unknown
 import run_mem_service_pool_matrix as driver
 
 class ReachedBusinessGate(Exception):pass
@@ -61,6 +61,16 @@ def main():
    state=json.loads((out/'state/state.json').read_bytes())
    assert state['charged_bytes']==12<<20 and state['retained_bytes']==8<<20 and state['creation_reserved_bytes']==0
    assert state['pools']==[]
+   old=state['reconciliation']['identity']
+   history=real_exchange(endpoint,'QueryPoolOperation',{'target_operation_id':old['operation_id']})
+   assert history['state']=='VerifiedUncreatedTerminal' and history['SDK_ACK_Unmapped_or_canary_close_claimed'] is False
+   for method,fields,options in [
+       ('RegisterPoolClient',{'pool_id':old['pool_id'],'pool_epoch':old['pool_epoch'],'provider_session':old['provider_session'],'node':'nodeA','access':'rw'},{}),
+       ('CreateManagedPool',values,{'operation_id':old['operation_id']})]:
+    try:real_exchange(endpoint,method,fields,**options)
+    except PoolV2Unknown:raise
+    except PoolV2Error as e:assert e.response['code']=='Rejected'
+    else:raise AssertionError('old terminal identity or cancel64 operation reused')
    closed=real_exchange(endpoint,'ShutdownManagedPool',values={'admin_token':values['admin_token']})
    assert closed['charged_bytes']==closed['retained_bytes']==8<<20 and closed['active_bytes']==closed['reserved_bytes']==0
    assert catalog[0].wait(timeout=5)==0
@@ -82,7 +92,7 @@ def main():
   result={'pass':True,'actual_matrix_function_and_callback':True,'actual_Rust_C_SDK_sockets':True,
    'Catalog_endpoint_after_both_bridges':observed,'actual_canary_activation_and_normal_shutdown':True,'retained8_before_new4_and_current12':True,
    'CPU_import_canary_worker_QEMU_doubles':True,'business_call_intercepted_before_allocation':True,
-   'real_original_authorities_read_or_modified':False}
+   'real_original_authorities_read_or_modified':False,'old_terminal_pool_and_operation_reuse_rejected':True}
   (a.output/'results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
  finally:
   for s in servers:

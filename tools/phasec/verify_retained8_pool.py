@@ -22,6 +22,10 @@ def sha(raw):return hashlib.sha256(raw).hexdigest()
 def store_family(names):require(not list(names),'no c027 lower store/managed/journal family')
 def nonlive(records,observe):
     for pid,expected in records.items():require(observe(pid)!=expected,'old exact birth live')
+def endpoints_quiet(endpoints,live):
+    names={row['path'] for row in endpoints}
+    names.update(str(ROOT/'runs'/j/name) for j in ['c013','c027'] for name in ['u.sock','l.sock','a.sock','b.sock'])
+    require(not names.intersection(live),'old control or Catalog/provider endpoint kernel-active')
 def read(path,maximum=4<<20):
     require(path.is_file() and not path.is_symlink(),'regular bounded evidence required')
     require(path.stat().st_size<=maximum,'evidence size bound')
@@ -146,7 +150,7 @@ def verify(old_assessment,old_bindings,assessment):
         extra[n]=json.loads(data);proof['evidence_sha256'][n]=sha(data)
     endpoints=json.loads(raw['runs/c027/control-endpoints-active.json'])+extra['runs/c013/control-endpoints-active.json']
     live={s.split()[-1] for s in proc_read(Path('/proc/net/unix'),16<<20).decode().splitlines()[1:] if len(s.split())>=8}
-    require(not any(row['path'] in live for row in endpoints),'old control endpoint kernel-active')
+    endpoints_quiet(endpoints,live)
     inventory=json.loads(raw['runs/c027/fm-carrier-active.json'])['files']+extra['runs/c013/fm-carrier-active.json']['files'];inodes=set()
     require(len(inventory)==20,'complete two-generation FM inventory')
     for row in inventory:

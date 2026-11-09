@@ -27,18 +27,18 @@ the official ready gate. Root readiness cannot certify another endpoint.
 
 The two exports carry 4 MiB of infrastructure responsibility, charged once in
 the same Catalog DDR ledger before admitting business allocations. The matrix
-uses 64 MiB business + 4 MiB current canaries + 4 MiB retained original canaries
-=72 MiB within the B 128 MiB cap; A's
+prepares 64 MiB business + 4 MiB current canaries + 8 MiB retained predecessor canaries
+=76 MiB within the B 128 MiB cap; A's
 historical 128 MiB remains unqueried. Temporary verification views and each
 application mapping add no physical backing charge. A failed current
 bootstrap is recorded as reserved/owned responsibility and fails the job;
 no replacement pool or endpoint is created to hide an uncertain outcome.
 
 Application owners unmap/release before their endpoint checked-close. After
-business retire, the Catalog still charges the 8 MiB current/retained canary baseline. Shutdown
+business retire, the Catalog still charges the 12 MiB current/retained canary baseline. Shutdown
 checked-closes both root endpoints and releases each charge only after its real
 receipt, then requires zero current contexts and active/reserved capacity, while
-the two original UnknownCanaryClose entries retain 4 MiB. The official checked-close
+the four predecessor UnknownCanaryClose entries retain 8 MiB. The official checked-close
 also owns canary export cleanup; a failure retains the original endpoint and
 charge. Shared FM files are retained and audited, never unlinked as private SHM.
 
@@ -92,7 +92,8 @@ cleared. No physical NPU, model, performance or global-zero claim is made.
 
 ## Portable checks
 
-Startup is ordered: both root prepare/peer verify, then public SDK directory
+Startup is ordered: both root prepare/peer verify, official platform GVA
+aperture registry/empty inventory preflight, then public SDK directory
 registration with the actual boot-bound incarnation/generation/capabilities,
 then worker fork and real SDK refresh. The bridge binds refresh to SO_PEERCRED
 PID/birth and retains full bounded public metadata requests and replies. Catalog
@@ -120,7 +121,7 @@ operation. It is run only by the B build job and proves no OBMM or Guest result.
 Worker stdout/stderr use bounded nonblocking parent forwarding; failure notice
 precedes diagnostic serialization and the external supervisor owns escalation.
 
-The c013 continuation starts its single responsibility Catalog before any new
+The historical c013 continuation started its single responsibility Catalog before any new
 Guest/bootstrap. An embedded verifier checks the pinned manager assessment and
 all original source/controller/SDK/image bindings, exact snapshot/store/journal/
 events, IDs/actor, absence of business objects and nonlive exact births in place
@@ -131,15 +132,40 @@ response/IDs remain terminal history. Two typed Provider canaries retain 4MiB
 as `UnknownCanaryClose` in the same DdrResources and public resource snapshot.
 No SDK close or Unmapped is claimed for them.
 
-The authority then reserves the two current canaries before their real prepare.
+That historical run retained its two new, actually prepared canaries after a
+worker startup failure, adding 4MiB without checked-close. The current matrix
+requires a narrow conservative c027 successor: the embedded retained8 verifier
+pins assessment b283ec29 and revalidates the original proof, fourteen exact
+predecessor files, completed cancel64 history, both serial/boot/receipt sets and
+empty store family. It also binds original FM metadata, checks both generations'
+actual births, all control endpoints and bounded FD/VMA/FM holders. It never
+replays descriptors or infers an SDK ACK. The original lineage lock is held
+through the entire successor Service. A new exclusive append-only
+`successor-c027-v1` contains fsynced intent/result; link-based publication refuses
+overwrite. Existing successors, half writes, drift or restart are refused.
+
+The four original BackingIds enter the same DdrResources as typed
+UnknownCanaryClose objects100/101/103/104, charged/retained8 and reserved0.
+No cancel64 is executed again. Resource IDs start above104; two generations'
+old boot/incarnation/realm/session identities cannot be reused. The authority
+then reserves the two current canaries before their real prepare.
 After real bootstrap/register/worker readiness, authenticated
 `ActivateManagedBootstrap` commits those reservations with actual boot-bound
 backings. Business is refused until activation. Final normal close releases
-only current resources: active0/reserved0/retained4MiB. B peak is72MiB under128,
-plus unqueried A historical128MiB gives200MiB. Existing lineage, partial writes,
-drift or a new unexpected Unknown cannot restart a fresh authority or reuse the
-old proof. The exclusive responsibility lock and immutable lineage accompany
-the one live Catalog; SDK3 and default POSIX zero-account close stay unchanged.
+only current resources: active0/reserved0/retained8MiB. The planned B peak is
+76MiB under128, plus unqueried A historical128MiB gives204MiB. This succession
+has only been exercised in isolated CPU fixtures; production restoration,
+Guest/aperture/OBMM and E1-E5 require their separate actual execution evidence.
+SDK3 and default POSIX zero-account close stay unchanged.
+
+`matrix_entry_cpu.py` invokes the actual matrix and callback with real Rust/C/SDK
+sockets, explicit import/canary/worker/QEMU doubles, and intercepts business
+creation before allocation. It checks retained8 -> new4 reserved -> active12 ->
+normal retained8, Catalog routing after both bridges, and old terminal identity
+rejection. No production verifier or actual old lineage is opened by this test.
+The task overlay PID1 launcher gives the Host monitor/QMP a finite30s handoff
+window after bounded child-group TERM/KILL/wait; expiry may still panic PID1 if
+the external handoff fails. CPU process tests do not certify real PID1/QMP.
 
 The build now consumes the official frozen managed-worker Makefile in a private
 output directory, with546/53011 and locked platform/GVA sources. It records the
