@@ -142,8 +142,8 @@ def main():
   assert len(preflight)==2 and all(e['Guest_acceptance_proved'] and e['body_bytes']==1496 for e in preflight)
   business=next(i for i,e in enumerate(events) if e['event']=='stage-business48-create-start')
   assert all(events.index(e)<business for e in preflight)
-  diagnostic=next(e for e in events if e['event']=='stage-first-cross-node-read4KiB-completed')
-  assert diagnostic['nbytes']==4096 and diagnostic['read']['receipt']['all_bytes'] and diagnostic['read']['receipt']['visible']
+  diagnostic=next(e for e in events if e['event']=='stage-first-cross-node-small-read-completed')
+  assert diagnostic['nbytes']==65536 and diagnostic['read']['receipt']['all_bytes'] and diagnostic['read']['receipt']['visible']
   assert events.index(diagnostic)<next(i for i,e in enumerate(events) if e['event']=='stage-full-direction-start')
   allocated=[e for e in calls if e['operation']==0x70 and e['origin']['role']=='root']
   assert len(allocated)==1 and allocated[0]['response_metadata']['live_refs']=='0'
@@ -154,7 +154,7 @@ def main():
    'budget_sequence':states,'strict_prestart_cancel_before_new_reservation':not a.terminal_domain,'terminal_commit_then_separate_service_process':a.terminal_domain,
    'reserve4_before_real_Guest_identity_then_activate_before48':a.terminal_domain,'new_native_generation_one_allowed':a.terminal_domain,
    'old_c044_boot_fenced_before_actual_activation_RPC':a.terminal_domain,
-   'large_serial_preflight_before48':True,'first_cross_node_4KiB_before_full_directions':True,
+   'large_serial_preflight_before48':True,'first_cross_node_64KiB_before_full_directions':True,
    'both20MiB_directions':True,'independent_full_guards':True,'three_client_lifetime_barrier':True,
    'negative64_and_new_live_Unknown_guard':True,'historical_Unknown_query_and_retry_denied':True,'normal_current_drain_keeps_reserved64':True,
    'SDK_allocate_has_no_holder_and_no_spurious_owner_RELEASE':True,
