@@ -132,12 +132,18 @@ impl MemServicePoolProvider {
         let old=&st.managed_pools.reconciliation;
         if let Some(contexts)=old["historical_prestart_contexts"].as_array(){
             for c in contexts {
-                if c["realm"]==self.realm || c["provider_session"]==self.session ||
-                    c["guest_identities"].as_array().is_some_and(|ids|ids.iter().any(|i|self.nodes.values().any(|n|
-                        ["boot_id","agent_session","incarnation"].iter().any(|k|n.get(*k).is_some_and(|v|!v.is_null() &&
-                            (Some(v)==i.get(*k) || (matches!(*k,"boot_id"|"agent_session") && (Some(v)==i.get("boot_id")||Some(v)==i.get("agent_session")))))))) {
+                if c["realm"]==self.realm || c["provider_session"]==self.session {
                     return Err("closed prestart realm/session/boot/incarnation cannot be revived".into());
                 }
+                if let Some(ids)=c["guest_identities"].as_array(){for i in ids {for n in self.nodes.values(){
+                    for key in ["boot_id","agent_session","incarnation"] {
+                        if let Some(v)=n.get(key){
+                            let same=Some(v)==i.get(key);
+                            let cross=matches!(key,"boot_id"|"agent_session") && (Some(v)==i.get("boot_id")||Some(v)==i.get("agent_session"));
+                            if !v.is_null() && (same||cross){return Err("closed prestart boot/incarnation cannot be revived".into());}
+                        }
+                    }
+                }}}
             }
         }
         if let Some(canaries)=old["retained_canaries"].as_array() {
