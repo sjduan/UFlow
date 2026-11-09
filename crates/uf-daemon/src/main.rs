@@ -29,6 +29,7 @@ mod pool_reconciliation;
 mod pool_retained8;
 mod pool_quarantine76;
 mod pool_c039_prestart;
+mod pool_terminal_domain;
 mod object_service;
 mod pool_provider;
 mod pool_ranges;
@@ -491,6 +492,16 @@ fn seal_bound_generation(endpoint: &str) -> std::io::Result<()> {
 }
 
 fn main() {
+    // Private explicit administrative modes run before every backend/trace/
+    // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
+    let private_args=std::env::args().skip(1).collect::<Vec<_>>();
+    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report") {
+        if private_args.len()!=1 {eprintln!("private pool mode accepts exactly its opt-in flag; fixed c044 scope only");std::process::exit(1);}
+        let report=if private_args[0]=="--pool-terminal-domain-loss"{pool_terminal_domain::production_terminal_only()}
+            else{pool_terminal_domain::production_shutdown_report()};
+        match report {Ok(value)=>println!("{}",value),Err(error)=>{eprintln!("{error}");std::process::exit(1);}}
+        return;
+    }
     trace::collector().init_from_env();
     let args = parse_args();
     if args.host_pool {

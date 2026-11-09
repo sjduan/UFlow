@@ -155,6 +155,14 @@ def build(root, source, name):
     run([cargo,'test','--locked','-p','uf-core','--target-dir',cargo_target,'-j','4'],cwd=source,env=env,timeout=300)
     for group in ('ddr_resources::tests','pool_ranges::tests','managed_pool::tests','mem_service_pool::tests','pool_reconciliation::tests','pool_retained8::tests','pool_quarantine76::tests','pool_c039_prestart::tests'):
         run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4',group],cwd=source,env=env,timeout=300)
+    with (out/'terminal-ledger-rust.log').open('xb') as log:
+        run([cargo,'test','--locked','-p','uf-daemon','--target-dir',cargo_target,'-j','4','pool_terminal_domain::tests','--','--nocapture'],
+            cwd=source,env={**env,'UFLOW_TERMINAL_LEDGER_CPU_OUTPUT':str(out/'terminal-ledger-cpu')},stdout=log,timeout=120)
+    disabled=subprocess.run([str(cargo_target/'debug/uf-daemon'),'--pool-terminal-domain-loss'],capture_output=True,timeout=5)
+    if disabled.returncode!=1 or b'production-not-ready' not in disabled.stderr:
+        raise RuntimeError('production terminal command must refuse without accepted E pins, before backend or authority actions')
+    (out/'terminal-command-not-ready.json').write_text(json.dumps({'actual_exit':disabled.returncode,'stdout':disabled.stdout.decode(),
+        'stderr':disabled.stderr.decode(),'production_ready':False,'original_authority_or_verifier_called':False},indent=2))
     # Real Catalog/memfd/independent owner closure regressions, no driver query.
     # The fixture appends .external-ddr to its already nonce-qualified socket.
     # A compact generation label leaves that suffix within Linux SUN_LEN.
@@ -225,6 +233,7 @@ def build(root, source, name):
                  'PID1_handoff_ms':30000,'unbounded_park':False},
              'matrix_entry_cpu':json.loads((out/'matrix-entry-cpu/results.json').read_bytes()),
              'serial_rx_cpu':json.loads((out/'serial-rx-cpu/results.json').read_bytes()),
+             'terminal_domain_host':json.loads((out/'terminal-ledger-cpu/results.json').read_bytes()),
              'retained8_admission_cpu':json.loads((out/'retained8-admission-cpu/results.json').read_bytes()),
              'source_inputs':{str(p):{'bytes':p.stat().st_size,'sha256':digest(p)} for p in agent_inputs+inputs},
              'startup_cpu':{'results':json.loads((fixture_output/'results.json').read_bytes()),

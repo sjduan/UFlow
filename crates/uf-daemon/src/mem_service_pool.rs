@@ -130,6 +130,7 @@ impl MemServicePoolProvider {
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
         let old=&st.managed_pools.reconciliation;
+        crate::pool_terminal_domain::reject_fenced(old,&json!({"realm":self.realm,"session":self.session,"nodes":self.nodes}))?;
         if let Some(contexts)=old["historical_prestart_contexts"].as_array(){
             for c in contexts {
                 if c["realm"]==self.realm || c["provider_session"]==self.session {
@@ -267,6 +268,7 @@ impl MemServicePoolProvider {
         let fingerprint = fingerprint.to_string();
         let read_only = matches!(op,"DescribeManagedPool"|"GetManagedPoolSnapshot"|"QueryPoolOperation");
         let prior = service.catalog(|state,st| {
+            crate::pool_terminal_domain::reject_fenced(&state.reconciliation,req)?;
             let original=&state.reconciliation["identity"];
             if op == "QueryPoolOperation" {
                 let target = text(req,"target_operation_id")?;

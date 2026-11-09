@@ -26,6 +26,7 @@ pub struct DdrResources {
     retained: HashMap<u64, serde_json::Value>, // lifecycle witness; capacity remains in resources
     retained_reservations: HashMap<String, RetainedUncertainReservation>,
     retired_unstarted: HashSet<u64>, // fixed c039 IDs108/109: no backing, never reused
+    terminal_domains: HashMap<u64, (BackingId, u64, serde_json::Value)>,
 }
 
 impl Default for DdrResources {
@@ -40,6 +41,7 @@ impl Default for DdrResources {
             retained: HashMap::new(),
             retained_reservations: HashMap::new(),
             retired_unstarted: HashSet::new(),
+            terminal_domains: HashMap::new(),
         }
     }
 }
@@ -77,7 +79,7 @@ impl DdrResources {
     }
     pub fn snapshot(&self) -> serde_json::Value {
         use serde_json::json;
-        json!({"charged_bytes":self.charged_bytes(),"reserved_bytes":self.reserved_bytes(),
+        let mut value=json!({"charged_bytes":self.charged_bytes(),"reserved_bytes":self.reserved_bytes(),
             "retained_reserved_bytes":self.retained_reserved_bytes(),
             "active_reserved_bytes":self.reserved_bytes()-self.retained_reserved_bytes(),
             "retained_uncertain_reservations":self.retained_reservations.iter().map(|(key,r)|
@@ -90,7 +92,13 @@ impl DdrResources {
                     BackingId::Provider{realm,provider,resource,generation}=>json!({"kind":"provider","realm":realm,
                         "provider":provider,"resource":resource,"generation":generation})};
                 json!({"object_id":id,"nbytes":n,"backing":identity,"retained":self.retained.get(id)})
-            }).collect::<Vec<_>>()})
+            }).collect::<Vec<_>>()});
+        if !self.terminal_domains.is_empty() {
+            value["terminal_domain_loss_tombstones"]=json!(self.terminal_domains.iter().map(|(id,(_,n,w))|
+                (*id,json!({"object_id":id,"nbytes":n,"outcome":"TerminalDomainDataLost","native_SDK_ACK":false,"witness":w})))
+                .collect::<std::collections::BTreeMap<_,_>>());
+        }
+        value
     }
     pub fn charged_object_bytes(&self, object: u64) -> Option<u64> {
         self.resources.get(&object).map(|(_, n)| *n)
@@ -153,7 +161,8 @@ impl DdrResources {
 
     pub fn commit_backing(&mut self, operation: &str, object: u64,
                           backing: BackingId, nbytes: u64) -> Result<(), String> {
-        if self.retired_unstarted.contains(&object) || self.retained_reservations.contains_key(operation) ||
+        if self.retired_unstarted.contains(&object) || self.terminal_domains.contains_key(&object) ||
+            self.terminal_domains.values().any(|(old,_,_)|old==&backing) || self.retained_reservations.contains_key(operation) ||
             self.retained_reservations.values().any(|r|r.object_id==object) {
             return Err("uncertain historical reservation has no confirmed backing/release".into());
         }
@@ -200,6 +209,39 @@ impl DdrResources {
     pub fn release_confirmed(&mut self, object: u64) {
         if self.retained.contains_key(&object) {return;} // No caller may infer old checked-close.
         self.resources.remove(&object);
+    }
+
+    /// Private opt-in CPU terminal-domain path. The permit cannot be minted
+    /// from caller booleans or normal SDK release receipts.
+    pub(crate) fn inherit_terminal_source(p:&crate::pool_terminal_domain::VerifiedCandidate)->Result<Self,String>{
+        let source=p.source_ledger();let mut ledger=Self::default();ledger.limit=128<<20;
+        for row in source["resources"].as_array().ok_or("source resources")? {
+            let id=row["object_id"].as_u64().ok_or("object id")?;let n=row["nbytes"].as_u64().ok_or("bytes")?;
+            let b=&row["backing"];if b["kind"]!="provider"{return Err("terminal source must be fixed provider resources".into());}
+            let identity=BackingId::Provider{realm:b["realm"].as_str().ok_or("realm")?.into(),provider:b["provider"].as_str().ok_or("provider")?.into(),
+                resource:b["resource"].as_str().ok_or("resource")?.into(),generation:b["generation"].as_u64().ok_or("generation")?};
+            let key=format!("terminal-inherit:{id}");ledger.reserve_unique(&key,n)?;ledger.commit_backing(&key,id,identity,n)?;
+            if !row["retained"].is_null(){ledger.retain_provider(id,row["retained"].clone())?;}
+        }
+        for (key,n) in source["reservations"].as_object().ok_or("reservations")?{ledger.reserve_unique(key,n.as_u64().ok_or("reserved bytes")?)?;}
+        for row in source["retained_uncertain_reservations"].as_array().ok_or("uncertain reservations")? {
+            ledger.retain_uncertain_reservation(row["key"].as_str().ok_or("reservation key")?,row["object_id"].as_u64().ok_or("reserved object")?,row["witness"].clone())?;
+        }
+        ledger.retired_unstarted.extend([108,109]);
+        p.matches_ledger(&ledger.snapshot())?;Ok(ledger)
+    }
+    pub(crate) fn apply_terminal_loss(&mut self,p:&crate::pool_terminal_domain::VerifiedCandidate)->Result<(),String>{
+        if self.limit!=128<<20{return Err("terminal budget is fixed128, not configurable".into());}
+        p.matches_ledger(&self.snapshot())?;
+        if !self.terminal_domains.is_empty(){return Err("terminal transaction cannot replay".into());}
+        for id in [110,111,112] {
+            let (backing,n)=self.resources.remove(&id).ok_or("terminal resource missing")?;
+            self.terminal_domains.insert(id,(backing,n,p.tombstone()));
+        }
+        if self.charged_bytes()!=12<<20 || self.retained_bytes()!=12<<20 || self.reserved_bytes()!=64<<20 || self.retained_reserved_bytes()!=64<<20 {
+            return Err("terminal loss must preserve exact historical76".into());
+        }
+        Ok(())
     }
 }
 
