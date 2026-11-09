@@ -1,6 +1,7 @@
 """Actual Linux child/launcher/file tests; metadata fixture, no Guest or SDK."""
 import argparse,hashlib,json,os,subprocess,sys,time
 from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tools/phasec'))
 from pool_journal_capture import capture,MAX_BYTES
 def main():
  p=argparse.ArgumentParser();p.add_argument('--launcher',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
