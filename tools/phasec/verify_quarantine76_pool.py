@@ -74,6 +74,7 @@ def documents(a,raw):
         'evidence_sha256':{n:sha(b) for n,b in raw.items()}}
 
 def inventory(raw):
+    require(all(not (ROOT/'runs'/j).is_symlink() and not (ROOT/'runs'/j/'fm').is_symlink() for j in OLD_JOBS),'old real FM namespaces')
     rows=[r for job in OLD_JOBS for r in json.loads(raw['runs/'+job+'/fm-carrier-active.json'])['files']]
     require(len(rows)==30,'three complete old FM inventories');inodes=set()
     for row in rows:
@@ -137,6 +138,7 @@ def verify_new_fm(out,assessment):
             require(len(b)==row['bytes'] and sha(b)==row['sha256'],'old FM inventory byte drift');raw[rel]=b
     rows,old=inventory(raw)
     require(out.parent==ROOT/'runs' and out.name not in OLD_JOBS and not out.is_symlink(),'new isolated output')
+    require((out/'fm').is_dir() and not (out/'fm').is_symlink(),'new real FM directory')
     current=json.loads(read(out/'fm-carrier-active.json',65536))['files'];require(len(current)==10,'new complete FM inventory')
     seen=set()
     for row in current:

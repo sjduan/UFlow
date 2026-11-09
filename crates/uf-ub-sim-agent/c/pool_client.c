@@ -21,7 +21,7 @@ struct context {
     char session[64], node[64], boot[96];
     char owner_release_operation[80], retire_operation[80];
     uint64_t incarnation, sequence;
-    bool holder, writable, bootstrap, ready, directory_registered, worker_bootstrapped;
+    bool holder, allocation_owned, writable, bootstrap, ready, directory_registered, worker_bootstrapped;
     char startup_diagnostic[768];
 };
 
@@ -139,19 +139,22 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_ready\":true,\"verified_checksum\":%" PRIu64 ",\"guest_pid\":%u}",checksum,(unsigned)getpid());return 0;
     }
     if(!strcmp(op,"bootstrap_close")) {
-        if(!c->bootstrap||c->directory_registered||c->holder||c->owner||c->domain||c->lifecycle.pending)return -1;
+        if(!c->bootstrap||c->directory_registered||c->allocation_owned||c->holder||c->owner||c->domain||c->lifecycle.pending)return -1;
         if(uflow_pool_platform_close(&c->platform))return -1;
         c->bootstrap=false;c->ready=false;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"canary_closed\":true,\"canary_bytes\":0,\"cleanup_required\":false}");return 0;
     }
     if(!strcmp(op,"allocate")) {
         const char *key=pool_get(req,"pool_id");
-        if(!c->bootstrap||!c->ready||!c->directory_registered||!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
+        if(!c->bootstrap||!c->ready||!c->directory_registered||c->allocation_owned||c->holder||!*key||pool_u64(req,"nbytes",&n)||!n||n>(128ULL<<20)||n%65536)return -1;
         if(snprintf(c->session,sizeof(c->session),"owner-%s",key)>=(int)sizeof(c->session))return -1;
         operation(c,id,"allocate");
         struct mem_service_client_allocate request={.key=key,.idempotency_key=id,.session_id=c->session,
             .size_bytes=n,.alignment_bytes=65536,.capabilities=1};
-        c->holder=true; /* Uncertain allocate already carries the named responsibility. */
+        /* ALLOCATE owns an attempted backing, but only ACQUIRE creates a
+         * holder. Retain the named allocation even on uncertain completion;
+         * never invent a holder or ignore NOT_HOLDER during retire. */
+        c->allocation_owned=true;
         if(mem_service_client_allocate_object_at_home(&c->client,&request,c->node,&c->allocation,&status) || status!=MEM_SERVICE_WIRE_STATUS_OK)return -1;
         if(wait_state(c,key,"active"))return -1;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"key\":\"%s\",\"state\":\"active\",\"generation\":%" PRIu64 ",\"incarnation\":%" PRIu64 ",\"nbytes\":%" PRIu64 "}",key,c->allocation.generation,c->allocation.provider_incarnation,c->allocation.size_bytes);
@@ -201,6 +204,7 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         return 0;
     }
     if(!strcmp(op,"unmap")) {
+        if(c->bootstrap||c->allocation_owned)return -1;
         if(strcmp(pool_get(req,"client_session"),c->session))return -1;
         if(c->owner) {
             if(mem_service_mapping_owner_close(c->owner,&status)||status!=MEM_SERVICE_WIRE_STATUS_OK)return -1;
@@ -221,7 +225,7 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
     }
     if(!strcmp(op,"retire")) {
         const char *key=pool_get(req,"key");
-        if(pool_u64(req,"generation",&generation)||generation!=c->allocation.generation||strcmp(key,c->allocation.key)||c->owner)return -1;
+        if(!c->allocation_owned||pool_u64(req,"generation",&generation)||generation!=c->allocation.generation||strcmp(key,c->allocation.key)||c->owner)return -1;
         if(c->holder){if(!*c->owner_release_operation)operation(c,c->owner_release_operation,"owner-release");
             if(mem_service_client_release_object(&c->client,key,c->owner_release_operation,c->session,true,generation,&c->allocation,&status)||status!=MEM_SERVICE_WIRE_STATUS_OK)return -1;
             c->holder=false;}
@@ -231,13 +235,14 @@ static int execute(struct context *c,const struct pool_control *req,char reply[4
         if(mem_service_client_allocation_stats(&c->client,&stats,&status)||status!=MEM_SERVICE_WIRE_STATUS_OK)return -1;
         if(stats.backing_allocated_bytes||stats.address_reserved_bytes||stats.export_mappings||stats.import_mappings||
            stats.live_objects||stats.live_refs||stats.in_flight||stats.quarantined_bytes||stats.quarantined_objects)return -1;
+        c->allocation_owned=false;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"state\":\"retired\",\"backing_bytes\":0,\"address_reserved_bytes\":0,\"export_mappings\":0,\"import_mappings\":0,\"live_refs\":0,\"in_flight\":0,\"quarantined_bytes\":0}");return 0;
     }
     if(!strcmp(op,"inspect")) {
         struct mem_service_mapping_owner_stats stats={0};
         if(c->owner&&mem_service_mapping_owner_inspect(c->owner,&stats))return -1;
         snprintf(reply,4096,"{\"schema\":2,\"phase\":\"completed\",\"contexts\":%u,\"pins\":%u,\"cleanup_required\":%s}",
-            (unsigned)(c->holder||c->owner||c->lifecycle.pending),stats.cpu_pins+stats.compute_pins+stats.in_flight_pins,
+            (unsigned)(c->allocation_owned||c->holder||c->owner||c->lifecycle.pending),stats.cpu_pins+stats.compute_pins+stats.in_flight_pins,
             c->lifecycle.pending||stats.mapping_pending||stats.holder_pending?"true":"false");return 0;
     }
     return -1;
@@ -256,11 +261,11 @@ int uflow_pool_client(int fd,const char *connect,const char *node,const char *bo
         if(!strchr(line,'\n')||pool_parse(line,&req)||pool_u64(&req,"schema",&schema)||schema!=2||execute(&c,&req,reply)) {
             unsigned saved_errno=(unsigned)errno;
             fprintf(output,"UFPOOL_FAILURE_NOTICE\n");fflush(output);
-            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s%s%s}",
-                saved_errno,c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false",*c.startup_diagnostic?",":"",c.startup_diagnostic);
+            snprintf(reply,sizeof(reply),"{\"schema\":2,\"phase\":\"unknown\",\"reason\":\"SDK operation unconfirmed; retain same context\",\"errno\":%u,\"allocation_owned\":%s,\"holder_pending\":%s,\"mapping_pending\":%s,\"owner_present\":%s%s%s}",
+                saved_errno,c.allocation_owned?"true":"false",c.holder?"true":"false",c.lifecycle.pending?"true":"false",c.owner?"true":"false",*c.startup_diagnostic?",":"",c.startup_diagnostic);
         }
         fprintf(output,"%s\n",reply);fflush(output);
     }
     /* No destructor fabricates unmap/release on a disconnected command pipe. */
-    return c.holder||c.owner||c.lifecycle.pending||c.platform||c.directory_registered?3:0;
+    return c.allocation_owned||c.holder||c.owner||c.lifecycle.pending||c.platform||c.directory_registered?3:0;
 }

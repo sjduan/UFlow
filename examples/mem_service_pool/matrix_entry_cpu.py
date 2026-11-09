@@ -87,10 +87,16 @@ def main():
   assert {e['writer']['node'] for e in directions[:2]}=={'nodeA','nodeB'}
   barrier=next(e for e in events if e['event']=='E3-real-lifetime-barrier');assert len(set(barrier['independent_host_pids']))==3
   assert any(e['event']=='E4-two-layer-release' for e in events) and not memory.exists()
+  calls=[e for e in events if e['event']=='lower-control']
+  allocated=[e for e in calls if e['operation']==0x70 and e['origin']['role']=='root']
+  assert len(allocated)==1 and allocated[0]['response_metadata']['live_refs']=='0'
+  assert not any(e['operation']==0x72 and e['origin']['role']=='root' for e in calls),'ALLOCATE does not create a holder to RELEASE'
+  assert any(e['operation']==0x73 and e['origin']['role']=='root' and e['status']==0 for e in calls)
   original=json.loads((out/'E1-E4.json').read_bytes());assert original['capacity']==48<<20 and original['final_B_total_bytes']==76<<20
   result={'pass':True,'actual_matrix_and_nested_callback':True,'actual_Rust_C_SDK_sockets':True,'actual_CPU_shared_mapping_all_bytes':True,
    'budget_sequence':states,'both20MiB_directions':True,'independent_full_guards':True,'three_client_lifetime_barrier':True,
    'negative64_and_new_live_Unknown_guard':True,'historical_Unknown_query_and_retry_denied':True,'normal_current_drain_keeps_reserved64':True,
+   'SDK_allocate_has_no_holder_and_no_spurious_owner_RELEASE':True,
    'CPU_import_canary_worker_platform_QEMU_Image_gate_doubles':True,'real_Guest_or_OBMM_or_production_lineage':False,'actual_capacity':48<<20}
   (a.output/'results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
  finally:

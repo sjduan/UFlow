@@ -298,9 +298,10 @@ def matrix(root,config,build):
                 'peak_B_responsibility':CAPACITY+bootstrap_bytes+RETAINED+RETAINED_RESERVED,'final_B_charged_bytes':RETAINED,
                 'final_B_reserved_bytes':RETAINED_RESERVED,'final_B_total_bytes':RETAINED+RETAINED_RESERVED,
                 'A_historical_bytes_unqueried':128*M,'global_responsibility_zero_claimed':False},indent=2))
-        except BaseException:
+        except BaseException as error:
             notify_failure()  # Never perform potentially blocking state capture before notice.
             event({'event':'matrix-failure','original_pool':pool,'same_pool_retained':True,
+                   'error_type':type(error).__name__,'detail':str(error)[:1600],
                    'unknown_not_reconciled_by_process_death':True})
             raise
     normal_closed=False

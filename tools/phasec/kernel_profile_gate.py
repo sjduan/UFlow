@@ -3,7 +3,7 @@
 Necessary capability evidence, never a Guest PASS or authority to boot. The
 selected manifest digest must come from the reviewed immutable launch config.
 """
-import hashlib,json,re,stat,zlib
+import hashlib,json,os,re,stat,zlib
 from pathlib import Path
 KERNEL='c2def7c931e6451d89727dec0c6f892abe28ba00'
 BASE='18f81737d7e2a7bdaa0b72a3c86bf5b2c7ff3fd742434437ffa8926be5deb4fd'
@@ -20,8 +20,11 @@ def unique(items):
     return d
 def bounded(p,maximum):
     require(not p.is_symlink() and stat.S_ISREG(p.stat().st_mode) and p.stat().st_size<=maximum,'bounded regular file')
-    with p.open('rb') as f:b=f.read(maximum+1)
-    require(len(b)<=maximum,'file grew beyond bound');return b
+    fd=os.open(p,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_CLOEXEC',0))
+    with os.fdopen(fd,'rb') as f:
+        before=os.fstat(f.fileno());require(stat.S_ISREG(before.st_mode) and before.st_size<=maximum,'actual bounded regular FD')
+        b=f.read(maximum+1);after=os.fstat(f.fileno())
+    require(len(b)==before.st_size==after.st_size and len(b)<=maximum and before.st_mtime_ns==after.st_mtime_ns,'file changed while hashing');return b
 def embedded(image):
     require(len(image)<=MAX_IMAGE and image.count(b'IKCFG_ST')==image.count(b'IKCFG_ED')==1,'one complete embedded config')
     start=image.index(b'IKCFG_ST')+8;end=image.index(b'IKCFG_ED');require(0<end-start<=MAX_CONFIG,'bounded ordered config stream')
@@ -44,21 +47,21 @@ def values(raw):
 def check(image_path,manifest_path,manifest_sha256,base_image,*,allowed_root):
     paths=[image_path,manifest_path,base_image]
     for p in paths:
-        require(p.is_absolute() and p.is_relative_to(allowed_root),'task-local absolute path')
+        require(p.is_absolute() and p==p.resolve() and p.is_relative_to(allowed_root.resolve()),'task-local canonical absolute path')
         require(not any(q.is_symlink() for q in [p,*p.parents] if q.is_relative_to(allowed_root)),'no symlink path components')
     raw=bounded(manifest_path,1<<20);require(sha(raw)==manifest_sha256,'reviewed producer manifest digest')
     m=json.loads(raw,object_pairs_hook=unique)
     required=['schema','interface','profile_id','kernel_commit','base_Image_sha256','base_embedded_config_sha256','resolved_config_diff','source_manifest_sha256','compiler_and_build_argv','outputs','embedded_config_sha256','required_builtin_config','real_symbol_and_obmm_call_evidence','old_baseline_unchanged','runtime_tested']
     require(all(k in m for k in required),'complete producer provenance')
-    require(m['schema']==1 and m['interface']=='mem-service-private-kernel-profile-v1' and m['profile_id']=='mem-service-gsva-separated-v1' and
+    require(type(m['schema']) is int and m['schema']==1 and m['interface']=='mem-service-private-kernel-profile-v1' and m['profile_id']=='mem-service-gsva-separated-v1' and
         m['kernel_commit']==KERNEL and m['base_Image_sha256']==BASE and m['base_embedded_config_sha256']==BASE_CONFIG,'versioned exact profile/source/base identity')
-    require(set(m['required_builtin_config'])==set(REQUIRED) and m['runtime_tested'] is False and m['old_baseline_unchanged'] is True,'host-only complete profile')
+    require(type(m['required_builtin_config']) is list and len(m['required_builtin_config'])==len(REQUIRED) and set(m['required_builtin_config'])==set(REQUIRED) and m['runtime_tested'] is False and m['old_baseline_unchanged'] is True,'host-only complete profile')
     require(isinstance(m['compiler_and_build_argv'],list) and m['compiler_and_build_argv'] and m['real_symbol_and_obmm_call_evidence'],'actual compiler/link/OBMM provenance')
     outputs=m['outputs'];require(isinstance(outputs,dict),'named producer outputs')
     data={}
     for name,limit in [('Image',MAX_IMAGE),('vmlinux',512<<20),('System.map',64<<20),('.config',MAX_CONFIG),('source-manifest.json',4<<20)]:
         row=outputs.get(name);require(isinstance(row,dict) and {'path','bytes','sha256'}<=row.keys(),'bound '+name)
-        p=Path(row['path']);require(p.is_absolute() and p.is_relative_to(allowed_root) and not any(q.is_symlink() for q in [p,*p.parents] if q.is_relative_to(allowed_root)),'controlled output '+name)
+        p=Path(row['path']);require(type(row['bytes']) is int and row['bytes']>0 and p.is_absolute() and p==p.resolve() and p.is_relative_to(allowed_root.resolve()) and not any(q.is_symlink() for q in [p,*p.parents] if q.is_relative_to(allowed_root)),'controlled output '+name)
         b=bounded(p,limit);require(len(b)==row['bytes'] and sha(b)==row['sha256'],'actual output hash/size '+name);data[name]=b
     require(Path(outputs['Image']['path'])==image_path and sha(data['Image'])!=BASE,'selected new Image membership; old disabled Image denied')
     require(data['vmlinux'][:4]==b'\x7fELF' and len(data['vmlinux'])>20 and int.from_bytes(data['vmlinux'][18:20],'little')==183,'actual aarch64 vmlinux')
