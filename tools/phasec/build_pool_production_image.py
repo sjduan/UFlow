@@ -27,7 +27,7 @@ def closure(argv,cwd):
  for p in sorted(deps):
   assert p.is_file() and p.stat().st_size<=128<<20;records[str(p)]={'bytes':p.stat().st_size,'sha256':sha(p),'compiler_generated_intermediate':p.is_relative_to(cwd)}
  return records
-def main(root,source,name,reuse=False):
+def main(root,source,name,reuse=False,reuse_cpu=False):
  assert str(root)==ROOT and 'UFLOW_ENV_CLOSE_FD' in os.environ and re.fullmatch('build-host[0-9]{3}',name)
  generation=name[-3:];assert int(generation)>=64 and source==root/'implementation'/('source-host'+generation)
  out=root/'implementation'/name;out.mkdir(exist_ok=False);manifest=json.loads((source/'.uflow-source.json').read_bytes())
@@ -64,7 +64,7 @@ def main(root,source,name,reuse=False):
   assert set(linked['files'])==set(manifest['files'])
   for rel,row in linked['files'].items():
    assert sha(link_source/rel)==row['sha256']
-   if rel!='tools/phasec/build_pool_production_image.py':assert manifest['files'][rel]==row
+   if rel not in {'tools/phasec/build_pool_production_image.py','examples/mem_service_pool/agent_pid1_cpu.py'}:assert manifest['files'][rel]==row
   for name_link in ['pool-agent','pool-guest-init']:
    src=link_out/name_link;assert src.is_file() and src.read_bytes()[:4]==b'\x7fELF';shutil.copyfile(src,out/name_link);(out/name_link).chmod(0o755);assert sha(src)==sha(out/name_link)
  for value in baseline['compiler_argv']:
@@ -86,12 +86,25 @@ def main(root,source,name,reuse=False):
   p=Path(value).resolve();inputs[str(p)]={'bytes':p.stat().st_size,'sha256':sha(p),'compiler_generated_intermediate':False}
  neutral=[sdk/'src/lingqu/mem_service'/n for n in ['mem_service_client.c','mem_service_wire_client.c','mem_service_provider.c','mem_service_mapping_owner.c']]
  common=[own/n for n in ['pool_agent.c','pool_client.c','pool_worker.c','pool_agent_io.c']]
- run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-pthread','-DUFLOW_POOL_CPU_FIXTURE','-I'+str(sdk/'include/lingqu/mem_service'),'-I'+str(own),*common,source/'examples/mem_service_pool/fixture_platform.c',*neutral,'-o',out/'cpu-agent'],'CPU-agent-link')
- run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-DUFLOW_POOL_LAUNCHER_FIXTURE',own/'pool_guest_init.c','-o',out/'cpu-guest-init'],'CPU-PID1-link')
- for script in ['launcher_cpu.py','journal_cpu.py']:
-  run([sys.executable,'-B',source/'examples/mem_service_pool'/script,'--launcher',out/'cpu-guest-init','--output',out/script.removesuffix('.py')],script,60)
- for pattern in ['test_normal_journal_shutdown.py','test_pool_image.py','test_execution_draft.py']:
-  run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p',pattern],pattern,30)
+ cpu_out=out;cpu_commit=manifest['commit']
+ if reuse_cpu:
+  assert reuse and int(generation)>65;closed=json.loads((root/'runs/cb094/result.json').read_bytes())['processes'];assert closed['actual_task_exit_code']==1 and closed['process_tree_empty'] and closed['task_resources_closed'] and not closed['remaining'] and not closed['evidence_errors']
+  cpu_out=root/'implementation/build-host065';cpu_source=root/'implementation/source-host065';cpu_m=json.loads((cpu_source/'.uflow-source.json').read_bytes());cpu_commit=cpu_m['commit']
+  assert set(cpu_m['files'])==set(manifest['files'])
+  for rel,row in cpu_m['files'].items():
+   assert sha(cpu_source/rel)==row['sha256']
+   if rel not in {'tools/phasec/build_pool_production_image.py','examples/mem_service_pool/agent_pid1_cpu.py'}:assert manifest['files'][rel]==row
+  for script in ['launcher_cpu','journal_cpu']:assert json.loads((cpu_out/script/'results.json').read_bytes())['pass']
+  for pattern,count in [('test_normal_journal_shutdown.py',2),('test_pool_image.py',3),('test_execution_draft.py',2)]:
+   log=(cpu_out/(pattern+'.log')).read_text();assert f'Ran {count} tests' in log and '\nOK\n' in log
+  for item in ['cpu-agent','cpu-guest-init']:shutil.copyfile(cpu_out/item,out/item);(out/item).chmod(0o755);assert sha(out/item)==sha(cpu_out/item)
+ else:
+  run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-pthread','-DUFLOW_POOL_CPU_FIXTURE','-I'+str(sdk/'include/lingqu/mem_service'),'-I'+str(own),*common,source/'examples/mem_service_pool/fixture_platform.c',*neutral,'-o',out/'cpu-agent'],'CPU-agent-link')
+  run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-DUFLOW_POOL_LAUNCHER_FIXTURE',own/'pool_guest_init.c','-o',out/'cpu-guest-init'],'CPU-PID1-link')
+  for script in ['launcher_cpu.py','journal_cpu.py']:
+   run([sys.executable,'-B',source/'examples/mem_service_pool'/script,'--launcher',out/'cpu-guest-init','--output',out/script.removesuffix('.py')],script,60)
+  for pattern in ['test_normal_journal_shutdown.py','test_pool_image.py','test_execution_draft.py']:
+   run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p',pattern],pattern,30)
  run([sys.executable,'-B',source/'examples/mem_service_pool/agent_pid1_cpu.py','--agent',out/'cpu-agent','--worker',root/'implementation/build-host046/cpu-worker',
       '--launcher',out/'cpu-guest-init','--controller',sdk/'bin/linqu_mem_service','--scratch',root/('i'+generation),'--output',out/'actual-agent-PID1-SDK-normal-close'],'actual-agent-PID1-SDK-normal-close',90)
  base=root/'src/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz';assert sha(base)==baseline['base_sha256']
@@ -122,9 +135,10 @@ def main(root,source,name,reuse=False):
   'SDK_manifest_sha256':hashlib.sha256(json.dumps(sdk_pins,sort_keys=True,separators=(',',':')).encode()).hexdigest(),'installed_sdk_manifest':sdk_pins,
   'official_worker_reused':worker,'agent_PID1_compiler_closure':str(out/'compiler-inputs.json'),'compiler_input_count':len(inputs),'compiler_inputs_sha256':sha(out/'compiler-inputs.json'),
   'daemon':str(daemon),'daemon_sha256':sha(daemon),'daemon_single_link':True,'daemon_compiled_source_commit':rust['source_commit'],'no_new_Cargo_or_worker_build':True,
-  'new_agent_PID1_SDK_CPU':json.loads((out/'actual-agent-PID1-SDK-normal-close/results.json').read_bytes()),'finite_exit':json.loads((out/'launcher_cpu/results.json').read_bytes()),'journal':json.loads((out/'journal_cpu/results.json').read_bytes()),
+  'CPU_compiled_source_commit':cpu_commit,'CPU_fixtures_and_completed_tests_reused_from':str(cpu_out) if reuse_cpu else None,
+  'new_agent_PID1_SDK_CPU':json.loads((out/'actual-agent-PID1-SDK-normal-close/results.json').read_bytes()),'finite_exit':json.loads((cpu_out/'launcher_cpu/results.json').read_bytes()),'journal':json.loads((cpu_out/'journal_cpu/results.json').read_bytes()),
   'commands':commands,'original_c081_sha256_before_after':pin,'actual_Guest_QMP_original_lock_ledger_device':False,'production_controller_ready':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));draft=prepare(receipt);(out/'execution-preparation.json').write_bytes(encode(draft))
  print(json.dumps({'pass':True,'image_sha256':receipt['image_sha256'],'image_bytes':receipt['image_bytes'],'source_commit':manifest['commit'],'production_runtime_ready':False}))
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',required=True);p.add_argument('--reuse-linked-host064',action='store_true');a=p.parse_args();main(a.root,a.source,a.output,a.reuse_linked_host064)
+ p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',required=True);p.add_argument('--reuse-linked-host064',action='store_true');p.add_argument('--reuse-host065-fixtures',action='store_true');a=p.parse_args();main(a.root,a.source,a.output,a.reuse_linked_host064,a.reuse_host065_fixtures)

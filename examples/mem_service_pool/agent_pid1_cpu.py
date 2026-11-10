@@ -29,7 +29,7 @@ def main():
      if 'EOF' not in str(error):raise
      break
    child=owned[name];assert child.wait(timeout=1)==0
-   raw=(a.output/(name+'.serial.log')).read_bytes();summary,reconstructed=capture(raw.decode());assert summary['complete'] and reconstructed==fixture
+   raw=(h.output/(name+'.serial.log')).read_bytes();summary,reconstructed=capture(raw.decode());assert summary['complete'] and reconstructed==fixture
    assert raw.count(b'UFLOW_ENV_DAEMON_CLOSED\n')==1 and b'UFPOOL_FAILURE_NOTICE' not in raw
    assert raw.index(b'UFPOOL_WORKERS_CLOSED')<raw.index(b'UFPOOL_JOURNAL_BEGIN')<raw.index(b'UFPOOL_JOURNAL_END')<raw.index(b'UFPOOL_LAUNCHER_CLOSED')<raw.index(b'UFLOW_ENV_DAEMON_CLOSED')
    assert birth(child.pid) is None
