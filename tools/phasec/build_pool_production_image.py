@@ -27,7 +27,7 @@ def closure(argv,cwd):
  for p in sorted(deps):
   assert p.is_file() and p.stat().st_size<=128<<20;records[str(p)]={'bytes':p.stat().st_size,'sha256':sha(p),'compiler_generated_intermediate':p.is_relative_to(cwd)}
  return records
-def main(root,source,name):
+def main(root,source,name,reuse=False):
  assert str(root)==ROOT and 'UFLOW_ENV_CLOSE_FD' in os.environ and re.fullmatch('build-host[0-9]{3}',name)
  generation=name[-3:];assert int(generation)>=64 and source==root/'implementation'/('source-host'+generation)
  out=root/'implementation'/name;out.mkdir(exist_ok=False);manifest=json.loads((source/'.uflow-source.json').read_bytes())
@@ -55,19 +55,33 @@ def main(root,source,name):
   argv=list(map(str,argv));commands.append({'label':label,'argv':argv})
   with (out/(label+'.log')).open('xb') as log:subprocess.run(argv,cwd=kwargs.pop('cwd',out),env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=timeout,**kwargs)
  own=source/'crates/uf-ub-sim-agent/c';argv=[]
+ link_source=source;link_out=out;link_commit=manifest['commit']
+ if reuse:
+  assert int(generation)>64
+  closed=json.loads((root/'runs/cb093/result.json').read_bytes())['processes'];assert closed['actual_task_exit_code']==1 and closed['process_tree_empty'] and closed['task_resources_closed'] and not closed['remaining'] and not closed['evidence_errors']
+  failure=(root/'runs/cb093/command-00.log').read_text();assert "FileNotFoundError: [Errno 2] No such file or directory: '/usr/local/bin/aarch64-linux-gnu-readelf'" in failure
+  link_source=root/'implementation/source-host064';link_out=root/'implementation/build-host064';linked=json.loads((link_source/'.uflow-source.json').read_bytes());link_commit=linked['commit']
+  assert set(linked['files'])==set(manifest['files'])
+  for rel,row in linked['files'].items():
+   assert sha(link_source/rel)==row['sha256']
+   if rel!='tools/phasec/build_pool_production_image.py':assert manifest['files'][rel]==row
+  for name_link in ['pool-agent','pool-guest-init']:
+   src=link_out/name_link;assert src.is_file() and src.read_bytes()[:4]==b'\x7fELF';shutil.copyfile(src,out/name_link);(out/name_link).chmod(0o755);assert sha(src)==sha(out/name_link)
  for value in baseline['compiler_argv']:
-  if '/implementation/source-host046/' in value:value=value.replace('/implementation/source-host046/','/implementation/source-host'+generation+'/')
-  elif value==str(root/'implementation/build-host046/pool-agent'):value=str(out/'pool-agent')
+  if '/implementation/source-host046/' in value:value=value.replace(str(root/'implementation/source-host046'),str(link_source))
+  elif value==str(root/'implementation/build-host046/pool-agent'):value=str(link_out/'pool-agent')
   argv.append(value)
- argv.extend(['-save-temps=obj','-Wl,-Map='+str(out/'agent.link.map')]);run(argv,'production-agent-link')
+ argv.extend(['-save-temps=obj','-Wl,-Map='+str(link_out/'agent.link.map')])
+ if not reuse:run(argv,'production-agent-link')
  compiler=argv[:argv.index('-I'+str(sdk/'include/lingqu/mem_service'))];assert compiler==['/usr/local/bin/aarch64-linux-gnu-gcc','-O2','-Wall','-Wextra','-static','-pthread','-D__EXPORTED_HEADERS__']
- run([*compiler,own/'pool_guest_init.c','-o',out/'pool-guest-init'],'production-PID1-link')
+ if not reuse:run([*compiler,own/'pool_guest_init.c','-o',out/'pool-guest-init'],'production-PID1-link')
+ readelf=shutil.which('readelf');assert readelf,'existing generic ELF inspection tool required; no implicit install'
  for p in [out/'pool-agent',out/'pool-guest-init',worker_elf]:
   data=p.read_bytes();assert data[:4]==b'\x7fELF' and int.from_bytes(data[18:20],'little')==183
-  header=subprocess.check_output(['/usr/local/bin/aarch64-linux-gnu-readelf','-l',str(p)],timeout=10);assert b'INTERP' not in header
- inputs=closure(argv,out)
+  header=subprocess.check_output([readelf,'-l',str(p)],timeout=10);assert b'INTERP' not in header
+ inputs=closure(argv,link_out)
  # PID1 shares the same target toolchain. Obtain its complete source/header set.
- dep=subprocess.check_output([*compiler,'-M',str(own/'pool_guest_init.c')],timeout=30).decode().replace('\\\n',' ')
+ dep=subprocess.check_output([*compiler,'-M',str(link_source/'crates/uf-ub-sim-agent/c/pool_guest_init.c')],timeout=30).decode().replace('\\\n',' ')
  for value in shlex.split(dep.split(':',1)[1]):
   p=Path(value).resolve();inputs[str(p)]={'bytes':p.stat().st_size,'sha256':sha(p),'compiler_generated_intermediate':False}
  neutral=[sdk/'src/lingqu/mem_service'/n for n in ['mem_service_client.c','mem_service_wire_client.c','mem_service_provider.c','mem_service_mapping_owner.c']]
@@ -104,7 +118,7 @@ def main(root,source,name):
  assert sha(state)==pin and not (authority/'successor-c081-terminal-domain-loss-v3').exists()
  receipt={'kind':'CProductionImageHostBuildV1','pass':True,'source_commit':manifest['commit'],'source_manifest_sha256':sha(source/'.uflow-source.json'),'source_files':len(manifest['files']),
   'image':str(image),'image_sha256':sha(image),'image_bytes':image.stat().st_size,'image_members':len(after),'base_sha256':sha(base),'unrelated_base_members_byte_identical':True,
-  'agent_sha256':sha(out/'pool-agent'),'launcher_sha256':sha(out/'pool-guest-init'),'worker_sha256':sha(worker_elf),'worker_inputs':233,'SDK_files':53,
+  'agent_sha256':sha(out/'pool-agent'),'launcher_sha256':sha(out/'pool-guest-init'),'ARM_compiled_source_commit':link_commit,'ARM_links_reused_from':str(link_out) if reuse else None,'ARM_compiler_argv':argv,'readelf':readelf,'worker_sha256':sha(worker_elf),'worker_inputs':233,'SDK_files':53,
   'SDK_manifest_sha256':hashlib.sha256(json.dumps(sdk_pins,sort_keys=True,separators=(',',':')).encode()).hexdigest(),'installed_sdk_manifest':sdk_pins,
   'official_worker_reused':worker,'agent_PID1_compiler_closure':str(out/'compiler-inputs.json'),'compiler_input_count':len(inputs),'compiler_inputs_sha256':sha(out/'compiler-inputs.json'),
   'daemon':str(daemon),'daemon_sha256':sha(daemon),'daemon_single_link':True,'daemon_compiled_source_commit':rust['source_commit'],'no_new_Cargo_or_worker_build':True,
@@ -113,4 +127,4 @@ def main(root,source,name):
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));draft=prepare(receipt);(out/'execution-preparation.json').write_bytes(encode(draft))
  print(json.dumps({'pass':True,'image_sha256':receipt['image_sha256'],'image_bytes':receipt['image_bytes'],'source_commit':manifest['commit'],'production_runtime_ready':False}))
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',required=True);a=p.parse_args();main(a.root,a.source,a.output)
+ p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',required=True);p.add_argument('--reuse-linked-host064',action='store_true');a=p.parse_args();main(a.root,a.source,a.output,a.reuse_linked_host064)
