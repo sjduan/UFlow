@@ -26,6 +26,7 @@ def main():
  a.scratch.mkdir();a.output.mkdir();h=Harness(a,0,lower=False);servers=[];catalog=[];observed=[];states=[]
  notice=NoticeOnce(h.notice)
  out=a.scratch/'runs/1';out.mkdir(parents=True);env=a.scratch/'env';env.mkdir()
+ original_state=out/'terminal-origin'/('current-state.json' if a.chain_terminal_domain else 'original-state.json')
  (env/'mem-service-sdk').symlink_to(a.controller.parent.parent,target_is_directory=True)
  sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
  daemon=a.scratch/'catalog-fixture';daemon.symlink_to(a.image)
@@ -116,7 +117,7 @@ def main():
   assert str(endpoint)==str(out/'u.sock'),'Catalog endpoint shadowed by Guest bridge'
   if a.terminal_domain and method=='ActivateManagedBootstrap':
    prepared=out/'prepared-provider.json';good=json.loads(prepared.read_bytes());bad=copy.deepcopy(good)
-   old=json.loads((out/'terminal-origin/original-state.json').read_bytes())['bootstrap_readiness']['nodes']['nodeA']
+   old=json.loads(original_state.read_bytes())['bootstrap_readiness']['nodes']['nodeA']
    node=next(v for v in bad['nodes'] if v['node']=='nodeA')
    for key in ('boot_id','agent_session','incarnation'):node[key]=old[key]
    for key in ('registration','directory'):
@@ -131,7 +132,7 @@ def main():
   if method=='CreateManagedPool' and values['nbytes']==48<<20:
    s=state();assert s['charged_bytes']==16<<20 and s['creation_reserved_bytes']==64<<20 and s['pools']==[]
    if a.terminal_domain:
-    old=json.loads((out/'terminal-origin/original-state.json').read_bytes())
+    old=json.loads(original_state.read_bytes())
     history={'pool':old['quarantined_pools'][0]}
     try:real_exchange(endpoint,'QueryPoolOperation',{'target_operation_id':'45282a1e-2287-4be6-97fa-0e7313c75818'})
     except PoolV2Unknown:raise

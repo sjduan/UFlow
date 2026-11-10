@@ -3,7 +3,8 @@ import argparse,hashlib,json,os,subprocess,sys
 from pathlib import Path
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main(root,source,name):
- assert str(root)=='/workspace/uflow/runs/mem-service-shared-pool-20261108' and name=='build-host060' and 'UFLOW_ENV_CLOSE_FD' in os.environ
+ assert str(root)=='/workspace/uflow/runs/mem-service-shared-pool-20261108' and name.startswith('build-host') and len(name)==13 and name[-3:].isdecimal() and int(name[-3:])>=60 and 'UFLOW_ENV_CLOSE_FD' in os.environ
+ generation=name[-3:];assert source==root/'implementation'/('source-host'+generation)
  out=root/'implementation'/name;out.mkdir(exist_ok=False);old=root/'implementation/source-host059';m=json.loads((old/'.uflow-source.json').read_bytes());new=json.loads((source/'.uflow-source.json').read_bytes())
  allowed={'tools/phasec/run_mem_service_pool_matrix.py','examples/mem_service_pool/matrix_entry_cpu.py'};added={'tools/phasec/resume_case_chain_cpu_host.py'}
  assert set(new['files'])-set(m['files'])==added and not set(m['files'])-set(new['files'])
@@ -20,7 +21,7 @@ def main(root,source,name):
  with (out/'three-generation-normal-CPU-matrix.log').open('xb') as log:
   subprocess.run(list(map(str,[sys.executable,'-B',source/'examples/mem_service_pool/matrix_entry_cpu.py','--chain-terminal-domain',
    '--agent',cbase/'cpu-agent','--worker',cbase/'cpu-worker','--controller',root/'env/mem-service-sdk/bin/linqu_mem_service',
-   '--scratch',root/'z060','--output',out/'three-generation-normal-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'])),
+   '--scratch',root/('z'+generation),'--output',out/'three-generation-normal-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'])),
    cwd=source,env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=900)
  assert sha(state)==pin and not (root/'implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3').exists()
  for p,v in before.items():assert sha(Path(p))==v
