@@ -55,3 +55,17 @@ def verify_current_fm(out):
     old,report=historical62();raw=(out/'fm-carrier-active.json').read_bytes();ap_require(len(raw)<=65536,'bounded new active inventory')
     rows=json.loads(raw)['files'];_validate_new_rows(out,rows,old)
     return {**report,'new_files':10,'independent_from_all_historical62':True,'new_inventory_sha256':hashlib.sha256(raw).hexdigest()}
+
+def verify_c081_fm(out,admission):
+    from managed_gate_v3 import require_runtime
+    from accepted_producers import ap_bound,ap_decode
+    admission=require_runtime(admission);out=Path(out)
+    ap_require(out==AP_ROOT/'runs'/admission.context['job'] and out.resolve()==out,'actual admitted new managed FM namespace')
+    candidate=ap_decode(ap_bound(admission.anchors['code_and_data']['terminal_candidate'],128<<10));rows=candidate['physical_closure']['files'];ap_require(len(rows)==73,'all retained73 identities required')
+    aliases=set();roots=set()
+    for row in rows:
+        p=Path(row['path']);m=p.lstat();ap_require(p.resolve()==p and m.st_uid==os.geteuid() and m.st_nlink==1 and (m.st_dev,m.st_ino,m.st_uid,stat.S_IFMT(m.st_mode),m.st_size)==(row['dev'],row['inode'],row['uid'],row['file_type'],row['bytes']),'retained73 metadata identity drift')
+        roots.add(next(q for q in p.parents if q.name=='fm' and q.parent.parent==AP_ROOT/'runs'));a=set(map(tuple,row['kernel_inode_aliases']));ap_require((m.st_dev,m.st_ino) in a,'actual old kernel alias missing');aliases.update(a)
+    ap_require(set().union(*(_files(root) for root in roots))=={Path(r['path']) for r in rows},'unexpected or missing retained73 file')
+    raw=(out/'fm-carrier-active.json').read_bytes();ap_require(len(raw)<=65536,'bounded new inventory');_validate_new_rows(out,json.loads(raw)['files'],aliases)
+    return {'historical_files':73,'new_files':10,'independent_from_all_historical73':True,'new_inventory_sha256':hashlib.sha256(raw).hexdigest(),'FM_payload_contents_read':False,'SDK_ACK_inferred':False,'quarantined_markers_normal_registered':False}

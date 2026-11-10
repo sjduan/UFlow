@@ -29,11 +29,12 @@ class ControlTests(unittest.TestCase):
         self.book.observe_worker_publication({'node':'nodeA','incarnation':7},{'role':'worker','pid':123,'birth':456},0x7a,{'key':'pool','generation':'1','incarnation':'7','node_id':'nodeA','descriptor_hex':encoded},{'status':'ok','key':'pool','generation':'1','descriptor_hex':encoded})
         public=self.c.descriptor_metadata(encoded);bindings={}
         for role,pid,map_id in [('home',111,101),('importer',222,102)]:
-            alias={**public,'map_id':map_id,'lease_epoch':71}
+            native={**public,'map_id':map_id,'lease_epoch':71,'offset':65536,'length':20<<20}
+            alias={k:str(v) if k in self.c.FIELDS64 else v for k,v in native.items()}
             def control(wire,deadline,role=role,pid=pid,alias=alias):
                 command=self.c.decode(wire);op=command['operation'];self.events.append(role+'-'+op);self.assertLessEqual(deadline,time.monotonic()+5.01)
                 reply={'version':1,'feature':self.c.FEATURE,'pid':pid,'operation':op,'request_sha256':self.c.request_sha256(wire),'control_generation':str(command['control_generation']),
-                       **{k:command[k] for k in self.c.HASHES},'code':'ok','active':op=='begin','in_flight':0,'cache_pages':0,'native_alias':copy.deepcopy(alias),'counters':{'fills':0,'hits':0}}
+                       **{k:command[k] for k in self.c.HASHES},'code':'ok','active':op=='begin','in_flight':0,'cache_pages':0,'native_alias':copy.deepcopy(alias),'scope':'UFlow-Catalog-managed-only','counters':{**{k:'0' for k in self.c.COUNTERS},'saturated':False}}
                 if self.bad:self.bad(op,reply)
                 return json.dumps(reply)
             bindings[role]={'pid':pid,'alias':alias,'control':control,'recheck':lambda:self.events.append('actual-QEMU-profile-recheck-seam')}

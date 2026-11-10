@@ -149,6 +149,7 @@ def binding():return _selection(_ACCEPTED_PROFILE)
 
 def launch_qemu_gate(root,config):
     require(Path(root)==ROOT,'fixed task root required')
+    if 'managed_cache_profile' in config:raise ValueError('production-not-ready: actual v3 E0 RuntimeAdmission required before new managed profile IO')
     if 'qemu_profile' in config:
         require(_ACCEPTED_PROFILE is not None,'not-ready: actual manager-accepted E QEMU manifest/validator/dependency/binary pins missing; no fallback or source execution')
         return _validate(root,config,_ACCEPTED_PROFILE,_PRODUCTION)
@@ -160,6 +161,9 @@ def launch_qemu_gate(root,config):
 
 def capture_identity(config,identity):
     _require_production_identity(identity)
+    if 'managed_cache_profile' in config:
+        from managed_gate_v3 import capture_binding
+        return capture_binding(config,identity)
     require(config.get('qemu_binary')==str(identity.binary),'capture binary differs from pre-launch validated identity')
     if 'qemu_profile' in config:
         require(_ACCEPTED_PROFILE is not None and config['qemu_profile']==_selection(_ACCEPTED_PROFILE),'accepted new-profile binding required for capture')

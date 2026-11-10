@@ -111,7 +111,12 @@ def capture_owned_starts(starts_path,expected_starts_sha,config,group_source,qem
     identity=capture_identity(config,qemu_identity if qemu_identity is not None else launch_qemu_gate(ROOT,config))
     raw=bounded(starts_path,65536)
     if hashlib.sha256(raw).hexdigest()!=expected_starts_sha:raise ValueError('frozen starts pin')
-    if hashlib.sha256(bounded(group_source,65536)).hexdigest()!=GROUP_SHA:raise ValueError('frozen group source pin')
+    group_sha=GROUP_SHA
+    if config.get('managed_cache_profile') is not None:
+        from accepted_c081_v3 import v3_anchors
+        ref=v3_anchors()['code_and_data']['wrapper'];group_sha=ref['sha256']
+        if str(group_source)!=ref['path']:raise ValueError('actual managed wrapper runtime path required')
+    if hashlib.sha256(bounded(group_source,65536)).hexdigest()!=group_sha:raise ValueError('frozen group source pin')
     starts=json.loads(raw)
     if len(starts)!=2 or {v['node'] for v in starts}!={'nodeA','nodeB'} or len({(v['pid'],v['birth']) for v in starts})!=2:
         raise ValueError('exact two distinct owned Guest records')
@@ -121,7 +126,7 @@ def capture_owned_starts(starts_path,expected_starts_sha,config,group_source,qem
         value=_observe_profiled(record,node,owner,identity)
         value['node']=record['node'];value['selected_launch_environment']=selected_launch_environment(os.environ,config,record['node'])
         result.append(value)
-    report={'schema':1,'kind':'own-QEMU-metadata-capture','owner':owner,'starts_sha256':expected_starts_sha,'group_source_sha256':GROUP_SHA,
+    report={'schema':1,'kind':'own-QEMU-metadata-capture','owner':owner,'starts_sha256':expected_starts_sha,'group_source_sha256':group_sha,
             'qemu_profile_provenance':identity.metadata(),
             'start_host_ns':begin,'end_host_ns':time.monotonic_ns(),'clock_domain':'B-host','processes':result,
             'scope':'process/namespace/argv/executable/FD/VMA metadata; environment is explicit source-derived inference',

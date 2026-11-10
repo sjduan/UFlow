@@ -85,14 +85,19 @@ def matrix(root,config,build):
     if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('accepted E0 supervisor required')
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
+    admission=None
     if config.get('terminal_case_execution') is not None:
-        raise ValueError('production-not-ready: accepted versioned current E witness/profile/metadata and exact execution context required before producer/lower/original authority IO')
+        from managed_gate_v3 import runtime_admission
+        admission=runtime_admission(config,build)
     if config.get('terminal_current_execution') is not None and config.get('qemu_profile') is None:
         raise ValueError('current-c064 successor requires the accepted private QEMU profile; no legacy fallback')
-    if config.get('managed_cache_profile') is not None:
-        raise ValueError('production-not-ready: accepted new managed native alias/profile/wrapper and execution context required before IO')
+    if config.get('managed_cache_profile') is not None and admission is None:
+        raise ValueError('production-not-ready: actual v3 execution admission required before producer/lower/original IO')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
-    qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
+    if admission is not None:
+        from managed_gate_v3 import selected_identity
+        qemu_identity=selected_identity(admission)
+    else:qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
     if config.get('qemu_profile') is not None:
         from profile_metadata_gate import require_profile_metadata_ready
         require_profile_metadata_ready(qemu_identity)  # Do not discover an unbound audit API after business.
@@ -108,7 +113,9 @@ def matrix(root,config,build):
         argv=node['boot_argv']
         if argv[argv.index('-initrd')+1]!=build['image']:raise RuntimeError('Guest is not using the source-bound image')
     sys.path.insert(0,str(root/'env/guest-kit004'))
-    from uflow_guest_group import run
+    if admission is None:
+        from uflow_guest_group import run
+    else:run=admission.modules['wrapper'].run
     lock=threading.Lock()
     log=(out/'pool-events.jsonl').open('x')
     def event(value):
@@ -143,7 +150,11 @@ def matrix(root,config,build):
         if set(execution)!={'path','sha256'}:raise ValueError('exact current resolved terminal execution binding required')
         reconciliation={'terminal_c064_execution_manifest':execution['path'],
                         'terminal_c064_execution_manifest_sha256':execution['sha256']}
-    provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
+    cache_execution=None
+    if admission is not None:
+        execution=config['terminal_case_execution'];reconciliation={'terminal_case_execution_manifest':execution['path'],'terminal_case_execution_manifest_sha256':execution['sha256']}
+        cache_execution={**execution,'accepted_context':admission.anchors['accepted_context']}
+    provider_config.write_text(json.dumps({**({'managed_cache_execution':cache_execution} if cache_execution is not None else {}),'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
         'reconciliation':reconciliation},indent=2))
@@ -169,20 +180,27 @@ def matrix(root,config,build):
         servers=[]
         peers=[]
         pool=None
+        managed=None
+        publication=None
         try:
-            if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None:
+            if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None or admission is not None:
                 from collect_owned_qemu_metadata import capture_owned_starts
                 starts=out/'guest-starts.json'
                 capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
-                                     root/'env/guest-kit004/uflow_guest_group.py',qemu_identity=qemu_identity)
-            if config.get('terminal_current_execution') is not None:
+                                     Path(admission.anchors['code_and_data']['wrapper']['path']) if admission is not None else root/'env/guest-kit004/uflow_guest_group.py',qemu_identity=qemu_identity)
+            if admission is not None:
+                from current_fm_isolation import verify_c081_fm
+                isolation=verify_c081_fm(out,admission)
+                from managed_cache_control import PublicationBook,production_controller
+                publication=PublicationBook();managed=production_controller(publication,admission=admission,channels=channels,starts=json.loads((out/'guest-starts.json').read_bytes()),event=event)
+            elif config.get('terminal_current_execution') is not None:
                 from current_fm_isolation import verify_current_fm
                 isolation=verify_current_fm(out)
             else:isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
                 name=identity['node']
-                nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm)
+                nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm,**({'managed_control':managed,'publication_book':publication} if admission is not None else {}))
                 nodes[name].thread.start()
                 nodes[name].send('start')
             for node in nodes.values():
@@ -199,7 +217,7 @@ def matrix(root,config,build):
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
                                  'incarnation':identity['incarnation'],'socket':str(bridge_endpoint),**bootstrap[name],
                                  'startup':readiness[name]})
-            prepared_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
+            prepared_config.write_text(json.dumps({**({'managed_cache_execution':cache_execution} if cache_execution is not None else {}),'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
                                                    'home':'nodeA','nodes':bindings},indent=2))
             activated=exchange(endpoint,'ActivateManagedBootstrap',{'admin_token':admin})
             if activated['bootstrap_activated'] is not True:raise RuntimeError('actual current bootstrap not committed into one ledger')
@@ -350,6 +368,8 @@ def matrix(root,config,build):
                 raise RuntimeError('canary checked-close/final ledger not confirmed')
             if daemon.wait(timeout=10)!=0:raise RuntimeError('Catalog normal shutdown failed')
             event({'event':'E4-two-layer-release','retired':retired,'catalog_before_canary_close':final,'shutdown':shutdown})
+            if managed is not None:
+                managed.close();event({'event':'managed-cache-normal-close','outstanding':0,'audit_records':len(managed.audit),'payload_bytes':0})
             for server in servers:server.close()
             for node in nodes.values():node.prepare_close()
             (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':all(i['engine']=='initramfs' for i in identities),
@@ -370,7 +390,9 @@ def matrix(root,config,build):
         lower.send_signal(signal.SIGTERM)
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
-        if config.get('terminal_current_execution') is not None:
+        if admission is not None:
+            event({'event':'managed-v3-postclose-audit-deferred-to-real-monitor-result','normal_native_or_SDK_release_ACK_inferred':False})
+        elif config.get('terminal_current_execution') is not None:
             event({'event':'profile-metadata-final-audit-deferred-until-E0-result-and-ownership-exist',
                    'normal_native_or_SDK_release_ACK_inferred':False})
         elif config.get('terminal_execution') is not None:

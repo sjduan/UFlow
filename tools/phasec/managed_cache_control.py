@@ -10,17 +10,38 @@ from pathlib import Path
 from daemon_peer_auth import AuthenticatedPeer
 from uflow._pool_bridge_v2 import metadata,POOL
 
-CODEC_SHA='84e32ea2325a36b870351a9a000690c0bf32cbf754330da94b316efeaf805284'
+CODEC_SHA='7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db'
 def check(ok,why):
     if not ok:raise ValueError(why)
 def canonical(value):return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode('utf-8')
 def sha(value):return hashlib.sha256(value).hexdigest()
+def native_u64(value):
+    check(type(value) is str and re.fullmatch('0|[1-9][0-9]{0,19}',value) and int(value)<1<<64,'canonical native uint64 text required')
+    return int(value)
 def codec():
-    path=Path(__file__).parents[2]/'examples/mem_service_pool/managed_cache_contract/v1/uflow_managed_cache_codec_v1.py'
+    path=Path(__file__).parents[2]/'examples/mem_service_pool/managed_cache_contract/v2/uflow_managed_cache_codec_v2.py'
     raw=path.read_bytes();check(sha(raw)==CODEC_SHA,'external E codec pin mismatch')
     module=types.ModuleType('_pinned_managed_codec');exec(compile(raw,str(path),'exec'),module.__dict__);return module
-def production_controller(*args,**kwargs):
-    raise ValueError('production-not-ready: accepted new native alias schema/profile/wrapper/current witness required before control IO')
+def production_controller(publication=None,*args,admission=None,channels=None,starts=None,event=None):
+    from managed_gate_v3 import require_runtime
+    from managed_interface_v2 import production_binding
+    from daemon_peer_auth import DaemonPeer
+    admission=require_runtime(admission);check(not args and type(publication) is PublicationBook,'actual shared publication book required')
+    check(type(starts) is list and len(starts)==2 and {r['node'] for r in starts}=={'nodeA','nodeB'} and set(channels)=={'nodeA','nodeB'},'exact actual owning QEMU starts/channels required')
+    by_node={};owned=[];ref=admission.anchors['code_and_data']['qemu_binary']
+    try:
+        for record in starts:
+            peer=DaemonPeer.capture(record['pid'],Path(ref['path']),ref['sha256']);owned.append(peer)
+            check(peer._expected['birth']==record['birth'] and record['argv'][0]==ref['path'],'actual selected QEMU birth/executable mismatch')
+            by_node[record['node']]=production_binding(admission.modules['wrapper'],channels[record['node']],peer,admission=admission)
+    except BaseException:
+        for peer in owned:peer.close()
+        raise
+    class Routes:
+        def __getitem__(self,key):
+            pool,node=key;rows=[r for (p,_),r in publication._rows.items() if p==pool];check(len(rows)==1 and node in by_node,'unique actual native publication required')
+            return {'home':by_node[rows[0]['home']],'importer':by_node[node]}
+    controller=_ManagedController(publication,Routes());controller.event=event;controller.owned_peers=owned;return controller
 
 READ={'schema','op','client_session','offset','nbytes','lease_id','content_version','pattern_id'}
 STRINGS={'cache_pool_id','cache_pool_epoch','cache_provider_session','cache_backing_realm','cache_backing_provider',
@@ -61,36 +82,35 @@ class PublicationBook:
         check(body['cache_backing_resource']==f"{row['home']}:{row['incarnation']}:{row['key']}" and
               body['offset']+body['nbytes']<=row['public']['size'],'actual backing/range publication mismatch');return row
 
-def strict_reply(c,wire,value,pid,alias):
-    # E's interface-v1 validator is intentionally supplemented: Python bool
-    # and float equality must not masquerade as integer counters/version.
-    check(type(value) is str and 0<len(value.encode('ascii'))<=4096,'bounded ASCII native metadata reply required')
+def strict_reply(c,wire,value,pid,alias=None):
+    # Actual v2 ABI: scope; every native u64/range and each of nine counters
+    # is canonical decimal TEXT, uint32/state are exact int, saturated bool.
+    # The real E wrapper returns a dict, not the old HOST-only JSON string API.
     reply=c.validate_reply(wire,value,pid);command=c.decode(wire)
-    keys={'version','feature','pid','operation','request_sha256','control_generation',*c.HASHES,'code','active','in_flight','cache_pages','native_alias','counters'}
-    check(type(reply) is dict and set(reply)==keys,'exact native reply schema required')
-    check(type(reply['version']) is int and reply['version']==1 and type(reply['pid']) is int and reply['pid']==pid and type(reply['active']) is bool,'strict native reply types')
-    check(all(type(reply[k]) is int and 0<=reply[k]<1<<64 for k in ('in_flight','cache_pages')),'strict native outstanding counters')
-    check(type(reply['counters']) is dict and len(reply['counters'])<=32 and all(type(k) is str and type(v) is int and 0<=v<1<<64 for k,v in reply['counters'].items()),'strict bounded native counters')
-    check(canonical(reply['native_alias'])==canonical(alias),'full independently resolved native alias mismatch')
+    if alias is not None:check(canonical(reply['native_alias'])==canonical(alias),'full independently resolved native alias mismatch')
     check(reply['code']=='ok','native denial/busy is not an ACK')
     if command['operation'] in ('begin','end'):
         check(reply['active'] is (command['operation']=='begin') and reply['in_flight']==0 and reply['cache_pages']==0,'empty begin or drained end ACK required')
     return reply
 
-class _HostController:
+class _ManagedController:
     """HOST-only seam. Final E alias resolver and QMP adapter are not invented."""
     def __init__(self,publication,bindings):
-        self.publication,self.bindings=publication,bindings;self.c=codec();self.highwater={};self.live={};self.audit=[]
-    def _control(self,binding,command,deadline,auth):
+        self.publication,self.bindings=publication,bindings;self.c=codec();self.highwater={};self.live={};self.audit=[];self.event=None;self.owned_peers=[]
+    def _control(self,binding,command,deadline,auth,expected_alias=None,trace=None):
         auth.recheck();check(time.monotonic()<deadline,'bounded managed control deadline')
         binding['recheck']() # Actual production implementation must verify PID/birth/ELF/profile, both peers.
         wire=self.c.encode(command)
-        control_deadline=min(deadline,time.monotonic()+5)
+        actual_wrapper=binding.get('requires_full_five_seconds') is True
+        if actual_wrapper:check(deadline-time.monotonic()>=5.05,'original deadline cannot fit the source-defined metadata bound')
+        control_deadline=deadline if actual_wrapper else min(deadline,time.monotonic()+5)
         reply=binding['control'](wire,control_deadline)
         check(time.monotonic()<control_deadline,'native control reply arrived after metadata deadline')
         auth.recheck();binding['recheck']()
-        result=strict_reply(self.c,wire,reply,binding['pid'],binding['alias'])
-        self.audit.append({'operation':command['operation'],'request_sha256':self.c.request_sha256(wire),'reply':result})
+        result=strict_reply(self.c,wire,reply,binding['pid'],expected_alias or binding.get('alias'))
+        record={'operation':command['operation'],'request_sha256':self.c.request_sha256(wire),'reply':result};self.audit.append(record)
+        if trace is not None:trace.append(record)
+        if self.event:self.event({'event':'managed-cache-control','native_peer_pid':binding['pid'],'record':record,'payload_bytes':0})
         if len(self.audit)>1024:self.audit.pop(0)
         return result
     def execute(self,node,frame,auth,timeout=120):
@@ -100,33 +120,32 @@ class _HostController:
         try:
             check(generation>self.highwater.get(key,0) and key not in self.live,'stale/live managed control generation')
             row=self.publication.binding(body);peers=self.bindings[(body['cache_pool_id'],frame.node)]
-            # These fixtures stand in for the final E-defined complete alias
-            # schema. Production never accepts a HOST binding/ready flag.
             check(set(peers)=={'home','importer'},'both actual home and importer native bindings required')
             for binding in peers.values():
-                check(type(binding['alias']) is dict and set(binding['alias'])==set(row['public'])|{'map_id','lease_epoch'} and
-                      all(type(binding['alias'].get(k)) is type(v) and binding['alias'][k]==v for k,v in row['public'].items()) and
-                      all(type(binding['alias'][k]) is int and binding['alias'][k]>0 for k in ('map_id','lease_epoch')),'complete home/importer public descriptor binding required')
+                check(type(binding['pid']) is int and binding['pid']>0,'peer-verified actual owning QEMU pid required')
+                if 'alias' in binding:
+                    alias=binding['alias']
+                    check(type(alias) is dict and set(alias)=={*self.c.FIELDS64,*self.c.FIELDS32,'descriptor_sha256'} and
+                          all(alias.get(k)==(str(v) if k in self.c.FIELDS64 else v) and type(alias.get(k)) is (str if k in self.c.FIELDS64 else type(v)) for k,v in row['public'].items()) and
+                          all(native_u64(alias[k])>0 for k in ('map_id','lease_epoch')) and alias['offset']==str(body['offset']) and alias['length']==str(body['nbytes']),'complete home/importer public descriptor binding required')
             base={'version':1,'control_generation':generation,'authority_sha256':body['cache_authority_sha256'],'correlation_sha256':body['cache_frame_sha256'],
                   **row['public'],'offset':body['offset'],'length':body['nbytes'],'map_id':0,'lease_epoch':0}
-            self.highwater[key]=generation;self.live[key]='BeginPending';end=None;ended=False
+            self.highwater[key]=generation;self.live[key]='BeginPending';end=None;ended=False;trace=[]
+            if self.event:self.event({'event':'managed-cache-server-authority','node':frame.node,'authority':body,'payload_bytes':0})
             try:
                 probes={}
-                for role,binding in peers.items():probes[role]=self._control(binding,{**base,'operation':'probe'},deadline,auth)
+                for role,binding in peers.items():probes[role]=self._control(binding,{**base,'operation':'probe'},deadline,auth,trace=trace)
                 imp=peers['importer'];alias=probes['importer']['native_alias']
-                # HOST schema only. The actual native alias names must be
-                # supplied by E and accepted before production construction.
-                check(type(alias.get('map_id')) is int and alias['map_id']>0 and type(alias.get('lease_epoch')) is int and alias['lease_epoch']>0,'actual nonzero native map/lease alias required')
-                native={**base,'map_id':alias['map_id'],'lease_epoch':alias['lease_epoch']}
+                # Never use Catalog lease_generation as the native token epoch.
+                native={**base,'map_id':native_u64(alias['map_id']),'lease_epoch':native_u64(alias['lease_epoch'])}
                 end={**native,'operation':'end'}
-                self._control(imp,{**native,'operation':'begin'},deadline-5,auth);self.live[key]='Reading'
+                self._control(imp,{**native,'operation':'begin'},deadline-5.05,auth,alias,trace);self.live[key]='Reading'
                 read=replace(frame,body=canonical({k:v for k,v in body.items() if k in READ}))
-                response=node._exchange_locked(read,max(0,deadline-time.monotonic()-5))
+                response=node._exchange_locked(read,max(0,deadline-time.monotonic()-5.05))
                 receipt=metadata(response.body)
                 check(response.status==0 and receipt.get('phase')=='completed' and receipt.get('all_bytes') is True and receipt.get('visible') is True and type(receipt.get('pins')) is int and receipt['pins']==0 and
                       all(receipt.get(k)==body[k] and type(receipt.get(k)) is int for k in ('offset','nbytes','pattern_id')),'actual unchanged Guest SDK read did not complete')
-                self.live[key]='Revoking';ended=True;self._control(imp,end,deadline,auth)
-                trace=[r for r in self.audit if r['reply']['authority_sha256']==body['cache_authority_sha256'] and r['reply']['correlation_sha256']==body['cache_frame_sha256'] and r['reply']['control_generation']==str(generation)]
+                self.live[key]='Revoking';ended=True;self._control(imp,end,deadline,auth,alias,trace)
                 check([r['operation'] for r in trace]==['probe','probe','begin','end'],'one complete same-authority native transcript required')
                 transcript=sha(canonical(trace));self.live.pop(key)
                 receipt.update({'cache_version':1,'cache_control_generation':generation,'cache_authority_sha256':body['cache_authority_sha256'],'cache_frame_sha256':body['cache_frame_sha256'],
@@ -140,5 +159,8 @@ class _HostController:
                     except BaseException:pass
                 raise
         finally:node.command_lock.release()
+    def close(self):
+        check(not self.live,'live/Unknown managed grant prevents normal controller close')
+        for peer in self.owned_peers:peer.close()
 
-def _host_fixture_controller(publication,bindings):return _HostController(publication,bindings)
+def _host_fixture_controller(publication,bindings):return _ManagedController(publication,bindings)

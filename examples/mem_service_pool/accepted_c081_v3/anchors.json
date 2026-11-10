@@ -1,0 +1,121 @@
+{
+  "schema": 3,
+  "goal": "uflow-mem-service-shared-pool-sim",
+  "acceptance": "E_MANAGED_CACHE_PROFILE_REAL_CURRENT_WITNESS_AND_V6_CONTEXT_ACCEPTED_FOR_C_PRODUCTION_INTEGRATION",
+  "source_commit": "f7e4c0d6b0d2398baf148c33b70857dc21f29303",
+  "accepted_context": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/context-binding-v6/accepted-context.json",
+    "bytes": 1764,
+    "sha256": "e6241411f9217661c6ccf5376120c67a5c096629c501c48f02bfb4238fb8175c"
+  },
+  "historical_rejected_runtime_context": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/accepted-context.json",
+    "bytes": 1764,
+    "sha256": "ec8984aa82f6ac17ef8f1ed1a2b48025eb169267acd9619c8c933a4c79684960"
+  },
+  "code_and_data": {
+    "profile": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/profile-manifest.json",
+      "bytes": 8554,
+      "sha256": "d0900df0212660ff6fb3cc60e11a8cb06545aeac190e0edb6729bf8eedd54dc9"
+    },
+    "qemu_binary": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/qemu-system-aarch64",
+      "bytes": 128060120,
+      "sha256": "a17087127825c40b5fa8740c484a987535495e03f72ba14ed5c40c2f259b135b"
+    },
+    "profile_validator": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_qemu_profile_v1.py",
+      "bytes": 12739,
+      "sha256": "a225f345d48046d228e33a98161c02a1b17a556453a13d2d2869ab33e2ea931b"
+    },
+    "wrapper": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_guest_group_v1.py",
+      "bytes": 20649,
+      "sha256": "8aebe66479b8eec36841fb8b3295ccd56362ab02bf7b6b4d6a63edbd83b86f3c"
+    },
+    "codec": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_cache_codec_v2.py",
+      "bytes": 9594,
+      "sha256": "7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db"
+    },
+    "metadata_producer": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_profile_metadata_v3.py",
+      "bytes": 31355,
+      "sha256": "5dfba50c223008701ce985eda66ad382182b98619cbe7ed4d893d168ac24c86a"
+    },
+    "terminal_producer": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_recovery_context_v3.py",
+      "bytes": 31211,
+      "sha256": "3925e8eea9491eece5c2a2bcb246a1a770ce11ac3006f84ee62853d00232b91d"
+    },
+    "ownership_producer": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_monitor_ownership_v3.py",
+      "bytes": 9096,
+      "sha256": "826e4a4373c46a4c90ce9012d94bd1107114551f83c15d50c159f722a8f8065a"
+    },
+    "terminal_context": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/terminal-context004/context.json",
+      "bytes": 11905,
+      "sha256": "48971c582a418376159dafaf4699890fb4cb806707a52047ec487cc1d3950566"
+    },
+    "terminal_candidate": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/terminal-context004/candidate.json",
+      "bytes": 67495,
+      "sha256": "3d8db81b27761ba58dfbda484e8381eb5ba4eba3d997b6c23fca075603859bc4"
+    }
+  },
+  "fixed_old_dependencies": {
+    "uflow_qemu_evidence.py": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_qemu_evidence.py",
+      "bytes": 6591,
+      "sha256": "0dc9cbe9909bca7d53dcc6aa58b72f72942e699999ecf420055528cbd98c0995"
+    },
+    "uflow_qemu_metadata.py": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_qemu_metadata.py",
+      "bytes": 25585,
+      "sha256": "3edf6eb9e99cfe1a194d273bd11ae0e21f2ddcd3fff7fed2fd835ec9f5c227e5"
+    },
+    "uflow_qemu_fixed_launch.py": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_qemu_fixed_launch.py",
+      "bytes": 21012,
+      "sha256": "949cd0866da8f1ad7b555dc6cf0f0a77574b82ea0499f34a6951fa5c3bb2b12b"
+    },
+    "uflow_profile_metadata_v2.py": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_profile_metadata_v2.py",
+      "bytes": 35200,
+      "sha256": "d512f1d5b9dbfe7e2c89d8dc4f11fe807fc480a222b1a0f69600b23afa021ecf"
+    },
+    "uflow_qemu_profile.py": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_qemu_profile.py",
+      "bytes": 10439,
+      "sha256": "e295a26c99216ac027dd64f54ed323b211bc529ee7fb6753dac4e422bc7fb43e"
+    }
+  },
+  "current": {
+    "sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26",
+    "revision": 419,
+    "eligible_ids": [
+      116,
+      117,
+      118
+    ],
+    "eligible_bytes": 54525952,
+    "protected_bytes": 79691776,
+    "B_MiB": 128,
+    "A_historical_unqueried_MiB": 128,
+    "new_successor": "successor-c081-terminal-domain-loss-v3"
+  },
+  "image_acceptance": "artifacts/mem-service-shared-pool-manager-20261110/C-review-1c8-production-image/accepted-image-anchors.json",
+  "wire": {
+    "binary_bytes": 220,
+    "ascii_bytes": 445,
+    "NativeAlias": "nine uint64 canonical decimal strings plus nine exact uint32 ints and descriptor_sha256",
+    "metadata_deadline_seconds": 5,
+    "SDK_deadline_seconds": 120,
+    "scope": "UFlow-Catalog-managed-only"
+  },
+  "actual_manager_readonly_API_result": "actual-API-check.stdout",
+  "no_runtime_or_original_authority_effect_by_this_acceptance": true,
+  "production_execution_requires_C_concrete_source_runtime_package_review": true
+}
