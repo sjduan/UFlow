@@ -328,7 +328,10 @@ class GuestNode:
                 with self.failure_lock:
                     if self.failure:raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
                     self.pending[key] = item
-                    self.send('v2 %d %d %s' % (*key, frame.body.hex()))
+                # Registration is the admission point. Never hold failure_lock
+                # across serial IO: a blocked send must not delay receiver-side
+                # panic notice or waking this already in-flight Unknown request.
+                self.send('v2 %d %d %s' % (*key, frame.body.hex()))
                 if not item['ready'].wait(timeout) or self.failure:
                     raise RuntimeError('same Guest operation outcome unknown') from self.failure
                 receipt = item['response']

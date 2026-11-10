@@ -60,7 +60,8 @@ fn from_e_proof(bytes:&[u8],proof:Value)->Result<VerifiedCandidate,String>{
         if c[key]!=false{return Err("E evidence must not claim C authority/native ACK".into());}
     }
     let state=parsed(bytes)?;let fences=make_fences(&state);
-    Ok(VerifiedCandidate{state,proof_sha:digest(&serde_json::to_vec(&proof).map_err(|e|e.to_string())?),proof,fences})
+    Ok(VerifiedCandidate{state,proof_sha:digest(&serde_json::to_vec(&proof).map_err(|e|e.to_string())?),proof,fences,
+        terminal_ids:vec![110,111,112],source_sha:STATE_SHA.into(),prior_backings:json!({})})
 }
 
 fn verify_e(bytes:&[u8])->Result<VerifiedCandidate,String>{
@@ -136,17 +137,20 @@ fn rows(value:&Value)->Result<BTreeMap<u64,Value>,String>{
     }Ok(result)
 }
 
-pub(crate) struct VerifiedCandidate {state:Value,proof:Value,proof_sha:String,fences:Value}
+pub(crate) struct VerifiedCandidate {state:Value,proof:Value,proof_sha:String,fences:Value,
+    terminal_ids:Vec<u64>,source_sha:String,prior_backings:Value}
 impl VerifiedCandidate {
     pub(crate) fn source_ledger(&self)->&Value{&self.state["resource_ledger"]}
     pub(crate) fn matches_ledger(&self,ledger:&Value)->Result<(),String>{
         let source=self.source_ledger();
         if rows(source)?!=rows(ledger)? || ["charged_bytes","reserved_bytes","retained_bytes","retained_reserved_bytes","active_reserved_bytes","active_bytes",
-            "reservations","retired_unstarted_object_ids","retained_uncertain_reservations"].iter().any(|k|source[*k]!=ledger[*k]){
+            "reservations","retired_unstarted_object_ids","retained_uncertain_reservations","terminal_domain_loss_tombstones"].iter().any(|k|source[*k]!=ledger[*k]){
             return Err("exact original128 ledger/backing/witness required before terminal loss".into());
         }Ok(())
     }
-    pub(crate) fn tombstone(&self)->Value{json!({"kind":"TerminalDomainDataLost","source_state_sha256":STATE_SHA,
+    pub(crate) fn prior_backings(&self)->&Value{&self.prior_backings}
+    pub(crate) fn terminal_ids(&self)->&[u64]{&self.terminal_ids}
+    pub(crate) fn tombstone(&self)->Value{json!({"kind":"TerminalDomainDataLost","source_state_sha256":self.source_sha,
         "proof_sha256":self.proof_sha,"normal_SDK_ACK":false,"data_valid":false,"permanent_anti_revival":true})}
 }
 
@@ -181,7 +185,8 @@ fn validate_candidate(bytes:&[u8],proof:&Value)->Result<VerifiedCandidate,String
         if proof[key].as_str().is_none_or(|s|s.len()!=64||!s.bytes().all(|b|b.is_ascii_hexdigit())){return Err(format!("missing full evidence binding: {key}"));}
     }
     let fences=make_fences(&state);
-    Ok(VerifiedCandidate{state,proof:proof.clone(),proof_sha:digest(&serde_json::to_vec(proof).map_err(|e|e.to_string())?),fences})
+    Ok(VerifiedCandidate{state,proof:proof.clone(),proof_sha:digest(&serde_json::to_vec(proof).map_err(|e|e.to_string())?),fences,
+        terminal_ids:vec![110,111,112],source_sha:STATE_SHA.into(),prior_backings:json!({})})
 }
 
 fn make_fences(state:&Value)->Value{
@@ -212,6 +217,9 @@ fn make_fences(state:&Value)->Value{
 /// Generation alone is not treated as an incarnation or global identity.
 pub(crate) fn reject_fenced(reconciliation:&Value,request:&Value)->Result<(),String>{
     let Some(fences)=reconciliation.get("terminal_domain_fences") else{return Ok(())};
+    if fences["version"]==2 && ["minimum_next_object_id","minimum_next_placement_id","minimum_next_binding_id","minimum_next_access_id","minimum_next_lease_id","minimum_next_client_id","minimum_next_block_id","minimum_next_transfer_plan_id","minimum_next_transfer_event_id"].iter().any(|k|fences[*k].as_u64().is_none_or(|n|n==0)) {
+        return Err("complete per-type v2 identity highwaters required".into());
+    }
     if fences["schema"]!=1 || fences["strings"].as_array().is_none_or(|a|a.is_empty()||a.iter().any(|v|v.as_str().is_none_or(|s|s.is_empty()))) ||
         fences["incarnations"].as_array().is_none_or(|a|a.is_empty()||a.iter().any(|v|v.as_u64().is_none())) {
         return Err("incomplete permanent terminal fences; refuse admission".into());
@@ -222,11 +230,15 @@ pub(crate) fn reject_fenced(reconciliation:&Value,request:&Value)->Result<(),Str
             Value::Array(v)=>v.iter().any(|v|visit(v,f)),
             Value::Object(values)=>values.iter().any(|(key,v)| {
                 (key=="incarnation" && f["incarnations"].as_array().unwrap().contains(v)) ||
-                (matches!(key.as_str(),"resource_id"|"object_id") && v.as_u64().is_some_and(|id|id<113)) ||
-                (key=="placement_id" && v.as_u64().is_some_and(|id|id<10003)) ||
-                (key=="binding_id" && v.as_u64().is_some_and(|id|id<40003)) ||
-                (key=="access_generation" && v.as_u64().is_some_and(|id|id<50003)) ||
-                (key=="lease_generation" && v.as_u64().is_some_and(|id|id<1008)) ||visit(v,f)
+                (matches!(key.as_str(),"resource_id"|"object_id") && v.as_u64().is_some_and(|id|id<f["minimum_next_object_id"].as_u64().unwrap_or(113))) ||
+                (key=="placement_id" && v.as_u64().is_some_and(|id|id<f["minimum_next_placement_id"].as_u64().unwrap_or(10003))) ||
+                (matches!(key.as_str(),"binding_id"|"resource_binding_id") && v.as_u64().is_some_and(|id|id<f["minimum_next_binding_id"].as_u64().unwrap_or(40003))) ||
+                (matches!(key.as_str(),"access_generation"|"access_id") && v.as_u64().is_some_and(|id|id<f["minimum_next_access_id"].as_u64().unwrap_or(50003))) ||
+                (key=="lease_generation" && v.as_u64().is_some_and(|id|id<f["minimum_next_lease_id"].as_u64().unwrap_or(1008))) ||
+                (key=="client_id" && v.as_u64().is_some_and(|id|id<f["minimum_next_client_id"].as_u64().unwrap_or(0))) ||
+                (key=="block_id" && v.as_u64().is_some_and(|id|id<f["minimum_next_block_id"].as_u64().unwrap_or(0))) ||
+                (matches!(key.as_str(),"plan_id"|"transfer_plan_id") && v.as_u64().is_some_and(|id|id<f["minimum_next_transfer_plan_id"].as_u64().unwrap_or(0))) ||
+                (matches!(key.as_str(),"event_id"|"transfer_event_id") && v.as_u64().is_some_and(|id|id<f["minimum_next_transfer_event_id"].as_u64().unwrap_or(0))) ||visit(v,f)
             }),_=>false
         }
     }
@@ -235,6 +247,7 @@ pub(crate) fn reject_fenced(reconciliation:&Value,request:&Value)->Result<(),Str
 
 pub(crate) struct TerminalAuthority {
     _original_lock:File,ledger:Option<DdrResources>,reconciliation:Value,path:PathBuf,
+    source_sha:String,revision:u64,
 }
 impl TerminalAuthority {
     fn validate_commit(&self)->Result<(),String>{
@@ -242,8 +255,8 @@ impl TerminalAuthority {
         let result=bounded(&self.path.join("resulting76.json"),1<<20)?;
         let fences=bounded(&self.path.join("permanent-fences.json"),1<<20)?;
         if commit["kind"]!="TerminalDomainAuthorityCommitted" || commit["resulting76_sha256"]!=digest(&result) ||
-            commit["fences_sha256"]!=digest(&fences) || commit["original_state_sha256"]!=STATE_SHA ||
-            digest(&bounded(&self.path.join("historical-state.json"),1<<20)?)!=STATE_SHA ||
+            commit["fences_sha256"]!=digest(&fences) || commit["original_state_sha256"]!=self.source_sha ||
+            digest(&bounded(&self.path.join("historical-state.json"),1<<20)?)!=self.source_sha ||
             parsed(&fences)?!=self.reconciliation["terminal_domain_fences"] {
             return Err("terminal commit/history/fences drift; admission blocked".into());
         }
@@ -269,10 +282,8 @@ impl TerminalAuthority {
         atomic_record(&self.path,"service-admission-claim.json",&json!({"kind":"CPUFullIdentityServiceAdmissionPending","namespace":new_context,
             "source_terminal_commit_sha256":digest(&bounded(&self.path.join("commit.json"),1<<20)?),"native_SDK_ACK":false}))?;
         st.ddr_resources=self.ledger.take().ok_or("terminal authority already consumed")?;
-        st.managed_pools.reconciliation=self.reconciliation.clone();st.managed_pools.revision=154;
-        st.next_object_id=st.next_object_id.max(113);st.next_placement_id=st.next_placement_id.max(10003);
-        st.next_resource_binding_id=st.next_resource_binding_id.max(40003);st.next_access_binding_id=st.next_access_binding_id.max(50003);
-        st.next_lease_id=st.next_lease_id.max(1008);st.next_client_id=st.next_client_id.max(1_000_000);st.next_block_id=st.next_block_id.max(1_000_000);
+        st.managed_pools.reconciliation=self.reconciliation.clone();st.managed_pools.revision=self.revision;
+        self.advance_highwaters(st)?;
         Ok(lifetime)
     }
     /// Launcher ordering: admit only the two metadata reservations before Guest
@@ -288,19 +299,29 @@ impl TerminalAuthority {
             nodes.iter().any(|v|v.as_object().is_none_or(|o|o.len()!=2)||v["socket"].as_str().is_none_or(|s|!Path::new(s).is_absolute())) {
             return Err("staged nodes require only real future node/socket, never invented boot identity".into());
         }
+        let first=self.reconciliation["terminal_domain_fences"]["minimum_next_object_id"].as_u64().ok_or("object highwater")?;
+        let second=first.checked_add(1).ok_or("canary identity overflow")?;
+        let next=second.checked_add(1).ok_or("business identity overflow")?;
         let lifetime=self._original_lock.try_clone().map_err(|e|e.to_string())?;
         let mut ledger=self.ledger.take().ok_or("terminal authority already consumed")?;
         ledger.reserve_unique("canary:nodeA",2<<20)?;ledger.reserve_unique("canary:nodeB",2<<20)?;
         let claim=json!({"kind":"SuccessorServiceAdmissionPending","namespace":namespace,"source_terminal_commit_sha256":digest(&bounded(&self.path.join("commit.json"),1<<20)?),
-            "conservative_B_bytes":80<<20,"resource_ledger":ledger.snapshot(),"canary_charge_objects":{"nodeA":113,"nodeB":114},
+            "conservative_B_bytes":80<<20,"resource_ledger":ledger.snapshot(),"canary_charge_objects":{"nodeA":first,"nodeB":second},
             "Guest_identity_known":false,"business_admission_enabled":false,"native_SDK_ACK":false});
         atomic_record(&self.path,"service-admission-claim.json",&claim)?;
         let mut reconciliation=self.reconciliation.clone();reconciliation["terminal_bootstrap_phase"]=json!("AwaitingNewGuestReadiness");
         reconciliation["terminal_staged_namespace"]=namespace.clone();reconciliation["terminal_canary_charge_objects"]=claim["canary_charge_objects"].clone();
-        st.ddr_resources=ledger;st.managed_pools.reconciliation=reconciliation;st.managed_pools.revision=154;
-        st.next_object_id=st.next_object_id.max(115);st.next_placement_id=st.next_placement_id.max(10003);st.next_resource_binding_id=st.next_resource_binding_id.max(40003);
-        st.next_access_binding_id=st.next_access_binding_id.max(50003);st.next_lease_id=st.next_lease_id.max(1008);
-        st.next_client_id=st.next_client_id.max(1_000_000);st.next_block_id=st.next_block_id.max(1_000_000);Ok(lifetime)
+        st.ddr_resources=ledger;st.managed_pools.reconciliation=reconciliation;st.managed_pools.revision=self.revision;
+        self.advance_highwaters(st)?;st.next_object_id=st.next_object_id.max(next);Ok(lifetime)
+    }
+    fn advance_highwaters(&self,st:&mut Catalog)->Result<(),String>{
+        let f=&self.reconciliation["terminal_domain_fences"];
+        macro_rules! advance {($field:ident,$key:literal,$fallback:expr)=>{st.$field=st.$field.max(f[$key].as_u64().unwrap_or($fallback));}}
+        advance!(next_object_id,"minimum_next_object_id",113);advance!(next_placement_id,"minimum_next_placement_id",10003);
+        advance!(next_resource_binding_id,"minimum_next_binding_id",40003);advance!(next_access_binding_id,"minimum_next_access_id",50003);
+        advance!(next_lease_id,"minimum_next_lease_id",1008);advance!(next_client_id,"minimum_next_client_id",1_000_000);
+        advance!(next_block_id,"minimum_next_block_id",1_000_000);advance!(next_transfer_plan_id,"minimum_next_transfer_plan_id",1);
+        advance!(next_transfer_event_id,"minimum_next_transfer_event_id",1);Ok(())
     }
     pub(crate) fn historical(&self)->Result<Value,String>{
         self.validate_commit()?;
@@ -311,7 +332,7 @@ impl TerminalAuthority {
         Ok(json!({"status":"AdministrativelyClosedTerminalDomainDataLost","normal_Destroy_RPC_succeeded":false,
             "normal_Shutdown_RPC_succeeded":false,"native_SDK_ACK":false,"B_at_terminal_commit_bytes":76<<20,
             "scope":"terminal commit before later new-domain admission; query the live Catalog for later responsibility",
-            "A_historical_unqueried_bytes":128<<20,"historical_Unknown_data_valid":false,"history_sha256":STATE_SHA}))
+            "A_historical_unqueried_bytes":128<<20,"historical_Unknown_data_valid":false,"history_sha256":self.source_sha}))
     }
 }
 
@@ -378,7 +399,7 @@ fn transact(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<VerifiedCan
         "fences_sha256":digest(&bounded(&path.join("permanent-fences.json"),1<<20)?),"new_authority":path,
         "old_state_untouched":true,"normal_SDK_ACK":false});
     atomic_record(&path,"commit.json",&commitment)?;fault("commit",crash)?;
-    Ok(TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation,path})
+    Ok(TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation,path,source_sha:STATE_SHA.into(),revision:154})
 }
 
 /// Reopen the complete terminal-only commit after its writer process exits.
@@ -407,7 +428,7 @@ fn recover_committed(dir:&Path,state_path:&Path,verify:impl Fn(&[u8])->Result<Ve
         durable["normal_destroy_or_shutdown_succeeded"]!=false || durable["charged_bytes"]!=12<<20 || durable["creation_reserved_bytes"]!=64<<20 || durable["budget_bytes"]!=128<<20 {
         return Err("committed terminal ledger differs from original protected76 and typed tombstones".into());
     }
-    let authority=TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation:durable["reconciliation"].clone(),path};
+    let authority=TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation:durable["reconciliation"].clone(),path,source_sha:STATE_SHA.into(),revision:154};
     authority.validate_commit()?;
     if authority.reconciliation["terminal_domain_fences"]!=p.fences{return Err("committed permanent fences differ".into());}
     Ok(authority)
@@ -448,3 +469,5 @@ fn kernel_endpoints()->Result<BTreeSet<String>,String>{
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) mod current;

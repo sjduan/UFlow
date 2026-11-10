@@ -174,7 +174,8 @@ impl MemServicePoolProvider {
                 let expected=namespace["nodes"].as_array().ok_or("staged nodes")?.iter().find(|v|v["node"]==*node).ok_or("staged node")?;
                 if expected["socket"]!=identity["socket"]{return Err("staged terminal endpoint changed".into());}
                 let id=terminal["terminal_canary_charge_objects"][node].as_u64().ok_or("staged canary id")?;
-                if id!=if node=="nodeA"{113}else{114} || self.bootstrap.get(node).is_some_and(|old|*old!=id){return Err("staged canary charge identity mismatch".into());}
+                let first=terminal["terminal_domain_fences"]["minimum_next_object_id"].as_u64().ok_or("staged object highwater")?;
+                if id!=if node=="nodeA"{first}else{first.checked_add(1).ok_or("staged object overflow")?} || self.bootstrap.get(node).is_some_and(|old|*old!=id){return Err("staged canary charge identity mismatch".into());}
                 self.bootstrap.insert(node.clone(),id);
             }
         }

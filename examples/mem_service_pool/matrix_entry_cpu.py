@@ -13,9 +13,11 @@ import run_mem_service_pool_matrix as driver
 def main():
  p=argparse.ArgumentParser()
  p.add_argument('--terminal-domain',action='store_true')
+ p.add_argument('--current-terminal-domain',action='store_true',help='HOST-only second-generation c064 snapshot consumer')
  p.add_argument('--panic-on-first-write',action='store_true',help='CPU-only serial fault; assert actual Catalog Unknown retains budget')
  for k in ('agent','worker','controller','scratch','output','rust-tests','source','image','shim'):p.add_argument('--'+k,type=Path,required=True)
  a=p.parse_args()
+ if a.current_terminal_domain:a.terminal_domain=True
  if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('admitted build required')
  if ctypes.CDLL(None).prctl(36,1,0,0,0):raise RuntimeError('subreaper required')
  a.scratch.mkdir();a.output.mkdir();h=Harness(a,0,lower=False);servers=[];catalog=[];observed=[];states=[]
@@ -34,11 +36,14 @@ def main():
    control=h.path/'rust.json';control.write_text(json.dumps({'provider_config':str(out/'provider.json'),'state':str(out/'state'),'endpoint':str(out/'u.sock')}))
    if a.terminal_domain:
     value=json.loads(control.read_bytes());value['terminal_origin']=str(out/'terminal-origin');control.write_text(json.dumps(value))
-    kwargs['env']={**kwargs['env'],'UFLOW_TERMINAL_STAGED_CPU_CONFIG':str(control)}
-    commit=real_popen([str(a.rust_tests),'--exact','pool_terminal_domain::tests::terminal_commit_process','--nocapture','--test-threads=1'],**kwargs)
+    key='UFLOW_CURRENT_TERMINAL_CPU_CONFIG' if a.current_terminal_domain else 'UFLOW_TERMINAL_STAGED_CPU_CONFIG'
+    prefix='pool_terminal_domain::current::tests::current_terminal_' if a.current_terminal_domain else 'pool_terminal_domain::tests::terminal_'
+    kwargs['env']={**kwargs['env'],key:str(control)}
+    commit=real_popen([str(a.rust_tests),'--exact',prefix+'commit_process','--nocapture','--test-threads=1'],**kwargs)
     stamp=birth(commit.pid);h.children.append((commit,stamp));assert commit.wait(timeout=10)==0
     (out/'terminal-only-process.json').write_text(json.dumps({'pid':commit.pid,'birth':stamp,'actual_exit':0,'source_state_preserved128':True,'durable_terminal_B_bytes':76<<20,'new_service_started':False}))
-    argv=[str(a.rust_tests),'--exact','pool_terminal_domain::tests::staged_terminal_service_process','--nocapture','--test-threads=1']
+    test='pool_terminal_domain::current::tests::current_terminal_service_process' if a.current_terminal_domain else 'pool_terminal_domain::tests::staged_terminal_service_process'
+    argv=[str(a.rust_tests),'--exact',test,'--nocapture','--test-threads=1']
    else:
     kwargs['env']={**kwargs['env'],'UFLOW_RECON_CATALOG_CPU_CONFIG':str(control)}
     argv=[str(a.rust_tests),'--exact','pool_c039_prestart::tests::staged_c039_prestart_fixture','--nocapture','--test-threads=1']
@@ -55,7 +60,7 @@ def main():
   initial=state();assert initial['charged_bytes']==initial['retained_bytes']==12<<20 and initial['creation_reserved_bytes']==68<<20
   assert initial['retained_reserved_bytes']==64<<20 and total(initial)==80<<20
   if a.terminal_domain:
-   records=out/'terminal-origin/lineage/successor-c044-terminal-domain-loss-v1'
+   records=out/'terminal-origin/lineage'/('successor-c064-terminal-domain-loss-v2' if a.current_terminal_domain else 'successor-c044-terminal-domain-loss-v1')
    inherited=json.loads((records/'before128.json').read_bytes());resulting=json.loads((records/'resulting76.json').read_bytes())
    assert inherited['charged_bytes']==64<<20 and inherited['reserved_bytes']==64<<20
    assert resulting['B_conservative_bytes']==76<<20 and initial['reconciliation']['terminal_bootstrap_phase']=='AwaitingNewGuestReadiness'
@@ -140,7 +145,7 @@ def main():
     else:raise AssertionError('old Unknown accessible or operation replayed')
   result=real_exchange(endpoint,method,values,**kwargs)
   if method=='CreateManagedPool':
-   if a.terminal_domain:assert result['resource_generation']==1 and result['resource_id']>=115,'fresh namespace uses real native generation1'
+   if a.terminal_domain:assert result['resource_generation']==1 and result['resource_id']>=(118 if a.current_terminal_domain else 115),'fresh namespace uses real native generation1'
    s=state();assert total(s)==128<<20 and s['retained_reserved_bytes']==64<<20;states.append({'point':'business-allocated','total':total(s)})
   return result
  def capability(*args):gate.append(True);return {'CPU_synthetic_capability_seam':True,'runtime_tested':False}
@@ -159,7 +164,7 @@ def main():
     assert current['creation_reserved_bytes']==current['retained_reserved_bytes']==64<<20
     pool=current['pools'][0];assert pool['frozen'] and pool['release_result'] is None
     assert any(lease['state']=='Unknown' for lease in pool['ranges']['leases'])
-    if a.terminal_domain:assert set(current['resource_ledger']['terminal_domain_loss_tombstones'])=={'110','111','112'}
+    if a.terminal_domain:assert set(current['resource_ledger']['terminal_domain_loss_tombstones'])==({'110','111','112','113','114','115'} if a.current_terminal_domain else {'110','111','112'})
     events=[json.loads(s) for s in (out/'pool-events.jsonl').read_text().splitlines()]
     first=next(e for e in events if e['event']=='guest-bridge-failure' and e['node']=='nodeA')
     assert first['cause']=='guest-kernel-panic' and first['responsibility_retained']
@@ -192,6 +197,7 @@ def main():
   assert any(e['operation']==0x73 and e['origin']['role']=='root' and e['status']==0 for e in calls)
   original=json.loads((out/'E1-E4.json').read_bytes());assert original['capacity']==48<<20 and original['final_B_total_bytes']==76<<20
   result={'pass':True,'actual_matrix_and_nested_callback':True,'actual_Rust_C_SDK_sockets':True,'actual_CPU_shared_mapping_all_bytes':True,
+   'current_c064_second_generation_HOST_only':a.current_terminal_domain,
    'budget_sequence':states,'strict_prestart_cancel_before_new_reservation':not a.terminal_domain,'terminal_commit_then_separate_service_process':a.terminal_domain,
    'reserve4_before_real_Guest_identity_then_activate_before48':a.terminal_domain,'new_native_generation_one_allowed':a.terminal_domain,
    'old_c044_boot_fenced_before_actual_activation_RPC':a.terminal_domain,

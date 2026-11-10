@@ -498,6 +498,7 @@ fn main() {
     if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify"||v=="--pool-terminal-execution-check") {
         let report=match private_args.as_slice() {
             [mode] if mode=="--pool-terminal-domain-loss"=>pool_terminal_domain::production_terminal_only(),
+            [mode,path,sha] if mode=="--pool-terminal-current-manifest"=>pool_terminal_domain::current::production_manifest(std::path::Path::new(path),sha),
             [mode] if mode=="--pool-terminal-domain-verify"=>pool_terminal_domain::production_verify_readonly(),
             [mode] if mode=="--pool-shutdown-report"=>pool_terminal_domain::production_shutdown_report(),
             [mode,manifest,path,pin,sha] if mode=="--pool-terminal-domain-loss"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"=>

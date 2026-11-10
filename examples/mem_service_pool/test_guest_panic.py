@@ -85,6 +85,31 @@ class PanicTests(unittest.TestCase):
             self.assertEqual(channel.line(time.monotonic()+1),'UFPOOL_WORKER_START 89 847')
             self.assertTrue(fatal_kernel_panic(channel.line(time.monotonic()+1)))
 
+    def test_blocked_send_cannot_delay_panic_notice_or_pending_wake(self):
+        entered=threading.Event();release=threading.Event();noticed=threading.Event();errors=[];events=[]
+        class BlockedSerial(Serial):
+            def send(self,line):
+                entered.set()
+                if not release.wait(2):raise TimeoutError('bounded blocked-send fixture')
+        channel=BlockedSerial();node=GuestNode(channel,IDENTITY,'unused',events.append,'simulated:cpu',notify=noticed.set)
+        frame=Frame(17,19,'simulated:cpu','nodeA','cpu-boot','cpu-session',7,b'{"schema":2,"op":"write"}')
+        def exchange():
+            try:node.exchange(frame)
+            except RuntimeError as error:errors.append(error)
+        caller=threading.Thread(target=exchange);caller.start()
+        self.assertTrue(entered.wait(1));node.thread.start();channel.rows.put(PANIC)
+        try:
+            self.assertTrue(noticed.wait(.5),'panic notice must precede unblocking send')
+            node.thread.join(.5);self.assertFalse(node.thread.is_alive())
+            self.assertTrue(next(iter(node.pending.values()))['ready'].is_set())
+            self.assertEqual(node.first_failure['cause'],'guest-kernel-panic')
+            self.assertEqual(len(events),1)
+        finally:release.set();caller.join(1);node.stop.set();node.thread.join(1)
+        self.assertFalse(caller.is_alive());self.assertEqual(len(errors),1)
+        self.assertIsInstance(errors[0].__cause__,GuestFatalPanic)
+        with self.assertRaisesRegex(RuntimeError,'already failed'):node.exchange(frame)
+        self.assertFalse(node.pending)
+
 
 class JournalTests(unittest.TestCase):
     def diagnostic(self, values):

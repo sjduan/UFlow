@@ -229,13 +229,27 @@ impl DdrResources {
             ledger.retain_uncertain_reservation(row["key"].as_str().ok_or("reservation key")?,row["object_id"].as_u64().ok_or("reserved object")?,row["witness"].clone())?;
         }
         ledger.retired_unstarted.extend([108,109]);
+        for (key,row) in p.prior_backings().as_object().ok_or("prior terminal backing map")? {
+            let id=key.parse::<u64>().map_err(|_|"prior terminal object")?;
+            let tomb=&source["terminal_domain_loss_tombstones"][key];let b=&row["backing"];
+            if tomb["object_id"]!=id || row["object_id"]!=id || tomb["nbytes"]!=row["nbytes"] ||
+                tomb["outcome"]!="TerminalDomainDataLost" || tomb["native_SDK_ACK"]!=false || b["kind"]!="provider" || ledger.resources.contains_key(&id) {
+                return Err("exact previous tombstone and original backing required".into());
+            }
+            let backing=BackingId::Provider{realm:b["realm"].as_str().ok_or("prior realm")?.into(),provider:b["provider"].as_str().ok_or("prior provider")?.into(),
+                resource:b["resource"].as_str().ok_or("prior resource")?.into(),generation:b["generation"].as_u64().ok_or("prior generation")?};
+            if ledger.resources.values().any(|(live,_)|live==&backing) || ledger.terminal_domains.values().any(|(old,_,_)|old==&backing) {return Err("prior terminal backing overlaps another identity".into());}
+            ledger.terminal_domains.insert(id,(backing,row["nbytes"].as_u64().ok_or("prior size")?,tomb["witness"].clone()));
+        }
         p.matches_ledger(&ledger.snapshot())?;Ok(ledger)
     }
     pub(crate) fn apply_terminal_loss(&mut self,p:&crate::pool_terminal_domain::VerifiedCandidate)->Result<(),String>{
         if self.limit!=128<<20{return Err("terminal budget is fixed128, not configurable".into());}
         p.matches_ledger(&self.snapshot())?;
-        if !self.terminal_domains.is_empty(){return Err("terminal transaction cannot replay".into());}
-        for id in [110,111,112] {
+        if p.terminal_ids().iter().any(|id|self.terminal_domains.contains_key(id)) {return Err("terminal transaction cannot replay".into());}
+        let total=p.terminal_ids().iter().try_fold(0u64,|sum,id|self.resources.get(id).and_then(|(_,n)|sum.checked_add(*n))).ok_or("eligible terminal size")?;
+        if total!=52<<20{return Err("exact eligible52 required".into());}
+        for &id in p.terminal_ids() {
             let (backing,n)=self.resources.remove(&id).ok_or("terminal resource missing")?;
             self.terminal_domains.insert(id,(backing,n,p.tombstone()));
         }
