@@ -28,3 +28,25 @@ then PID1 reaps/captures the bounded journal before emitting the marker which
 allows frozen guest_group to issue QMP quit. Fail-first notice/deadlines remain.
 Only the two changed C TUs are checked in this HOST stage; a new real production
 image/execution package is still pending and the old image stays unchanged.
+
+The subsequent image-only builder is tools/phasec/build_pool_production_image.py.
+It links the complete new production ARM64 agent and PID1, verifies their
+compiler/header/link closure, and reuses the immutable SDK53 and official
+worker233. A bounded newc overlay replaces only the four standard task entries;
+every unrelated base member remains byte-identical, without filesystem
+extraction. Its actual build-receipt.json and image-members.json, not the
+existence of this script, establish that a particular image was produced.
+
+The new host agent/PID1 integration performs real neutral-SDK worker drain
+through an explicit CPU platform and worker fixture, then verifies journal,
+launcher-close and normal-close marker ordering and finite exit. The journal
+bytes in this test are synthetic metadata. It does not prove a genuine Guest
+official-worker journal or QMP close. Those remain part of the future matrix.
+
+pool_execution_draft.py prepares a versioned, non-executable dependency plan
+from the actual image receipt. Accepted E aliases/wrapper/profile/current-case
+witness, compiled production context and exact E0 execution bindings remain
+unresolved. Its resolver rejects before any original or control IO; no caller
+hash or ready flag can activate this draft. The existing b451 daemon may be
+copied as a checked single-link candidate, but needs accepted-context
+integration/compilation before production cache selection can be enabled.
