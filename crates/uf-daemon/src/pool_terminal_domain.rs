@@ -74,14 +74,29 @@ pub(crate) fn production_verify_readonly()->Result<Value,String>{
 }
 
 fn execution_context(path:&Path,sha:&str,phase:&str)->Result<(),String>{
-    let fixed=Path::new(ROOT).join("implementation/config-terminal-c060-v1/execution.json");
-    if path!=fixed || sha.len()!=64 {return Err("production-not-ready: fixed explicit execution manifest and external digest required before original I/O".into());}
+    let namespace=path.parent().and_then(|p|p.file_name()).and_then(|s|s.to_str()).unwrap_or("");
+    let valid=namespace.strip_prefix("config-terminal-c").and_then(|s|s.split_once("-v"))
+        .is_some_and(|(job,version)|job.len()==3&&job.bytes().all(|b|b.is_ascii_digit())&&
+            !version.is_empty()&&version.len()<=3&&!version.starts_with('0')&&version.bytes().all(|b|b.is_ascii_digit()));
+    if !valid || path.file_name().and_then(|s|s.to_str())!=Some("execution.json") ||
+        path.parent().and_then(|p|p.parent())!=Some(Path::new(ROOT).join("implementation").as_path()) ||
+        sha.len()!=64 || !sha.bytes().all(|b|b.is_ascii_hexdigit()) {
+        return Err("production-not-ready: fixed task-local resolved execution manifest and external digest required before original I/O".into());
+    }
     let raw=bounded(path,1<<20)?;
     if digest(&raw)!=sha{return Err("execution manifest external hash mismatch".into());}
     let result=adapter(json!({"action":"execution-context","execution_action":phase,
         "execution_manifest":{"path":path,"bytes":raw.len(),"sha256":sha},"daemon_pid":std::process::id(),
         "daemon_path":std::env::current_exe().map_err(|e|e.to_string())?}))?;
     if result["phase"]!=phase||result["execution_manifest_sha256"]!=sha{return Err("resolved execution context rejected".into());}Ok(())
+}
+
+/// Exercise the actual reviewed E0 execution context without E validation,
+/// original state access, authority acquisition, transaction or Guest startup.
+pub(crate) fn production_execution_check(path:&Path,sha:&str,phase:&str)->Result<Value,String>{
+    execution_context(path,sha,phase)?;
+    Ok(json!({"status":"PASS_READONLY_EXECUTION_CONTEXT_ONLY","phase":phase,
+        "execution_manifest_sha256":sha,"original_authority_lock_or_state_or_E_proof_or_transaction_or_Guest":false}))
 }
 
 pub(crate) fn production_terminal_manifest(path:&Path,sha:&str)->Result<Value,String>{

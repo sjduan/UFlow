@@ -495,13 +495,15 @@ fn main() {
     // Private explicit administrative modes run before every backend/trace/
     // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
     let private_args=std::env::args().skip(1).collect::<Vec<_>>();
-    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify") {
+    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify"||v=="--pool-terminal-execution-check") {
         let report=match private_args.as_slice() {
             [mode] if mode=="--pool-terminal-domain-loss"=>pool_terminal_domain::production_terminal_only(),
             [mode] if mode=="--pool-terminal-domain-verify"=>pool_terminal_domain::production_verify_readonly(),
             [mode] if mode=="--pool-shutdown-report"=>pool_terminal_domain::production_shutdown_report(),
             [mode,manifest,path,pin,sha] if mode=="--pool-terminal-domain-loss"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"=>
                 pool_terminal_domain::production_terminal_manifest(std::path::Path::new(path),sha),
+            [mode,manifest,path,pin,sha,phase_flag,phase] if mode=="--pool-terminal-execution-check"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"&&phase_flag=="--phase"=>
+                pool_terminal_domain::production_execution_check(std::path::Path::new(path),sha,phase),
             _=>Err("production-not-ready: private mode requires its exact read-only flag or resolved execution manifest; no original action".into())
         };
         match report {Ok(value)=>println!("{}",value),Err(error)=>{eprintln!("{error}");std::process::exit(1);}}

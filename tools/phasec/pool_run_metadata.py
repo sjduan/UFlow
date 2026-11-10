@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import stat
 
 import terminal_domain_adapter as adapter
@@ -71,7 +72,8 @@ def complete_run(run, directory):
     Dynamic metadata requires real publication, QEMU event and serial journal.
     """
     run = Path(run)
-    adapter.require(run == adapter.ROOT / 'runs/c061' and run.resolve() == run, 'fixed future run only; old c044 stays readonly')
+    adapter.require(run.parent == adapter.ROOT / 'runs' and re.fullmatch(r'c[0-9]{3}',run.name)
+                    and int(run.name[1:])>=63 and run.resolve() == run, 'new reviewed task run only; old c044 stays readonly')
     directory = scope(directory)
     directory.mkdir(parents=True, exist_ok=False)
     modules = accepted()

@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import sys
 import types
@@ -106,7 +107,9 @@ def execution_context(request, pins):
     """
     row = request['execution_manifest']
     path = Path(row['path'])
-    require(path == ROOT / 'implementation/config-terminal-c060-v1/execution.json', 'fixed resolved execution manifest required')
+    require(path.name == 'execution.json' and path.parent.parent == ROOT / 'implementation'
+            and re.fullmatch(r'config-terminal-c[0-9]{3}-v[1-9][0-9]{0,2}', path.parent.name),
+            'fixed resolved execution manifest required in dedicated task namespace')
     plan = decode(reference(row))
     require(plan['schema'] == 1 and plan['kind'] == 'C044TerminalResolvedExecutionV1'
             and plan['consumer_pins_sha256'] == PIN_SHA and plan['state_sha256'] == pins['current_state_sha256']
@@ -115,10 +118,19 @@ def execution_context(request, pins):
             and plan['protected_bytes'] == 76 << 20, 'exact resolved c044 transaction scope required')
     action = request['execution_action']
     require(action in ('terminal-only', 'successor'), 'explicit execution phase required')
+    require(set(plan['phases']) == {'terminal-only','successor'}, 'exact terminal and successor phases required')
+    terminal = plan['phases']['terminal-only']['job']
+    successor = plan['phases']['successor']['job']
+    require(re.fullmatch(r'c[0-9]{3}', terminal) and re.fullmatch(r'c[0-9]{3}', successor)
+            and terminal != successor and path.parent.name.startswith('config-terminal-' + terminal + '-v'),
+            'unique manifest-bound phase jobs required')
+    for name, item in plan['phases'].items():
+        require(item['config']['path'] == str(path.parent / (item['job'] + '.json')), 'phase config outside resolved namespace')
+        configured = decode(reference(item['config']))
+        require(configured['root'] == str(ROOT) and configured['job'] == item['job']
+                and configured['kind'] == ('build' if name == 'terminal-only' else 'guest'), 'phase job/kind binding mismatch')
     phase = plan['phases'][action]
-    job = 'c060' if action == 'terminal-only' else 'c061'
-    require(phase['job'] == job and phase['config']['path'] == str(ROOT / ('implementation/config-terminal-c060-v1/' + job + '.json')),
-            'fixed phase job/config required')
+    job = phase['job']
     config = decode(reference(phase['config']))
     require(config['root'] == str(ROOT) and config['job'] == job and config['kind'] == ('build' if action == 'terminal-only' else 'guest'),
             'resolved E0 job identity mismatch')
