@@ -132,7 +132,8 @@ impl MemServicePoolProvider {
             deferred_bootstrap:deferred,readiness_file:c["readiness_file"].as_str().map(PathBuf::from),
             reconciliation:if c["reconciliation"].is_null(){None}else{Some(c["reconciliation"].clone())},
             active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution,
-            #[cfg(test)] managed_cache_host_test:false,managed_write_host_test:false })
+            #[cfg(test)] managed_cache_host_test:false,
+            #[cfg(test)] managed_write_host_test:false })
     }
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
