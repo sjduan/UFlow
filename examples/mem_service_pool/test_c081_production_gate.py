@@ -1,5 +1,5 @@
 """Production admission must reject before caller-selected original IO."""
-import json,sys,unittest
+import json,sys,unittest,os,tempfile
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
@@ -8,6 +8,18 @@ from accepted_c081_v3 import v3_anchors,v3_policy
 from managed_gate_v3 import runtime_admission,require_runtime
 
 class ProductionGateTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform=='linux','actual POSIX source identity')
+    def test_empty_tracked_source_is_allowed_but_changed_bytes_mode_and_alias_are_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();path=root/'__init__.py';path.write_bytes(b'');path.chmod(0o644);row={'bytes':0,'mode':'100644'}
+            with patch.object(adapter,'AP_ROOT',root):
+                self.assertEqual(adapter.c081_source_file(path,row),b'')
+                path.write_bytes(b'x')
+                with self.assertRaises(ValueError):adapter.c081_source_file(path,row)
+                path.write_bytes(b'');path.chmod(0o600)
+                with self.assertRaises(ValueError):adapter.c081_source_file(path,row)
+                path.chmod(0o644);alias=root/'alias.py';alias.symlink_to(path)
+                with self.assertRaises(ValueError):adapter.c081_source_file(alias,row)
     def test_old_context_ready_flags_and_wrong_namespaces_never_read_caller_data(self):
         a=v3_anchors();policy=v3_policy()
         with patch.object(adapter,'ap_read',side_effect=AssertionError('unexpected original IO')):

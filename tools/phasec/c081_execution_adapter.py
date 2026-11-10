@@ -8,6 +8,19 @@ def c081_manifest_gate(path,external_sha,policy):
     ap_require(path==Path(policy['config_directory'])/'execution.json' and type(external_sha) is str and re.fullmatch('[0-9a-f]{64}',external_sha),'production-not-ready: exact compiled reviewed execution namespace required; no descriptor/state/authority/verifier IO')
     return {'path':str(path),'bytes':len(ap_read(path,1<<20)),'sha256':external_sha}
 
+def c081_source_file(path,row):
+    # Empty tracked package markers are legitimate Git source. Evidence/data
+    # readers retain their nonempty invariant; this exception is source-only.
+    if row['bytes']!=0:return ap_read(path,8<<20,int(row['mode'][-3:],8))
+    path=Path(path)
+    ap_require(path.is_absolute() and path.resolve(strict=True)==path and path.is_relative_to(AP_ROOT),'canonical bound empty source required')
+    fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0)|getattr(os,'O_CLOEXEC',0))
+    with os.fdopen(fd,'rb') as stream:
+        before=os.fstat(stream.fileno());raw=stream.read(1);after=os.fstat(stream.fileno());named=path.lstat()
+    identity=lambda s:(s.st_dev,s.st_ino,s.st_uid,s.st_mode,s.st_size,s.st_mtime_ns,s.st_ctime_ns,s.st_nlink)
+    ap_require(stat.S_ISREG(before.st_mode) and before.st_uid==os.geteuid() and before.st_nlink==1 and before.st_size==0 and stat.S_IMODE(before.st_mode)==int(row['mode'][-3:],8) and not raw and identity(before)==identity(after)==identity(named),'empty source identity/mode drift')
+    return raw
+
 def c081_execution(request,a,policy):
     phase=request['execution_action'];ap_require(phase in policy['phases'],'exact compiled execution phase required')
     ref=c081_manifest_gate(request['execution_manifest']['path'],request['execution_manifest']['sha256'],policy);plan=ap_decode(ap_bound(ref,1<<20));directory=Path(policy['config_directory'])
@@ -28,7 +41,7 @@ def c081_execution(request,a,policy):
     for key,config in configs.items():
         ap_require(config['commands']==[{'argv':commands[key],'cwd':str(AP_ROOT)}] and config['supervisor_sha256']==frozen and config['supervisor_root']==str(AP_ROOT/'env/supervisor') and 0<config['run_seconds']<=3600,'exact source-bound actual phase actor and frozen bounded supervisor required')
     for rel,row in m['files'].items():
-        ap_require(hashlib.sha256(ap_read(source/rel,8<<20,int(row['mode'][-3:],8))).hexdigest()==row['sha256'],'actual bound Git source/mode drift')
+        ap_require(hashlib.sha256(c081_source_file(source/rel,row)).hexdigest()==row['sha256'],'actual bound Git source/mode drift')
     build=ap_decode(ap_bound(plan['build'],8<<20));ap_require(build['source_commit']==plan['source_commit'] and build['source_manifest_sha256']==plan['source_manifest']['sha256'] and build['managed_cache_enabled'] is True and build['accepted_context']==a['accepted_context'],'actual newly compiled production daemon/source receipt required')
     daemon=plan['daemon'];ap_require(daemon['path']==build['daemon'] and daemon['sha256']==build['daemon_sha256'],'actual compiled runtime executable binding')
     ap_bound(daemon,128<<20)
