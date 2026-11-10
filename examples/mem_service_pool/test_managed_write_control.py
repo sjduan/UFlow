@@ -17,6 +17,7 @@ class HostProtocol:
     def encode(self,body,public,op,alias):
         return canonical({'HOST_ONLY_NOT_E_NATIVE_WIRE':True,'op':op,'generation':body['write_control_generation'],'authority':body['write_authority_sha256'],'correlation':body['write_frame_sha256']}).decode()
     def validate_reply(self,wire,value,pid):return value
+    def request_sha256(self,wire):return sha(wire.encode('ascii'))
 
 class WriteControlTests(unittest.TestCase):
     def setUp(self):
@@ -26,7 +27,7 @@ class WriteControlTests(unittest.TestCase):
         for role,binding in f.bindings.items():
             def control(wire,deadline,role=role,binding=binding):
                 self.assertTrue(self.node.command_lock.locked());q=json.loads(wire);op=q['op'];self.events.append(role+'-W-'+op)
-                r={'version':1,'mode':'w','operation':op,'pid':binding['pid'],'control_generation':str(q['generation']),'authority_sha256':q['authority'],'correlation_sha256':q['correlation'],'request_sha256':sha(wire.encode()),'code':'ok','active':op=='begin','in_flight':0,'cache_pages':0,'dirty_bytes':0,'flush_confirmed':op=='end','native_alias':copy.deepcopy(binding['alias'])}
+                r={'version':1,'mode':'w','operation':op,'pid':binding['pid'],'control_generation':str(q['generation']),'authority_sha256':q['authority'],'correlation_sha256':q['correlation'],'request_sha256':sha(wire.encode()),'code':'ok','active':op in ('begin','flush'),'in_flight':0,'cache_pages':0,'dirty_bytes':0,'flush_confirmed':op in ('flush','end'),'native_alias':copy.deepcopy(binding['alias'])}
                 if self.bad:self.bad(op,r)
                 return r
             binding['control']=control

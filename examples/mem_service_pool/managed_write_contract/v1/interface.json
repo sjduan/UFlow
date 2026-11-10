@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "interface": "UFlow-managed-write-native-v1",
+  "contract_stable": true,
+  "production_release_ready": false,
+  "reason": "Full ELF/profile/context and wrapper HOST tests remain pending; no new Guest or claim release.",
+  "codecs": {
+    "uflow_managed_write_codec_v1.py": {
+      "bytes": 10928,
+      "sha256": "e5627711dc76a5441a7c957733983bff10dfd7d38fe1cf787b3b535e0de05c08"
+    },
+    "uflow_managed_guest_group_v2.py": {
+      "bytes": 21436,
+      "sha256": "9bd5df060abfa26b2527557e14b755c701b9b3323cb57d6c5466ffa6691765b2"
+    }
+  },
+  "host_proof": "../transport004-originals/implementation/c101-write-v1/transport-tests004/result.json",
+  "operations": {
+    "probe": 1,
+    "begin": 2,
+    "end": 3,
+    "status": 4,
+    "flush": 5
+  },
+  "wire": {
+    "prefix": "umw1:",
+    "magic": "UMW1",
+    "bytes": 220,
+    "text_bytes": 445,
+    "body_struct": "!4sB3xQ32s32s32s9Q9I",
+    "property": "uflow-managed-write-control-v1",
+    "object_path": "/machine",
+    "enable_argv": [
+      "-global",
+      "ubc.uflow-managed-write-v1=on"
+    ],
+    "R_feature_separately_enabled_unchanged": true
+  },
+  "API": {
+    "codec": [
+      "descriptor_metadata(opaque_hex)",
+      "encode(command)",
+      "decode(wire)",
+      "request_sha256(wire)",
+      "validate_reply(wire,value,expected_pid)"
+    ],
+    "channel": "ManagedSerialChannel.managed_write(wire) -> exact typed reply; same QMP channel and same lock as managed_cache",
+    "qmp": "QMP.managed_write(wire), owning pid/birth/uid/pid-mnt-user ns verified; serialized qom-set then qom-get, five second deadline",
+    "lifecycle": "One active R OR W per QEMU. flush keeps W active. Only exact successful end clears channel obligation. Unknown/uncertain sticks and notifies independent monitor; normal quit/close remain blocked."
+  },
+  "authority": "C alone authenticates Executing W/Catalog Writing/native RW, mints authority/correlation/generation and owns Book, grant/write/verify/flush/end/commit sequence. R Committed content is not W authority. No payload/token_value/control reset.",
+  "native_alias": "Same full nine uint64 decimal-string + nine uint32 integer fields as fixed R. descriptor SHA is of 192 lowercase opaque MSOB hex bytes. Do not decode offset92 token_value. key.flags0 is not segment_flags7.",
+  "W_reply_additions": {
+    "uncertain": "bool",
+    "dirty_bytes": "exact int 0..4096",
+    "write_in_flight": "exact int 0..1",
+    "write_counters": "exact cpu_callbacks/accepted_bytes/strict_flush_calls/completed_bytes/failures canonical uint64 decimal strings"
+  },
+  "exact_ok_ack": "uncertain=false, failures=0, dirty_bytes=write_in_flight=in_flight=0 for begin/flush/end; begin active=true/pages0; flush active=true; end active=false/pages0. code!=ok never authorizes publish or Book retirement.",
+  "evidence_scope": "Actual source-extracted production callbacks, strict IO and home handler with actual two-process UBLink rings plus synthetic scatter DMA. 20MiB scalar W plus six20MiB actual scalar verification reads/byte/checksum/48MiB guards; 71680 real endpoint replies/11 negative cases. HOST19.08676s; no Guest120s claim."
+}

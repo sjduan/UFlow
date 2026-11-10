@@ -1,7 +1,8 @@
 """Exclusive Catalog W orchestration, distinct from committed-content R.
 
-The protocol parameter is a private HOST seam until E publishes its final W
-codec/profile. It normalizes native metadata; it never carries data bytes.
+The private HOST constructor can use E's pinned stable W codec/wrapper or an
+explicit normalized double. Production still needs the final profile/context.
+The protocol normalizes native metadata; it never carries data bytes.
 No production constructor accepts a caller's protocol or readiness flag.
 """
 from dataclasses import replace
@@ -54,16 +55,17 @@ class _WriteController:
         reply=self.protocol.validate_reply(wire,raw,binding['pid'])
         check(type(reply['version']) is int and reply['version']==self.protocol.VERSION and reply['mode']=='w' and reply['operation']==op and type(reply['pid']) is int and reply['pid']==binding['pid'] and
               reply['control_generation']==str(body['write_control_generation']) and reply['authority_sha256']==body['write_authority_sha256'] and
-              reply['correlation_sha256']==body['write_frame_sha256'] and reply['request_sha256']==sha(wire.encode('ascii')) and reply['code']=='ok','full authenticated W control correlation required')
+              reply['correlation_sha256']==body['write_frame_sha256'] and reply['request_sha256']==self.protocol.request_sha256(wire) and reply['code']=='ok','full authenticated W control correlation required')
         native=reply['native_alias']
         check(set(native)=={*self.protocol.FIELDS64,*self.protocol.FIELDS32,'descriptor_sha256'} and
               all(type(native.get(k)) is (str if k in self.protocol.FIELDS64 else type(v)) and native.get(k)==(str(v) if k in self.protocol.FIELDS64 else v) for k,v in public.items()) and
               all(native_u64(native[k])>0 for k in ('map_id','lease_epoch')) and native['offset']==str(body['offset']) and native['length']==str(body['nbytes']),'full native W publication/alias/range required')
         if alias is not None:check(native==alias,'W native alias/epoch changed around IO')
-        if op in ('begin','end'):
-            check(reply['active'] is (op=='begin') and all(type(reply[k]) is int and reply[k]==0 for k in ('in_flight','cache_pages','dirty_bytes')),'empty begin or drained W end required')
-        if op=='end':check(reply['flush_confirmed'] is True,'actual strict-native W flush ACK required')
-        record={'operation':op,'request_sha256':sha(wire.encode('ascii')),'reply':reply};trace.append(record);self.audit.append(record)
+        if op in ('begin','flush','end'):
+            check(reply['active'] is (op!='end') and all(type(reply[k]) is int and reply[k]==0 for k in ('in_flight','dirty_bytes')),'zero dirty/IO native W ACK required')
+        if op in ('begin','end'):check(type(reply['cache_pages']) is int and reply['cache_pages']==0,'empty begin or drained W end required')
+        if op in ('flush','end'):check(reply['flush_confirmed'] is True,'actual strict-native W flush ACK required')
+        record={'operation':op,'request_sha256':self.protocol.request_sha256(wire),'reply':reply};trace.append(record);self.audit.append(record)
         if len(self.audit)>1024:self.audit.pop(0)
         return reply
     def execute(self,node,frame,auth,timeout=120):
@@ -81,13 +83,15 @@ class _WriteController:
                 for role,binding in peers.items():
                     result=self._control(binding,body,row['public'],'probe',deadline,auth,None,trace)
                     if role=='importer':alias=result['native_alias']
-                imp=peers['importer'];self._control(imp,body,row['public'],'begin',deadline-5.05,auth,alias,trace);self.live[key]='Writing'
-                response=node._exchange_locked(replace(frame,body=canonical({k:v for k,v in body.items() if k in SDK})),max(0,deadline-time.monotonic()-5.05))
+                imp=peers['importer'];self._control(imp,body,row['public'],'begin',deadline-10.10,auth,alias,trace);self.live[key]='Writing'
+                response=node._exchange_locked(replace(frame,body=canonical({k:v for k,v in body.items() if k in SDK})),max(0,deadline-time.monotonic()-10.10))
                 r=metadata(response.body)
                 check(response.status==0 and r.get('phase')=='completed' and r.get('all_bytes') is True and r.get('visible') is True and type(r.get('pins')) is int and r['pins']==0 and
                       type(r.get('checksum')) is str and r['checksum'] and all(type(r.get(k)) is int and r[k]==body[k] for k in ('offset','nbytes','pattern_id')),'unchanged Guest W stores/verification/publication did not complete')
+                # Flush keeps the exclusive W grant active. It is not end ACK.
+                self.live[key]='Flushing';self._control(imp,body,row['public'],'flush',deadline-5.05,auth,alias,trace)
                 self.live[key]='Revoking';ended=True;self._control(imp,body,row['public'],'end',deadline,auth,alias,trace)
-                check([x['operation'] for x in trace]==['probe','probe','begin','end'],'one complete W native transcript required')
+                check([x['operation'] for x in trace]==['probe','probe','begin','flush','end'],'one complete W native transcript required')
                 r.update({'write_version':1,'write_control_generation':generation,'write_authority_sha256':body['write_authority_sha256'],'write_frame_sha256':body['write_frame_sha256'],
                           'write_begin_confirmed':True,'write_end_confirmed':True,'write_flush_confirmed':True,'write_active':False,'write_in_flight':0,'write_pages':0,'write_dirty_bytes':0,'write_transcript_sha256':sha(canonical(trace))})
                 self.live.pop(key);return frame.completion(r)
