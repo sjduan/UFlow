@@ -1,5 +1,6 @@
 """HOST-only control transport doubles; no QMP, Guest or native cache proof."""
-import copy,hashlib,json,sys,threading,time,unittest
+import copy,hashlib,json,sys,threading,time,types,unittest
+from unittest.mock import patch
 from dataclasses import replace
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
@@ -106,5 +107,19 @@ class ControlTests(unittest.TestCase):
             self.assertTrue(entered.wait(2));self.assertFalse(self.node.command_lock.acquire(timeout=.02));self.assertNotIn('importer-end',self.events)
         finally:resume.set();thread.join(3)
         self.assertFalse(thread.is_alive());self.assertEqual(len(completed),1);self.assertIsInstance(completed[0],Frame);self.assertFalse(self.controller.live)
+    def test_transcript_filters_interleaved_other_node_audit_by_full_authority(self):
+        def interleave(op,r):
+            if op=='begin':
+                other=copy.deepcopy(r);other['authority_sha256']='00'*32;self.controller.audit.append({'operation':'begin','reply':other,'request_sha256':'00'*32})
+        self.bad=interleave;receipt=metadata(self.execute().body)
+        trace=[r for r in self.controller.audit if r['reply']['authority_sha256']==receipt['cache_authority_sha256']]
+        self.assertEqual(receipt['cache_transcript_sha256'],sha(canonical(trace)));self.assertEqual(len(trace),4)
+    def test_reply_after_five_second_metadata_deadline_is_Unknown(self):
+        clock=[time.monotonic()]
+        def late(op,r):clock[0]+=6
+        self.bad=late
+        with patch('managed_cache_control.time',types.SimpleNamespace(monotonic=lambda:clock[0])):
+            with self.assertRaisesRegex(ValueError,'metadata deadline'):self.execute()
+        self.assertIn('Unknown',self.controller.live.values());self.assertIn('notice',self.events)
 
 if __name__=='__main__':unittest.main()

@@ -64,6 +64,7 @@ class PublicationBook:
 def strict_reply(c,wire,value,pid,alias):
     # E's interface-v1 validator is intentionally supplemented: Python bool
     # and float equality must not masquerade as integer counters/version.
+    check(type(value) is str and 0<len(value.encode('ascii'))<=4096,'bounded ASCII native metadata reply required')
     reply=c.validate_reply(wire,value,pid);command=c.decode(wire)
     keys={'version','feature','pid','operation','request_sha256','control_generation',*c.HASHES,'code','active','in_flight','cache_pages','native_alias','counters'}
     check(type(reply) is dict and set(reply)==keys,'exact native reply schema required')
@@ -84,8 +85,9 @@ class _HostController:
         auth.recheck();check(time.monotonic()<deadline,'bounded managed control deadline')
         binding['recheck']() # Actual production implementation must verify PID/birth/ELF/profile, both peers.
         wire=self.c.encode(command)
-        reply=binding['control'](wire,min(deadline,time.monotonic()+5))
-        check(time.monotonic()<deadline,'native control reply arrived after operation deadline')
+        control_deadline=min(deadline,time.monotonic()+5)
+        reply=binding['control'](wire,control_deadline)
+        check(time.monotonic()<control_deadline,'native control reply arrived after metadata deadline')
         auth.recheck();binding['recheck']()
         result=strict_reply(self.c,wire,reply,binding['pid'],binding['alias'])
         self.audit.append({'operation':command['operation'],'request_sha256':self.c.request_sha256(wire),'reply':result})
@@ -103,7 +105,8 @@ class _HostController:
             check(set(peers)=={'home','importer'},'both actual home and importer native bindings required')
             for binding in peers.values():
                 check(type(binding['alias']) is dict and set(binding['alias'])==set(row['public'])|{'map_id','lease_epoch'} and
-                      all(type(binding['alias'].get(k)) is type(v) and binding['alias'][k]==v for k,v in row['public'].items()),'complete home/importer public descriptor binding required')
+                      all(type(binding['alias'].get(k)) is type(v) and binding['alias'][k]==v for k,v in row['public'].items()) and
+                      all(type(binding['alias'][k]) is int and binding['alias'][k]>0 for k in ('map_id','lease_epoch')),'complete home/importer public descriptor binding required')
             base={'version':1,'control_generation':generation,'authority_sha256':body['cache_authority_sha256'],'correlation_sha256':body['cache_frame_sha256'],
                   **row['public'],'offset':body['offset'],'length':body['nbytes'],'map_id':0,'lease_epoch':0}
             self.highwater[key]=generation;self.live[key]='BeginPending';end=None;ended=False
@@ -123,7 +126,9 @@ class _HostController:
                 check(response.status==0 and receipt.get('phase')=='completed' and receipt.get('all_bytes') is True and receipt.get('visible') is True and type(receipt.get('pins')) is int and receipt['pins']==0 and
                       all(receipt.get(k)==body[k] and type(receipt.get(k)) is int for k in ('offset','nbytes','pattern_id')),'actual unchanged Guest SDK read did not complete')
                 self.live[key]='Revoking';ended=True;self._control(imp,end,deadline,auth)
-                transcript=sha(canonical(self.audit[-4:]));self.live.pop(key)
+                trace=[r for r in self.audit if r['reply']['authority_sha256']==body['cache_authority_sha256'] and r['reply']['correlation_sha256']==body['cache_frame_sha256'] and r['reply']['control_generation']==str(generation)]
+                check([r['operation'] for r in trace]==['probe','probe','begin','end'],'one complete same-authority native transcript required')
+                transcript=sha(canonical(trace));self.live.pop(key)
                 receipt.update({'cache_version':1,'cache_control_generation':generation,'cache_authority_sha256':body['cache_authority_sha256'],'cache_frame_sha256':body['cache_frame_sha256'],
                                 'cache_begin_confirmed':True,'cache_end_confirmed':True,'cache_active':False,'cache_in_flight':0,'cache_pages':0,'cache_transcript_sha256':transcript})
                 return frame.completion(receipt)

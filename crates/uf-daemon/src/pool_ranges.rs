@@ -320,7 +320,7 @@ impl Ranges {
         }).collect::<Vec<_>>(),"leases":self.leases.values().filter(|lease| lease.state!="Closed").map(|lease| {
             let mut value=lease.identity(); value["state"]=json!(if lease.state=="Unknown" {"Unknown"} else if lease.mode=="w" {"Writing"} else {"Reading"}); value
         }).collect::<Vec<_>>()});
-        if !self.cache.is_empty(){snapshot["managed_cache_obligations"]=self.cache.snapshot();}snapshot
+        if self.cache.has_history(){snapshot["managed_cache_obligations"]=self.cache.snapshot();}snapshot
     }
 }
 

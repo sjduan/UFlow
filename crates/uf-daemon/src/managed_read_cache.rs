@@ -66,6 +66,7 @@ impl Book {
  pub(crate) fn uncertain(&mut self,generation:u64){if let Some(g)=self.live.get_mut(&generation){g.state="Unknown";}}
  pub(crate) fn has_unknown(&self)->bool{self.live.values().any(|g|g.state=="Unknown")}
  pub(crate) fn is_empty(&self)->bool{self.live.is_empty()}
+ pub(crate) fn has_history(&self)->bool{self.highwater!=0}
  pub(crate) fn client_pending(&self,client:&str)->bool{self.live.values().any(|g|g.authority.client==client)}
  pub(crate) fn lease_pending(&self,lease:&str)->bool{self.live.values().any(|g|g.authority.lease==lease)}
  pub(crate) fn guard_writer(&self,offset:u64,nbytes:u64)->Result<(),String>{

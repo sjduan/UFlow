@@ -43,6 +43,7 @@ fn ack(r:&Value)->Value{json!({"cache_version":1,"cache_control_generation":r["c
  let(st,mut state,l,node)=fixture();let a=grant(&st,&state,&l,&node,9);let p=state.pools.get_mut("pool").unwrap();let r=p.ranges.cache.begin(a.clone(),&json!(17)).unwrap();
  assert!(p.ranges.cache.begin(a.clone(),&json!(17)).is_err());assert!(p.ranges.cache.guard_writer(0,65536).is_err());assert!(p.ranges.cache.guard_writer(65536,65536).is_ok());
  p.ranges.cache.finish(9,&ack(&r)).unwrap();assert!(p.ranges.cache.is_empty());assert!(p.ranges.cache.begin(a,&json!(17)).is_err());assert!(p.ranges.cache.guard_writer(0,65536).is_ok());
+ assert_eq!(p.ranges.snapshot()["managed_cache_obligations"]["control_highwater"],9);assert_eq!(p.ranges.snapshot()["managed_cache_obligations"]["outstanding"],json!([]));
 }
 #[test]fn dropped_forged_partial_or_wrong_typed_ack_freezes_even_after_late_ack(){
  for(key,value)in [("cache_end_confirmed",json!(false)),("cache_authority_sha256",json!("00".repeat(32))),("cache_frame_sha256",json!("00".repeat(32))),("cache_control_generation",json!(10)),("cache_active",json!(true)),("cache_in_flight",json!(false)),("cache_pages",json!(0.0)),("cache_transcript_sha256",json!("bad"))]{
