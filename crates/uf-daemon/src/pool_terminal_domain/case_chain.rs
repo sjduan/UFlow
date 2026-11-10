@@ -127,9 +127,15 @@ impl Case {
             let history=bounded(&old.join("historical-state.json"),1<<20)?;let intent=parsed(&bounded(&old.join("intent.json"),1<<20)?)?;
             // Historical validators rederive accepted old proof/ledger data;
             // they execute no E code and confer no current-domain permit.
-            let p=match index {0=>from_e_proof(&history,intent["verified_candidate"].clone())?,1=>current::from_current_e_proof(&history,dir,intent["verified_candidate"].clone())?,_=>return Err("additional historical producer context not accepted".into())};
+            let p=match index {
+                0=>from_e_proof(&history,intent["verified_candidate"].clone())?,
+                1=>current::from_current_e_proof(&history,dir,intent["verified_candidate"].clone())?,
+                2=>recorded_third(&history,&intent,&ancestors[..index],&previous,&fences,&json!(backings))?,
+                _=>return Err("additional historical producer context not accepted".into())
+            };
             if a["version"]!=index as u64+1 || a["resource_ids"]!=json!(p.terminal_ids) || intent["proof_sha256"]!=p.proof_sha || p.prior_backings!=json!(backings){return Err("claimed ancestor proof/backing chain changed".into());}
             let commit=parsed(&bounded(&old.join("commit.json"),1<<20)?)?;
+            if index==2 && commit["case_sha256"]!=intent["case_sha256"]{return Err("consumed third case/commit binding changed".into());}
             if commit["kind"]!="TerminalDomainAuthorityCommitted" || commit["original_state_sha256"]!=digest(&history) || commit["proof_consumed_once"]!=p.proof_sha || commit["normal_SDK_ACK"]!=false ||
                 commit["resulting76_sha256"]!=digest(&bounded(&old.join("resulting76.json"),1<<20)?) || commit["fences_sha256"]!=digest(&bounded(&old.join("permanent-fences.json"),1<<20)?) {
                 return Err("ancestor commit/proof binding changed".into());
@@ -154,6 +160,21 @@ impl Case {
         }
         Ok(Lineage{pins:self.descriptor.clone(),previous,previous_fences:fences,backings:json!(backings)})
     }
+}
+/// Re-derive the already-consumed v3 accounting from its pinned recorded proof.
+/// This does not invoke the E adapter, lock authority, or retest old eligibility.
+fn recorded_third(history:&[u8],intent:&Value,ancestors:&[Value],previous:&Value,fences:&Value,backings:&Value)->Result<VerifiedCandidate,String>{
+    let old=producer_context::readonly_case()?; // Compiled historical bytes; no adapter or live proof.
+    if intent["case"]!=old.descriptor||intent["case_sha256"]!=old.descriptor_sha{return Err("recorded third compiled historical case drift".into());}
+    producer_context::validate_case(&old)?;
+    producer_context::validate_recorded_proof(&intent["verified_candidate"])?;
+    if old.version()!=3||old.descriptor["claimed_ancestors"]!=json!(ancestors)||old.descriptor["predecessor_files"]!=parsed(PINS.as_bytes())?{return Err("third consumed ancestry prefix changed".into());}
+    let lineage=Lineage{pins:old.descriptor.clone(),previous:previous.clone(),previous_fences:fences.clone(),backings:backings.clone()};
+    let p=candidate(&old,history,&lineage,intent["verified_candidate"].clone())?;
+    let expected=json!({"kind":"VersionedCurrentTerminalLossPending","version":old.version(),"case":old.descriptor,"case_sha256":old.descriptor_sha,
+        "source_state_sha256":old.sha(),"source_revision":old.revision(),"proof_sha256":p.proof_sha,"verified_candidate":p.proof,"lineage":lineage.pins,"resource_ids":old.ids(),"normal_SDK_ACK":false});
+    if *intent!=expected{return Err("consumed third full recorded intent changed".into());}
+    Ok(p)
 }
 fn checked_file(path:&Path,row:&Value)->Result<(),String>{let raw=bounded(path,1<<20)?;if row["bytes"]!=raw.len()||row["sha256"]!=digest(&raw){return Err("source/ancestor exact bytes drift".into());}Ok(())}
 fn exact_names(path:&Path,names:&[&str])->Result<(),String>{

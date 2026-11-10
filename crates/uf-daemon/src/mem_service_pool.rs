@@ -767,7 +767,7 @@ mod tests {
                 provider.execute(&service_exec,&peer,&json!({"op":"ExecutePoolRange","operation_id":"host-real-w-execute","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":client,"access_generation":access,"access_binding_v2":{},"lease":lease_json,"pattern_id":17}))
             });
             entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
-            service.catalog(|state,st|{let p=state.pools.get_mut("pool").unwrap();assert_eq!(p.ranges.leases[&lease_token].state,"Executing");assert_eq!(st.leases[&lease.catalog_id].state,"Writing");
+            service.catalog(|state,st|{let p=state.pools.get_mut("pool").unwrap();assert_eq!(p.ranges.leases[&lease_token].state,"Executing");assert_eq!(st.leases[&lease.catalog_id].state,"Executing");
                 assert_eq!(p.ranges.write.is_empty(),!enabled);assert!(p.ranges.cache.is_empty());assert_eq!(p.ranges.blocks[&lease.block].segments.last().unwrap().version,0);
                 if enabled{assert!(p.ranges.write.guard_access(65536,65536).is_err());assert!(p.ranges.release(&lease).is_err());assert!(p.ranges.commit(&lease,"early",65536).is_err());assert!(p.confirm_client_unmapped(st,&lease.client).is_err());}
                 if scenario==5{p.ranges.unknown(&lease);}

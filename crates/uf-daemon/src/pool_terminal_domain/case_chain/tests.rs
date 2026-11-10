@@ -24,6 +24,45 @@ impl Fixture{
  fn recover(&self)->Result<TerminalAuthority,String>{recover(&self.dir,&self.state,&self.case,|b,l|self.verify(b,l))}
 }
 impl Drop for Fixture{fn drop(&mut self){if self.cleanup{assert_eq!(self.root.parent(),Some(std::env::temp_dir().as_path()));fs::remove_dir_all(&self.root).unwrap();}}}
+fn c101_fixture()->Fixture{
+ let mut f=Fixture::new();let source=Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/mem_service_pool/current_c101_host");
+ let m=parsed(&fs::read(source.join("fixture-manifest.json")).unwrap()).unwrap();
+ for (name,row) in m["origins"].as_object().unwrap(){
+  let raw=fs::read(source.join(name)).unwrap();assert_eq!(raw.len() as u64,row["bytes"].as_u64().unwrap());assert_eq!(digest(&raw),row["sha256"].as_str().unwrap());
+  let dest=if name=="current-state.json"{f.state.clone()}else{f.dir.join("successor-c081-terminal-domain-loss-v3").join(Path::new(name).file_name().unwrap())};
+  fs::create_dir_all(dest.parent().unwrap()).unwrap();fs::write(dest,raw).unwrap();
+ }
+ let raw=fs::read(source.join("case-host.json")).unwrap();f.case=Case::parse(&raw,m["case_sha256"].as_str().unwrap()).unwrap();f
+}
+fn c101_host_candidate(f:&Fixture,b:&[u8],lineage:&Lineage)->Result<VerifiedCandidate,String>{
+ candidate(&f.case,b,lineage,json!({"kind":"HOSTOnlyC101MetadataCandidateNoEPermit","source_sha256":f.case.sha(),"normal_SDK_ACK":false}))
+}
+#[test]fn c101_consumed_three_commits_and_claims_are_readonly_history_not_fresh_eligibility(){
+ let f=c101_fixture();let b=fs::read(&f.state).unwrap();let l=f.case.lineage(&f.dir,false).unwrap();let p=c101_host_candidate(&f,&b,&l).unwrap();
+ assert_eq!(p.terminal_ids(),&[119,120,121]);assert_eq!(p.prior_backings.as_object().unwrap().len(),9);assert_eq!(p.source_sha,"934b30b07df72ab28e96ef173a639f55e64584db46dbdc13518828246ab48796");
+ assert_eq!(p.fences["minimum_next_object_id"],122);assert_eq!(p.source_ledger()["terminal_domain_loss_tombstones"].as_object().unwrap().len(),9);
+ assert!(!f.dir.join(f.case.successor()).exists());assert_eq!(fs::read(&f.state).unwrap(),b);
+ assert!(producer_context::validate_case(&f.case).is_err()); // HOST preparation is never current E acceptance.
+}
+#[test]fn c101_host_only_once_claim_reserves122123_and_business_starts124_preserving76(){
+ let f=c101_fixture();let b=fs::read(&f.state).unwrap();let mut a=transact(&f.dir,&f.state,&f.case,|b,l|c101_host_candidate(&f,b,l),"").unwrap();
+ let after=a.ledger.as_ref().unwrap().snapshot();assert_eq!(after["terminal_domain_loss_tombstones"].as_object().unwrap().len(),12);assert_eq!(after["charged_bytes"],12<<20);assert_eq!(after["reserved_bytes"],64<<20);
+ let mut st=catalog();let lifetime=a.attach_staged(&mut st,&namespace(&f)).unwrap();assert_eq!(st.next_object_id,124);assert_eq!(st.managed_pools.reconciliation["terminal_canary_charge_objects"],json!({"nodeA":122,"nodeB":123}));
+ assert_eq!((st.ddr_resources.charged_bytes(),st.ddr_resources.reserved_bytes()),(12<<20,68<<20));assert!(a.attach_staged(&mut catalog(),&namespace(&f)).is_err());drop(a);assert!(recover(&f.dir,&f.state,&f.case,|b,l|c101_host_candidate(&f,b,l)).is_err());drop(lifetime);assert_eq!(fs::read(&f.state).unwrap(),b);
+}
+#[test]fn c101_missing_consumed_claim_and_coherently_rewritten_third_case_or_backing_fail(){
+ for target in ["claim","case","backing"]{
+  let mut f=c101_fixture();let root=f.dir.join("successor-c081-terminal-domain-loss-v3");
+  if target=="claim"{fs::remove_file(root.join("service-admission-claim.json")).unwrap();}
+  else {
+   let name=if target=="case"{"intent.json"}else{"inherited-backing-identities.json"};let mut value=parsed(&fs::read(root.join(name)).unwrap()).unwrap();
+   if target=="case"{value["case_sha256"]=json!("00".repeat(32));}else{value["115"]["backing"]["resource"]=json!("forged-consumed-backing");}
+   fs::write(root.join(name),serde_json::to_vec(&value).unwrap()).unwrap();let mut commit=parsed(&fs::read(root.join("commit.json")).unwrap()).unwrap();commit["files"][name]=json!(digest(&fs::read(root.join(name)).unwrap()));if target=="case"{commit["case_sha256"]=value["case_sha256"].clone();}fs::write(root.join("commit.json"),serde_json::to_vec(&commit).unwrap()).unwrap();
+   for name in [name,"commit.json"]{let raw=fs::read(root.join(name)).unwrap();f.case.descriptor["claimed_ancestors"][2]["files"][name]=json!({"bytes":raw.len(),"sha256":digest(&raw)});}
+  }
+  assert!(f.case.lineage(&f.dir,false).is_err(),"{target}");assert!(!f.dir.join(f.case.successor()).exists());
+ }
+}
 fn catalog()->Catalog{let mut c=Catalog::new(-1,vec![]);c.ddr_resources.limit=128<<20;c}
 fn namespace(f:&Fixture)->Value{json!({"realm":"simulated:chain-new","session":"chain-new-session","nodes":[{"node":"nodeA","socket":f.root.join("new-a.sock")},{"node":"nodeB","socket":f.root.join("new-b.sock")}]})}
 
