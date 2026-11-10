@@ -4,7 +4,8 @@ from pathlib import Path
 ROOT='/workspace/uflow/runs/mem-service-shared-pool-20261108'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main(root,source,name):
- assert str(root)==ROOT and name=='build-host057' and 'UFLOW_ENV_CLOSE_FD' in os.environ
+ assert str(root)==ROOT and name.startswith('build-host') and len(name)==13 and name[-3:].isdecimal() and int(name[-3:])>=57 and 'UFLOW_ENV_CLOSE_FD' in os.environ
+ generation=name[-3:];assert source==root/'implementation'/('source-host'+generation)
  out=root/'implementation'/name;out.mkdir(exist_ok=False)
  manifest=json.loads((source/'.uflow-source.json').read_bytes())
  for rel,row in manifest['files'].items():
@@ -17,7 +18,7 @@ def main(root,source,name):
  original=root/'runs/c081/state/state.json';state_pin=sha(original);assert state_pin=='4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26'
  authority=root/'implementation/responsibility-c013';real={str(p):sha(p) for folder in ['successor-c044-terminal-domain-loss-v1','successor-c064-terminal-domain-loss-v2'] for p in (authority/folder).iterdir()};assert len(real)==15
  assert not (authority/'successor-c081-terminal-domain-loss-v3').exists()
- cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo';target=root/'implementation/cargo-host057';assert not target.exists()
+ cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo';target=root/'implementation'/('cargo-host'+generation);assert not target.exists()
  cbase=root/'implementation/build-host046';own=source/'crates/uf-ub-sim-agent/c'
  env={**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),'CARGO_INCREMENTAL':'0','CARGO_BUILD_JOBS':'4',
   'UF_ACL_SHIM_LIB_DIR':str(cbase/'fence'),'LD_LIBRARY_PATH':str(cbase/'fence'),'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1',
@@ -44,7 +45,7 @@ def main(root,source,name):
  # Recompile only the changed C translation units. Full C/SDK/image are kept
  # unchanged for CPU matrix reuse; a new production image is still pending.
  old_flags=receipt['compiler_argv'];flags=old_flags[:next(i for i,a in enumerate(old_flags) if a.endswith('/pool_agent.c'))]
- flags=[s.replace('/implementation/source-host046/','/implementation/source-host057/') for s in flags]
+ flags=[s.replace('/implementation/source-host046/','/implementation/source-host'+generation+'/') for s in flags]
  run(flags+['-c',own/'pool_agent.c','-o',out/'pool_agent.o'],'changed-agent-TU')
  run(flags+[own/'pool_guest_init.c','-o',out/'pool-guest-init'],'changed-PID1-TU')
  run(['/usr/bin/gcc','-O0','-Wall','-Wextra','-DUFLOW_POOL_LAUNCHER_FIXTURE',own/'pool_guest_init.c','-o',out/'cpu-guest-init'],'host-PID1-fixture-compile')
@@ -58,7 +59,7 @@ def main(root,source,name):
  (out/'actual-c081-monitor-ownership.json').write_text(json.dumps(ownership,indent=2))
  run([sys.executable,'-B',source/'examples/mem_service_pool/matrix_entry_cpu.py','--chain-terminal-domain',
   '--agent',cbase/'cpu-agent','--worker',cbase/'cpu-worker','--controller',root/'env/mem-service-sdk/bin/linqu_mem_service',
-  '--scratch',root/'z057','--output',out/'three-generation-normal-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'],
+  '--scratch',root/('z'+generation),'--output',out/'three-generation-normal-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'],
   'three-generation-normal-CPU-matrix',900)
  assert sha(original)==state_pin and not (authority/'successor-c081-terminal-domain-loss-v3').exists()
  for p,pin in {**frozen,**real}.items():assert sha(Path(p))==pin
