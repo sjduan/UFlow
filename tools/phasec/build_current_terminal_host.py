@@ -78,7 +78,7 @@ def main(root,source,name):
  assert sha(state)==state_pin
  for path,pin in pins.items():assert sha(Path(path))==pin
  result={'schema':1,'pass':True,'source_commit':current['commit'],'source_manifest_sha256':sha(source/'.uflow-source.json'),
-  'compiled_only':'affected uf-daemon terminal Rust tests; production daemon reused' if resume else 'affected uf-daemon and terminal Rust tests',
+  'compiled_only':'production uf-daemon dispatcher; unchanged terminal31 reused' if dispatch_fix else ('affected terminal Rust tests; production daemon reused' if resume else 'affected uf-daemon and terminal Rust tests'),
   'compiled_source_commit':current['commit'] if dispatch_fix else (compiled['commit'] if resume else current['commit']),
   'terminal_Rust31_source_commit':compiled['commit'] if resume else current['commit'],
   'terminal_Rust31_reused_without_repeat':dispatch_fix,'production_dispatch_fix_recompiled':dispatch_fix,'runtime_ELF':str(launch),'runtime_ELF_sha256':sha(launch),'runtime_ELF_nlink':1,
