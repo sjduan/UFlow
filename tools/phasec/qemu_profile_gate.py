@@ -13,6 +13,7 @@ import re
 import stat
 import sys
 import types
+from accepted_producers import accepted_anchors,ap_bound,ap_decode,ap_fresh_modules
 
 ROOT=Path('/workspace/uflow/runs/mem-service-shared-pool-20261108')
 LEGACY_BINARY=ROOT/'build/qemu/qemu-system-aarch64'
@@ -20,7 +21,7 @@ LEGACY_SHA='56fab4e5d8c50c559f76c8ddbae9d6e1661e4764a6f927db2c3706e8199e5d4c'
 BASE_COMMIT='f2ef54f454b661e551a8619f9feb7406752a1b1a'
 INTERFACE='mem-service-private-qemu-profile-v1'
 PROFILE='mem-service-gsva-scatter-home-v1'
-_ACCEPTED_PROFILE=None  # Requires manager acceptance of actual E raw pins.
+_ACCEPTED_PROFILE=accepted_anchors()['profile']
 _PRODUCTION=object()
 _HOST=object()
 
@@ -69,6 +70,8 @@ def _selection(anchor):
 
 
 def _validate(root,config,anchor,seal):
+    if 'expected_actual_result' in anchor:return _validate_accepted(root,config,anchor,seal)
+    require(seal is _HOST,'only explicit private HOST fixtures use the interim single-ref schema')
     # Every code/dependency/member byte is bound before the FIRST source exec.
     require(type(anchor) is dict and config.get('qemu_profile')==_selection(anchor),'exact accepted E profile selection required')
     require(config.get('qemu_binary')==anchor['binary']['path'],'selected QEMU member mismatch')
@@ -109,6 +112,39 @@ def _validate(root,config,anchor,seal):
         **result,'external_validator':anchor['validator'],'accepted_dependencies':dependencies,
         'profile_manifest':anchor['manifest'],'HOST_fixture_only':seal is _HOST,
         'boot_authority':False},seal)
+
+
+def _closure_refs(value):
+    require(type(value) is dict and value,'nonempty accepted nested closure required')
+    if set(value)=={'path','bytes','sha256'}:
+        yield value
+    else:
+        for item in value.values():yield from _closure_refs(item)
+
+
+def _validate_accepted(root,config,anchor,seal):
+    require(Path(root)==ROOT and config.get('qemu_profile')==_selection(anchor),'exact accepted E profile selection required')
+    require(config.get('qemu_binary')==anchor['binary']['path'],'selected accepted QEMU executable mismatch')
+    manifest=ap_decode(ap_bound(anchor['manifest'],8<<20))
+    ap_bound(anchor['binary'],256<<20)
+    expected=anchor['expected_actual_result']
+    require(manifest['patch']['sha256']==expected['patch_sha256'],'accepted patch/reference mismatch')
+    refs=[manifest['patch']]
+    for key in ('source_closure','object_closure','link_closure'):refs.extend(_closure_refs(expected[key]))
+    for row in refs:ap_bound(row,8<<20)
+    require(set(anchor['dependencies'])=={'uflow_qemu_evidence'},'actual accepted QEMU dependency closure')
+    rows={**anchor['dependencies'],'uflow_qemu_profile':anchor['validator']}
+    modes={'uflow_qemu_evidence':anchor['module_modes']['uflow_qemu_evidence'],'uflow_qemu_profile':anchor['module_modes']['validator']}
+    with ap_fresh_modules(rows,modes,('uflow_qemu_evidence','uflow_qemu_profile')) as modules:
+        value=modules['uflow_qemu_profile'].validate(Path(anchor['manifest']['path']),anchor['manifest']['sha256'],Path(anchor['binary']['path']))
+        require(type(value) is dict and value==expected,'actual full nested producer result differs from separately accepted output')
+    for row in [anchor['manifest'],anchor['binary'],*refs]:ap_bound(row,256<<20 if row==anchor['binary'] else 8<<20)
+    return _identity(anchor['binary']['path'],anchor['binary']['sha256'],{**value,
+        'external_validator':anchor['validator'],'accepted_dependencies':anchor['dependencies'],
+        'profile_manifest':anchor['manifest'],'HOST_fixture_only':seal is _HOST,'boot_authority':False},seal)
+
+
+def binding():return _selection(_ACCEPTED_PROFILE)
 
 
 def launch_qemu_gate(root,config):

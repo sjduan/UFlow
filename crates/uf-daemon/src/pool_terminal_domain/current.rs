@@ -1,16 +1,94 @@
-//! Current c064 HOST consumer seam. No accepted E v2 trust anchor exists yet.
-//! Neither a descriptor nor a test fixture is a production loss permit.
+//! Current c064 consumer of independently accepted E f5a5 sources. Execution
+//! binding, fresh lock-scoped proof and exact case data are separate guards.
 use super::*;
 
 const CURRENT_SHA:&str="163f7500836dc4fd199d34f83a0e08453ab05255f8b15a57338052df4601d5b0";
 const SUCCESSOR:&str="successor-c064-terminal-domain-loss-v2";
 const OLD_COMMIT:&str="31c4ab9126df335b4d25492fc6574c0c997237cab603ba8003fe8abf959c0ab4";
 const OLD_CLAIM:&str="e571f2e683ad08fb9720928d5c1dd795318c66a434190dc6e7956148de5a6fcd";
+const ANCHOR_SHA:&str="d16b3922afc9c33f589318634413527981f641e5a8b4bd1c1252ca39a6cae80c";
+const ANCHORS:&str=include_str!("../../../../examples/mem_service_pool/current_terminal_production/accepted-producer-anchors.json");
+const ACCEPTED_CANDIDATE:&[u8]=include_bytes!("../../../../examples/mem_service_pool/current_terminal_production/accepted-terminal-candidate.json");
+const PRODUCER_LOADER:&str=include_str!("../../../../tools/phasec/accepted_producers.py");
+const CURRENT_ADAPTER:&str=include_str!("../../../../tools/phasec/terminal_current_adapter.py");
 
-/// Deliberately before descriptor/state/lock/verifier IO. Acceptance of a real
-/// E v2 source interface and execution package is a separate reviewed change.
-pub(crate) fn production_manifest(_path:&Path,_external_sha:&str)->Result<Value,String>{
-    Err("production-not-ready: genuine E current-c064 v2 verifier/interface/pins and execution binding are not accepted; no descriptor/state/authority/verifier IO performed".into())
+fn current_adapter(mut request:Value)->Result<Value,String>{
+    use std::{io::Write,process::{Command,Stdio}};
+    if digest(ANCHORS.as_bytes())!=ANCHOR_SHA{return Err("compiled accepted current E anchor drift".into());}
+    request["accepted_anchor_bytes"]=json!(ANCHORS);
+    let script=format!("{PRODUCER_LOADER}\n{CURRENT_ADAPTER}");
+    let mut child=Command::new("/usr/local/python3.11.14/bin/python3.11").args(["-B","-I","-S","-c",&script])
+        .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e|e.to_string())?;
+    child.stdin.take().ok_or("current adapter stdin")?.write_all(&serde_json::to_vec(&request).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+    let output=child.wait_with_output().map_err(|e|e.to_string())?;
+    if !output.status.success()||output.stdout.len()>256<<10||output.stderr.len()>4096{return Err(format!("accepted current E adapter rejected: {}",String::from_utf8_lossy(&output.stderr[..output.stderr.len().min(1600)])));}
+    parsed(&output.stdout)
+}
+
+fn current_execution(path:&Path,external_sha:&str,phase:&str)->Result<Value,String>{
+    let namespace=path.parent().and_then(|p|p.file_name()).and_then(|s|s.to_str()).unwrap_or("");
+    let valid=namespace.strip_prefix("config-terminal-c").and_then(|s|s.split_once("-v")).is_some_and(|(job,v)|job.len()==3&&job.bytes().all(|b|b.is_ascii_digit())&&!v.is_empty()&&v.len()<=3&&!v.starts_with('0')&&v.bytes().all(|b|b.is_ascii_digit()));
+    if !valid || path.file_name().and_then(|s|s.to_str())!=Some("execution.json") || path.parent().and_then(|p|p.parent())!=Some(Path::new(ROOT).join("implementation").as_path()) || external_sha.len()!=64 || !external_sha.bytes().all(|b|b.is_ascii_hexdigit()) {
+        return Err("production-not-ready: exact current reviewed execution binding required; no descriptor/state/authority/verifier IO".into());
+    }
+    let raw=bounded(path,1<<20)?;if digest(&raw)!=external_sha{return Err("current execution external digest mismatch".into());}
+    let value=current_adapter(json!({"action":"execution-context","execution_action":phase,"execution_manifest":{"path":path,"bytes":raw.len(),"sha256":external_sha},
+        "daemon_pid":std::process::id(),"daemon_path":std::env::current_exe().map_err(|e|e.to_string())?}))?;
+    if value["phase"]!=phase||value["execution_manifest_sha256"]!=external_sha{return Err("current actual E0 phase binding rejected".into());}Ok(value)
+}
+
+fn production_case(path:&Path,sha:&str,phase:&str)->Result<Case,String>{
+    let context=current_execution(path,sha,phase)?;let row=&context["case"];let p=Path::new(row["path"].as_str().ok_or("current case path")?);
+    if p!=path.parent().ok_or("execution parent")?.join("current-case.json"){return Err("current case namespace drift".into());}
+    let raw=bounded(p,1<<20)?;if row["bytes"]!=raw.len(){return Err("current case size drift".into());}
+    Case::parse(&raw,row["sha256"].as_str().ok_or("current case external SHA")?)
+}
+
+fn from_current_e_proof(bytes:&[u8],dir:&Path,proof:Value)->Result<VerifiedCandidate,String>{
+    let anchors:Value=serde_json::from_str(ANCHORS).map_err(|e|e.to_string())?;let a=&anchors["terminal"];let result=&proof["validated_candidate"];
+    if digest(ACCEPTED_CANDIDATE)!=a["candidate"]["sha256"] || parsed(ACCEPTED_CANDIDATE)?!=*result ||
+        proof["schema"]!=2 || proof["kind"]!="EValidatedCurrentTerminalProofV2" || proof["consumer_anchor_sha256"]!=ANCHOR_SHA ||
+        proof["producer_commit"]!=anchors["producer_commit"] || proof["verified_module_sources"]!=a["modules"] || proof["verified_module_mode"]!=a["module_mode"] ||
+        proof["release_manifest"]!=a["release_manifest"] || proof["candidate_reference"]!=a["candidate"] ||
+        digest(bytes)!=CURRENT_SHA || bytes.len()!=60761 || result["state"]!=a["expected_state"] || result["eligible_rows"]!=a["expected_eligible_rows"] ||
+        result["prior_chain"]!=a["expected_prior_chain"] || result["assessment_sha256"]!=a["expected_assessment_sha256"] ||
+        result["status"]!=a["expected_status"] || result["interface"]!=a["expected_interface"] || result["method"]!=a["expected_method"] ||
+        result["current_eligible_capacity_bytes"]!=52<<20 || result["protected_historical_bytes"]!=76<<20 || result["missing_evidence"]!=json!([]) {
+        return Err("entire accepted current E typed proof/state/backings/protected76/history binding required".into());
+    }
+    for key in ["normal_metadata_publication_proven","normal_native_or_SDK_release_ACK","journal_A_complete","ledger_mutated","fences_applied","new_allocation_authority","FM_payload_destroyed","authority_to_mutate_ledger","authority_to_launch_new_Guest"] {
+        if result[key]!=false{return Err("current E proof cannot grant normal ACK or C authority".into());}
+    }
+    current_candidate(bytes,dir,proof)
+}
+
+fn verify_current(bytes:&[u8],dir:&Path)->Result<VerifiedCandidate,String>{
+    from_current_e_proof(bytes,dir,current_adapter(json!({"action":"verify-current"}))?)
+}
+
+pub(crate) fn production_manifest(path:&Path,external_sha:&str)->Result<Value,String>{
+    let case=production_case(path,external_sha,"terminal-only")?;
+    let a=transact_current(&Path::new(ROOT).join("implementation/responsibility-c013"),&Path::new(ROOT).join("runs/c064/state/state.json"),&case,verify_current,"")?;
+    a.closure_report()
+}
+
+pub(crate) fn production_execution_check(path:&Path,sha:&str,phase:&str)->Result<Value,String>{
+    let value=current_execution(path,sha,phase)?;
+    Ok(json!({"status":"PASS_READONLY_CURRENT_EXECUTION_CONTEXT_ONLY","context":value,"original_authority_or_state_or_E_proof_or_transaction_or_Guest":false}))
+}
+
+pub(crate) fn production_verify_readonly()->Result<Value,String>{
+    let bytes=bounded(&Path::new(ROOT).join("runs/c064/state/state.json"),1<<20)?;
+    Ok(verify_current(&bytes,&Path::new(ROOT).join("implementation/responsibility-c013"))?.proof)
+}
+
+pub(crate) fn restore_staged(st:&mut Catalog,config:&Value,loaded:&Value)->Result<File,String>{
+    let p=config["terminal_c064_execution_manifest"].as_str().ok_or("current execution manifest")?;
+    let sha=config["terminal_c064_execution_manifest_sha256"].as_str().ok_or("current execution digest")?;
+    let case=production_case(Path::new(p),sha,"successor")?;
+    let mut a=recover_current(&Path::new(ROOT).join("implementation/responsibility-c013"),&Path::new(ROOT).join("runs/c064/state/state.json"),&case,verify_current)?;
+    let nodes=loaded["nodes"].as_object().ok_or("current deferred nodes")?.values().cloned().collect::<Vec<_>>();
+    a.attach_staged(st,&json!({"realm":loaded["realm"],"session":loaded["session"],"nodes":nodes}))
 }
 
 struct Case {descriptor:Value,descriptor_sha:String}

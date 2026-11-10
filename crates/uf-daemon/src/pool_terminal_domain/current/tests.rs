@@ -42,6 +42,33 @@ fn production_v2_refuses_before_any_descriptor_state_lock_or_verifier_io(){
  for sha in ["true",CASE_SHA,""]{assert!(production_manifest(&f.root.join("nonexistent"),sha).unwrap_err().contains("no descriptor/state/authority/verifier IO"));}
  assert!(!f.dir.join(SUCCESSOR).exists());assert_eq!(fs::read(&f.state).unwrap(),before);
 }
+
+fn accepted_envelope()->Value{
+ let anchors:Value=serde_json::from_str(ANCHORS).unwrap();let a=&anchors["terminal"];
+ json!({"schema":2,"kind":"EValidatedCurrentTerminalProofV2","consumer_anchor_sha256":ANCHOR_SHA,
+  "producer_commit":anchors["producer_commit"],"release_manifest":a["release_manifest"],"candidate_reference":a["candidate"],
+  "verified_module_sources":a["modules"],"verified_module_mode":a["module_mode"],"validated_candidate":parsed(ACCEPTED_CANDIDATE).unwrap()})
+}
+#[test]
+fn current_production_whole_typed_accepted_output_and_backing_scope(){
+ let f=Fixture::new();let bytes=fs::read(&f.state).unwrap();let p=from_current_e_proof(&bytes,&f.dir,accepted_envelope()).unwrap();
+ assert_eq!(p.terminal_ids(),&[113,114,115]);assert_eq!(p.source_sha,CURRENT_SHA);
+ let mut ledger=DdrResources::inherit_terminal_source(&p).unwrap();ledger.apply_terminal_loss(&p).unwrap();
+ assert_eq!(ledger.snapshot()["terminal_domain_loss_tombstones"].as_object().unwrap().len(),6);
+ assert!(!f.dir.join(SUCCESSOR).exists());
+}
+#[test]
+fn current_production_changed_pin_partial_result_or_old_domain_proof_rejected(){
+ let f=Fixture::new();let bytes=fs::read(&f.state).unwrap();
+ for key in ["consumer_anchor_sha256","producer_commit","verified_module_mode","candidate_reference","verified_module_sources"]{
+  let mut proof=accepted_envelope();proof[key]=json!("caller-controlled");assert!(from_current_e_proof(&bytes,&f.dir,proof).is_err());
+ }
+ for key in ["normal_native_or_SDK_release_ACK","journal_A_complete","authority_to_mutate_ledger"]{
+  let mut proof=accepted_envelope();proof["validated_candidate"][key]=json!(true);assert!(from_current_e_proof(&bytes,&f.dir,proof).is_err());
+ }
+ let mut proof=accepted_envelope();proof["validated_candidate"]["eligible_rows"]=json!([]);assert!(from_current_e_proof(&bytes,&f.dir,proof).is_err());
+ assert!(from_current_e_proof(STATE,&f.dir,accepted_envelope()).is_err());assert!(!f.dir.join(SUCCESSOR).exists());
+}
 #[test]
 fn two_generation_exact_history_backings_tombstones_protected76_and_native_one(){
  let f=Fixture::new();let original=fs::read(&f.state).unwrap();let old_claim=fs::read(f.dir.join(NEXT).join("service-admission-claim.json")).unwrap();

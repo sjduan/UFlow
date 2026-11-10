@@ -117,11 +117,18 @@ def matrix(root,config,build):
     provider_config=out/'provider.json';prepared_config=out/'prepared-provider.json'
     endpoint=str(out/'u.sock');state=out/'state'
     reconciliation={'closed_c039_prestart_assessment':str(source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')}
+    if config.get('terminal_execution') is not None and config.get('terminal_current_execution') is not None:
+        raise ValueError('exactly one original/current terminal execution namespace required')
     if config.get('terminal_execution') is not None:
         execution=config['terminal_execution']
         if set(execution)!={'path','sha256'}:raise ValueError('exact resolved terminal execution binding required')
         reconciliation={'terminal_c044_execution_manifest':execution['path'],
                         'terminal_c044_execution_manifest_sha256':execution['sha256']}
+    if config.get('terminal_current_execution') is not None:
+        execution=config['terminal_current_execution']
+        if set(execution)!={'path','sha256'}:raise ValueError('exact current resolved terminal execution binding required')
+        reconciliation={'terminal_c064_execution_manifest':execution['path'],
+                        'terminal_c064_execution_manifest_sha256':execution['sha256']}
     provider_config.write_text(json.dumps({'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
@@ -148,7 +155,7 @@ def matrix(root,config,build):
         peers=[]
         pool=None
         try:
-            if config.get('terminal_execution') is not None:
+            if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None:
                 from collect_owned_qemu_metadata import capture_owned_starts
                 starts=out/'guest-starts.json'
                 capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
@@ -345,9 +352,10 @@ def matrix(root,config,build):
         lower.send_signal(signal.SIGTERM)
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
-        if config.get('terminal_execution') is not None:
+        if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None:
             from pool_run_metadata import complete_run
-            result=complete_run(out,Path(config['metadata_completion_directory']))
+            result=complete_run(out,Path(config['metadata_completion_directory']),
+                                qemu_identity=qemu_identity if config.get('qemu_profile') is not None else None)
             event({'event':'validated-exact-metadata-union-companion-audit','status':result['status'],
                    'exact_union_files':result['exact_union_files'],'normal_native_or_SDK_release_ACK_inferred':False})
         normal_closed=True

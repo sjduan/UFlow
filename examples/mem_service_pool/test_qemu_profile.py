@@ -15,10 +15,10 @@ import qemu_profile_gate as gate
 
 
 class ProductionTests(unittest.TestCase):
-    def test_unaccepted_selection_never_reads_or_executes_or_falls_back(self):
+    def test_unbound_selection_never_reads_or_executes_or_falls_back(self):
         for selection in ({'ready':True},None,{'validator':'caller.py','sha256':'0'*64}):
             with patch.object(gate,'_read',side_effect=AssertionError('no profile IO')):
-                with self.assertRaisesRegex(ValueError,'not-ready'):gate.launch_qemu_gate(gate.ROOT,{'qemu_profile':selection,'qemu_binary':str(gate.LEGACY_BINARY)})
+                with self.assertRaisesRegex(ValueError,'exact accepted'):gate.launch_qemu_gate(gate.ROOT,{'qemu_profile':selection,'qemu_binary':str(gate.LEGACY_BINARY)})
 
     def test_caller_hash_or_host_identity_cannot_enter_production_capture(self):
         for value in ({'binary':str(gate.LEGACY_BINARY),'sha256':gate.LEGACY_SHA},gate._host_fixture_identity(gate.LEGACY_BINARY,gate.LEGACY_SHA)):

@@ -99,12 +99,15 @@ def register_and_audit(directory, requests, original_carriers, births, endpoints
     return result
 
 
-def complete_run(run, directory):
+def complete_run(run, directory,*,qemu_identity=None):
     """Called only after the actual future group has reaped its QEMU children.
 
     The original FM carrier inventory must have been captured before business.
     Dynamic metadata requires real publication, QEMU event and serial journal.
     """
+    if qemu_identity is not None:
+        from profile_metadata_gate import complete_profile_run
+        return complete_profile_run(run,directory,qemu_identity)
     run = Path(run)
     adapter.require(run.parent == adapter.ROOT / 'runs' and re.fullmatch(r'c[0-9]{3}',run.name)
                     and int(run.name[1:])>=63 and run.resolve() == run, 'new reviewed task run only; old c044 stays readonly')

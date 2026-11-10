@@ -495,10 +495,12 @@ fn main() {
     // Private explicit administrative modes run before every backend/trace/
     // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
     let private_args=std::env::args().skip(1).collect::<Vec<_>>();
-    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify"||v=="--pool-terminal-execution-check"||v=="--pool-terminal-current-manifest") {
+    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify"||v=="--pool-terminal-execution-check"||v=="--pool-terminal-current-manifest"||v=="--pool-terminal-current-verify"||v=="--pool-terminal-current-execution-check") {
         let report=match private_args.as_slice() {
             [mode] if mode=="--pool-terminal-domain-loss"=>pool_terminal_domain::production_terminal_only(),
             [mode,path,sha] if mode=="--pool-terminal-current-manifest"=>pool_terminal_domain::current::production_manifest(std::path::Path::new(path),sha),
+            [mode] if mode=="--pool-terminal-current-verify"=>pool_terminal_domain::current::production_verify_readonly(),
+            [mode,path,sha,phase] if mode=="--pool-terminal-current-execution-check"=>pool_terminal_domain::current::production_execution_check(std::path::Path::new(path),sha,phase),
             [mode] if mode=="--pool-terminal-domain-verify"=>pool_terminal_domain::production_verify_readonly(),
             [mode] if mode=="--pool-shutdown-report"=>pool_terminal_domain::production_shutdown_report(),
             [mode,manifest,path,pin,sha] if mode=="--pool-terminal-domain-loss"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"=>
