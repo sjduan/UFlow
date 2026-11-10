@@ -80,6 +80,8 @@ def matrix(root,config,build):
     if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('accepted E0 supervisor required')
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
+    if config.get('terminal_case_execution') is not None:
+        raise ValueError('production-not-ready: accepted versioned current E witness/profile/metadata and exact execution context required before producer/lower/original authority IO')
     if config.get('terminal_current_execution') is not None and config.get('qemu_profile') is None:
         raise ValueError('current-c064 successor requires the accepted private QEMU profile; no legacy fallback')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.

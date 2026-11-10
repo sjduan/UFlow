@@ -273,8 +273,10 @@ int main(int argc,char **argv) {
             if(!strcmp(input,"start")){if(create_client(0,"owner")||pool_emit("UFPOOL_STARTED\n"))return fail("root client start");continue;}
             if(!strcmp(input,"quit")) {
                 if(!drained)return fail("prepare-quit required");
-                close(listener);if(pool_emit("UFLOW_ENV_DAEMON_CLOSED\n"))return fail("closed output");
-                uint64_t until=pool_now_ms()+30000;while(pool_now_ms()<until){if(pool_output_flush(pool_now_ms()))return 2;usleep(10000);}return fail("QMP close deadline");
+                /* PID1 emits CLOSED only after reaping us and attempting the
+                 * bounded journal capture. An early marker lets QMP quit
+                 * erase the only real journal before PID1 can observe exit. */
+                close(listener);return 0;
             }
             if(!strcmp(input,"prepare-quit")) {
                 for(unsigned i=0;i<SLOTS;i++)if(clients[i].obligation||clients[i].canary||clients[i].registered)return fail("quit with lower obligation");

@@ -471,3 +471,4 @@ fn kernel_endpoints()->Result<BTreeSet<String>,String>{
 mod tests;
 
 pub(crate) mod current;
+pub(crate) mod case_chain;

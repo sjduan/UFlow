@@ -44,7 +44,7 @@ fn production_case(path:&Path,sha:&str,phase:&str)->Result<Case,String>{
     Case::parse(&raw,row["sha256"].as_str().ok_or("current case external SHA")?)
 }
 
-fn from_current_e_proof(bytes:&[u8],dir:&Path,proof:Value)->Result<VerifiedCandidate,String>{
+pub(super) fn from_current_e_proof(bytes:&[u8],dir:&Path,proof:Value)->Result<VerifiedCandidate,String>{
     let anchors:Value=serde_json::from_str(ANCHORS).map_err(|e|e.to_string())?;let a=&anchors["terminal"];let result=&proof["validated_candidate"];
     if digest(ACCEPTED_CANDIDATE)!=a["candidate"]["sha256"] || parsed(ACCEPTED_CANDIDATE)?!=*result ||
         proof["schema"]!=2 || proof["kind"]!="EValidatedCurrentTerminalProofV2" || proof["consumer_anchor_sha256"]!=ANCHOR_SHA ||
@@ -185,6 +185,10 @@ fn current_candidate(bytes:&[u8],dir:&Path,proof:Value)->Result<VerifiedCandidat
 }
 
 fn union_fences(state:&Value,previous:&Value,backings:&Value)->Result<Value,String>{
+    union_fences_for(state,previous,backings,"c064")
+}
+
+pub(super) fn union_fences_for(state:&Value,previous:&Value,backings:&Value,run:&str)->Result<Value,String>{
     let mut strings=BTreeSet::<String>::new();let mut incarnations=BTreeSet::<u64>::new();let mut ids=BTreeSet::<u64>::new();
     for v in previous["strings"].as_array().ok_or("previous string fences")?{strings.insert(v.as_str().filter(|s|!s.is_empty()).ok_or("previous identity")?.into());}
     for v in previous["incarnations"].as_array().ok_or("previous incarnation fences")?{incarnations.insert(v.as_u64().ok_or("previous incarnation")?);}
@@ -217,7 +221,7 @@ fn union_fences(state:&Value,previous:&Value,backings:&Value)->Result<Value,Stri
     }
     visit(state,&mut strings,&mut incarnations,&mut ids,&mut high)?;
     visit(backings,&mut strings,&mut incarnations,&mut ids,&mut high)?;
-    for n in ["u.sock","l.sock","a.sock","b.sock","nodeA.qmp","nodeA.serial","nodeB.qmp","nodeB.serial"]{strings.insert(format!("{ROOT}/runs/c064/{n}"));}
+    for n in ["u.sock","l.sock","a.sock","b.sock","nodeA.qmp","nodeA.serial","nodeB.qmp","nodeB.serial"]{strings.insert(format!("{ROOT}/runs/{run}/{n}"));}
     let mut result=json!({"schema":1,"version":2,"strings":strings,"incarnations":incarnations,"retired_object_ids":ids});
     for (k,n) in high{result[k]=json!(n);}Ok(result)
 }

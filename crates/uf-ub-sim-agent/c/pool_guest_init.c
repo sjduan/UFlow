@@ -66,6 +66,9 @@ int main(int argc,char **argv) {
     journal_capture(diagnostic_deadline);
     printf("UFPOOL_LAUNCHER_CLOSED child=%d exit=%d signal=%d children_empty=%u logical_ACK_inferred=0\n",
         child,info.si_code==CLD_EXITED?info.si_status:-1,info.si_code==CLD_KILLED?info.si_status:0,empty);fflush(stdout);
+    /* The frozen group waits for this marker before QMP quit. It proves
+     * actual process closure; complete journals still need their own gate. */
+    if(!failed && empty){fputs("UFLOW_ENV_DAEMON_CLOSED\n",stdout);fflush(stdout);}
     /* Normal: authenticated host QMP quits after actual SDK drain. Failure:
      * independent host monitor kills this exact QEMU. No indefinite PID1 park.
      * If that external handoff fails, deadline exit may panic PID1; it is an
