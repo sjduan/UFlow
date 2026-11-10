@@ -6,12 +6,14 @@ lineage. The production executable has no fixture/import-ACK escape hatch.
 import argparse
 import copy
 import ctypes
+import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import time
 from startup_cpu_probe import Harness
+from daemon_peer_auth import DaemonPeer
 from mem_service_pool_bridge import BridgeServer,notify_failure
 from uflow.mem_service_pool_v2 import exchange,PoolV2Error,PoolV2Unknown
 
@@ -46,6 +48,7 @@ def main():
         while not Path(endpoint).exists():
             if child.poll() is not None or time.monotonic()>deadline:raise RuntimeError('actual staged Rust fixture failed startup')
             time.sleep(.02)
+        daemon_auth=DaemonPeer.capture(child.pid,a.rust_tests.resolve(),hashlib.sha256(a.rust_tests.read_bytes()).hexdigest())
         admin=(state/'admin.token').read_text();initial=json.loads((state/'state.json').read_bytes())
         assert initial['charged_bytes']==initial['retained_bytes']==4<<20 and initial['creation_reserved_bytes']==4<<20
         refused(lambda:exchange(endpoint,'CreateManagedPool',{'admin_token':admin,'nbytes':64<<20}))
@@ -57,7 +60,7 @@ def main():
             'node':'nodeA','access':'rw'}))
         startup=h.start();bootstrap,ready=startup.run();bindings=[]
         for name,node in h.nodes.items():
-            server=BridgeServer(h.path/(name+'.sock'),node);servers.append(server);server.thread.start()
+            server=BridgeServer(h.path/(name+'.sock'),node,daemon_auth);servers.append(server);server.thread.start()
             bindings.append({k:node.identity[k] for k in ('node','boot_id','agent_session','incarnation')}|
                 {'socket':str(server.path),**bootstrap[name],'startup':ready[name]})
         value={'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,'home':'nodeA','nodes':bindings}

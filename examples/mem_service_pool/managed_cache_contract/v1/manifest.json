@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "files": {
+    "codec-local001.json": {
+      "bytes": 240,
+      "sha256": "bb5c3cad271106d440284f73f77d610e08da8123f740f7bfb11c168c18342444"
+    },
+    "interface.json": {
+      "bytes": 653,
+      "sha256": "d38e7213a42de01cd44faf5f2918b72f3dae602131b43cdf4ff61078ae053397"
+    },
+    "README.md": {
+      "bytes": 7000,
+      "sha256": "673501256a540b6c5d441af8edfff593b56b705ba1fe653aa093f4c7ec657044"
+    },
+    "uflow_managed_cache_codec_v1.py": {
+      "bytes": 6670,
+      "sha256": "84e32ea2325a36b870351a9a000690c0bf32cbf754330da94b316efeaf805284"
+    }
+  }
+}

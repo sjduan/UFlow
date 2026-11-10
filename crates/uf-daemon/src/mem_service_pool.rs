@@ -29,6 +29,9 @@ pub struct MemServicePoolProvider {
     pub reconciliation: Option<Value>,
     active: OnceLock<Box<MemServicePoolProvider>>,
     activation: Mutex<()>,
+    // No production constructor until the new native profile has been accepted.
+    #[cfg(test)]
+    managed_cache_host_test: bool,
 }
 
 const CANARY_BYTES: u64 = 2 << 20;
@@ -125,7 +128,8 @@ impl MemServicePoolProvider {
             nodes, home, sequence: AtomicU64::new(BUSINESS_SEQUENCE), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
             deferred_bootstrap:deferred,readiness_file:c["readiness_file"].as_str().map(PathBuf::from),
             reconciliation:if c["reconciliation"].is_null(){None}else{Some(c["reconciliation"].clone())},
-            active:OnceLock::new(),activation:Mutex::new(()) })
+            active:OnceLock::new(),activation:Mutex::new(()),
+            #[cfg(test)] managed_cache_host_test:false })
     }
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
@@ -205,11 +209,20 @@ impl MemServicePoolProvider {
             "fidelity":"functional-simulation","payload_rpc_bytes":0})
     }
 
-    fn call(&self, node: &str, mut body: Value) -> Result<Value, String> {
+    fn managed_cache_enabled(&self)->bool {
+        #[cfg(test)] {self.managed_cache_host_test}
+        #[cfg(not(test))] {false}
+    }
+    fn next_sequence(&self)->Result<u64,String>{
+        self.sequence.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|n|n.checked_add(1))
+            .map_err(|_| "bridge request sequence exhausted; original session cannot wrap".into())
+    }
+    fn call(&self, node: &str, body: Value) -> Result<Value, String> {
+        self.call_with_id(node,body,self.next_sequence()?)
+    }
+    fn call_with_id(&self,node:&str,mut body:Value,id:u64)->Result<Value,String>{
         let identity = self.nodes.get(node).ok_or("unbound logical node")?;
         body["schema"] = json!(2);
-        let id = self.sequence.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|n|n.checked_add(1))
-            .map_err(|_| "bridge request sequence exhausted; original session cannot wrap")?;
         let mut request = BridgeFrame::request(BridgeMessageType::PoolControlV2, id, id,
             &self.realm, node, text(identity,"boot_id")?, text(identity,"agent_session")?,
             number(identity,"incarnation")?, serde_json::to_vec(&body).map_err(|e| e.to_string())?);
@@ -565,36 +578,53 @@ impl MemServicePoolProvider {
         }
         if matches!(op,"ExecutePoolRange"|"BeginPoolUnregister") {
             let client=text(req,"client_session")?;
-            let (node,lease)=service.catalog(|state,st| {
+            let control=self.next_sequence()?;
+            let (node,lease,managed)=service.catalog(|state,st| {
                 let p=state.pools.get_mut(pool_id).unwrap();let session=p.clients.get(client).ok_or("client not found")?;
                 if session.birth!=peer.birth || req["access_generation"]!=session.access_id {return Err("client birth/access mismatch".into());}
                 let node=st.access_bindings[&session.access_id].accessor_node_id.clone();
                 if op=="BeginPoolUnregister" {
+                    if p.ranges.cache.client_pending(client){return Err("native cache must be acknowledged revoked before unmap".into());}
                     if p.ranges.leases.values().any(|l|l.client==client && matches!(l.state,"Active"|"Executing")) {return Err("drain range obligations before unmap".into());}
-                    p.clients.get_mut(client).unwrap().closing=true;return Ok((node,None));
+                    p.clients.get_mut(client).unwrap().closing=true;return Ok((node,None,None));
                 }
                 p.admission()?;
                 if session.closing || session.state!="Mapped" {return Err("mapped live client required".into());}
                 let lease=p.validate_lease(&req["lease"],client,session.access_id)?;
                 if p.ranges.leases[&lease.token].state!="Active" {return Err("range already executing/unknown/closed".into());}
+                if lease.mode=="w"{p.ranges.cache.guard_writer(lease.offset,lease.nbytes)?;}
                 number(req,"pattern_id")?;
                 p.ranges.leases.get_mut(&lease.token).unwrap().state="Executing";
-                Ok((node,Some(lease)))
+                let managed=if self.managed_cache_enabled()&&lease.mode=="r" {
+                    let prepared=crate::managed_read_cache::Authority::mint(p,st,&lease,&self.nodes[&node],&self.realm,text(req,"operation_id")?,control)
+                        .and_then(|grant|p.ranges.cache.begin(grant,&req["pattern_id"]));
+                    match prepared{Ok(body)=>Some(body),Err(error)=>{p.ranges.leases.get_mut(&lease.token).unwrap().state="Active";return Err(error);}}
+                }else{None};
+                Ok((node,Some(lease),managed))
             })?;
             if let Some(lease)=lease {
-                let done=self.call(&node,json!({"op":if lease.mode=="w"{"write"}else{"read"},"client_session":client,
+                let cached=managed.is_some();
+                let body=managed.unwrap_or_else(||json!({"op":if lease.mode=="w"{"write"}else{"read"},"client_session":client,
                     "offset":lease.offset,"nbytes":lease.nbytes,"pattern_id":req["pattern_id"],"lease_id":lease.token,
                     "content_version":lease.version}));
+                let done=self.call_with_id(&node,body,control);
                 return service.catalog(|state,st| {
                     let p=state.pools.get_mut(pool_id).unwrap();
                     if p.ranges.leases[&lease.token].state!="Executing" || p.clients[client].state!="Mapped" {
                         p.ranges.unknown(&lease);
+                        if cached{p.ranges.cache.uncertain(control);}
+                        st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();
                         return Err("uncertainty/death during execution remains sticky; no commit".into());
                     }
                     match done {
                         Ok(receipt) if receipt["nbytes"]==lease.nbytes && receipt["offset"]==lease.offset
                             && receipt["all_bytes"]==true && receipt["pins"]==0 && receipt["visible"]==true
                             && receipt["pattern_id"]==req["pattern_id"] => {
+                            if cached {
+                                if let Err(error)=p.ranges.cache.finish(control,&receipt){
+                                    p.ranges.unknown(&lease);st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();return Err(error);
+                                }
+                            }
                             p.ranges.leases.get_mut(&lease.token).unwrap().state="Active";
                             if lease.mode=="w" {
                                 let version=p.ranges.commit(&lease,text(&receipt,"checksum")?,lease.nbytes)?;
@@ -602,7 +632,8 @@ impl MemServicePoolProvider {
                                 Ok(json!({"committed":true,"content_version":version,"receipt":receipt}))
                             } else {Ok(json!({"verified":true,"content_version":lease.version,"receipt":receipt}))}
                         }
-                        other=>{p.ranges.unknown(&lease);Err(format!("same lease/bytes outcome unknown: {other:?}"))}
+                        other=>{p.ranges.unknown(&lease);if cached{p.ranges.cache.uncertain(control);}
+                            st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();Err(format!("same lease/bytes outcome unknown: {other:?}"))}
                     }
                 });
             }
@@ -640,6 +671,47 @@ impl MemServicePoolProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn real_execute_keeps_executing_and_independent_grant_until_exact_native_end_ack(){
+        use std::{os::unix::net::UnixListener,sync::{Arc,mpsc},thread};
+        for corrupt in [false,true] {
+            let(mut st,mut state,lease,mut identity)=crate::managed_read_cache::tests::fixture();
+            let root=std::env::temp_dir().join(format!("uf-cache-host-{}",opaque_id().unwrap()));std::fs::create_dir(&root).unwrap();
+            let socket=root.join("b.sock");let listener=UnixListener::bind(&socket).unwrap();
+            let access=state.pools["pool"].clients[&lease.client].access_id;
+            state.pools.get_mut("pool").unwrap().ranges.leases.get_mut(&lease.token).unwrap().state="Active";
+            st.access_bindings.get_mut(&access).unwrap().opaque_token=b"{}".to_vec();
+            let lease_json=state.pools["pool"].lease_json(&lease,access);st.managed_pools=state;
+            let service=Arc::new(crate::pool_service::managed_read_cache_host_service(st,&root));
+            let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,"worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":8,"readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
+            identity["startup"]=json!({"worker":worker,"directory_epoch":2});identity["socket"]=json!(socket.to_str().unwrap());
+            let status=json!({"schema":2,"phase":"completed","node":"nodeB","boot_id":"boot-b","incarnation":8,"readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,"directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2});
+            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_host_test:true};
+            let(entered_tx,entered_rx)=mpsc::channel();let(resume_tx,resume_rx)=mpsc::channel();
+            let transport_lease=lease_json.clone();
+            let transport=thread::spawn(move||{
+                for expected in ["worker_state","provider_status","read"] {
+                    let(mut stream,_)=listener.accept().unwrap();let frame=BridgeFrame::read_from(&mut stream).unwrap();let body:Value=serde_json::from_slice(&frame.body).unwrap();assert_eq!(body["op"],expected);
+                    let receipt=if expected=="worker_state"{worker.clone()}else if expected=="provider_status"{status.clone()}else{
+                        assert_eq!(body["cache_lease_generation"],transport_lease["lease_generation"]);assert_eq!(body["cache_control_generation"],frame.request_id);
+                        entered_tx.send(()).unwrap();resume_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                        json!({"schema":2,"phase":"completed","nbytes":body["nbytes"],"offset":body["offset"],"pattern_id":body["pattern_id"],"all_bytes":true,"visible":true,"pins":0,
+                            "cache_version":1,"cache_control_generation":body["cache_control_generation"],"cache_authority_sha256":body["cache_authority_sha256"],"cache_frame_sha256":body["cache_frame_sha256"],"cache_begin_confirmed":true,"cache_end_confirmed":!corrupt,"cache_active":false,"cache_in_flight":0,"cache_pages":0,"cache_transcript_sha256":"ab".repeat(32)})};
+                    let mut reply=frame;reply.message_type=BridgeMessageType::Completion;reply.body=serde_json::to_vec(&receipt).unwrap();reply.write_to(&mut stream).unwrap();
+                }
+            });
+            let service_exec=Arc::clone(&service);let lease_token=lease.token.clone();let client=lease.client.clone();
+            let execute=thread::spawn(move||{
+                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_provider::pidfd(pid).unwrap()};
+                provider.execute(&service_exec,&peer,&json!({"op":"ExecutePoolRange","operation_id":"host-real-execute","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":client,"access_generation":access,"access_binding_v2":{},"lease":lease_json,"pattern_id":17}))
+            });
+            entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            service.catalog(|state,_|{let p=&mut state.pools.get_mut("pool").unwrap();assert_eq!(p.ranges.leases[&lease_token].state,"Executing");assert!(!p.ranges.cache.is_empty());assert!(p.ranges.cache.guard_writer(0,65536).is_err());assert!(p.ranges.release(&lease).is_err());Ok(())}).unwrap();
+            resume_tx.send(()).unwrap();let result=execute.join().unwrap();transport.join().unwrap();assert_eq!(result.is_err(),corrupt);
+            service.catalog(|state,st|{let p=&state.pools["pool"];assert_eq!(p.ranges.cache.is_empty(),!corrupt);assert_eq!(p.ranges.leases[&lease_token].state,if corrupt{"Unknown"}else{"Active"});assert_eq!(st.ddr_resources.charged_bytes(),131072);if corrupt{assert!(p.frozen());assert_eq!(st.leases[&lease.catalog_id].state,"Unknown");}Ok(())}).unwrap();
+            drop(service);std::fs::remove_dir_all(&root).unwrap();
+        }
+    }
     #[test]
     fn admission_requires_real_worker_freshness_directory_and_boot_binding() {
         let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,
@@ -679,7 +751,7 @@ mod tests {
                 ("nodeB".into(),json!({"boot_id":"fresh-b","agent_session":"fresh-b","incarnation":19}))].into_iter().collect(),
             home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),
             bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:true,readiness_file:None,reconciliation:None,
-            active:OnceLock::new(),activation:Mutex::new(())};
+            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_host_test:false};
         assert!(fresh().reject_retained_reuse(&st).is_ok());
         for c in st.managed_pools.reconciliation["retained_canaries"].as_array().unwrap(){
             let mut p=fresh();p.realm=c["backing"]["realm"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
@@ -705,7 +777,7 @@ mod tests {
             ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
         let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
             nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
-            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(())};
+            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_host_test:false};
         let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
         provider.admit_bootstrap(&mut st).unwrap();
         assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);

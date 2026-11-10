@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from startup_cpu_probe import Harness,Channel,birth
 from mem_service_pool_bridge import GuestNode,BridgeServer,NoticeOnce
+from daemon_peer_auth import DaemonPeer
 from qemu_profile_gate import _host_fixture_identity
 from uflow.mem_service_pool_v2 import exchange,PoolV2Error,PoolV2Unknown
 import run_mem_service_pool_matrix as driver
@@ -156,7 +157,7 @@ def main():
  try:
   with patch.dict(sys.modules,{'uflow_guest_group':types.SimpleNamespace(run=group_run)}),patch.object(driver.subprocess,'Popen',popen), \
       patch.object(driver,'GuestNode',node),patch.object(driver,'BridgeServer',bridge),patch.object(driver,'exchange',routed), \
-      patch.object(driver,'notify_failure',notice),patch.object(driver,'launch_gate',capability), \
+      patch.object(driver,'capture_catalog_peer',lambda child,build:DaemonPeer.capture(child.pid,a.rust_tests.resolve(),sha(a.rust_tests))),patch.object(driver,'notify_failure',notice),patch.object(driver,'launch_gate',capability), \
       patch.object(driver,'launch_qemu_gate',lambda *args:_host_fixture_identity(a.image,sha(a.image))), \
       patch.object(driver,'verify_new_fm',lambda *a:{'CPU_fake_QEMU_no_FM':True,'independent':True}):
    try:driver.matrix(a.scratch,config,build)

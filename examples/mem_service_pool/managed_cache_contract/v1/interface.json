@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "feature": "uflow-managed-lease-cache-v1",
+  "property": "uflow-managed-cache-control-v1",
+  "object": "/machine",
+  "QEMU_construction_flag": [
+    "-global",
+    "ubc.uflow-managed-cache-v1=on"
+  ],
+  "wire_struct": "!4sB3xQ32s32s32s9Q9I",
+  "wire_binary_bytes": 220,
+  "wire_ASCII_bytes": 445,
+  "ops": {
+    "probe": 1,
+    "begin": 2,
+    "end": 3,
+    "status": 4
+  },
+  "one_active_grant_per_QEMU": true,
+  "cache_quota_bytes": 8388608,
+  "normal_QEMU_control_implemented": false,
+  "actual_ELF_profile_ready": false,
+  "HOST_codec_roundtrip_tested": true,
+  "data_or_token_value_in_control": false
+}

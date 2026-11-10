@@ -148,9 +148,10 @@ def worker_idle_reply(identity,worker,origin,op,fields,public,reply):
 
 
 class GuestNode:
-    def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10):
+    def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10, managed_control=None, publication_book=None):
         self.channel, self.identity, self.lower_socket, self.event = channel, identity, lower_socket, event
         self.realm = realm
+        self.managed_control,self.publication_book=managed_control,publication_book
         self.notify,self.lower_timeout=NoticeOnce(notify),lower_timeout
         self.root_pid,self.root_birth=0,0
         self.worker=None
@@ -244,6 +245,8 @@ class GuestNode:
                 self.refreshes[request]=evidence
                 while len(self.refreshes)>64:self.refreshes.pop(next(iter(self.refreshes)))
             if origin['role']=='root' and op==0x78:self.directory=evidence
+        if self.publication_book is not None and not fields[8] and not fields[9]:
+            self.publication_book.observe_worker_publication(self.identity,origin,op,public,reply)
         for offset in range(0, len(response), 1024):
             self.send('wire %s %s' % (identifier, response[offset:offset+1024].hex()))
 
@@ -306,48 +309,55 @@ class GuestNode:
         except BaseException as error:
             self.fail(error)
 
-    def exchange(self, frame, timeout=120):
-        # Serial transport lock is per node and held for one bounded operation;
-        # no pool/global lock is held while A/B application leases stay alive.
+    def exchange(self, frame, timeout=120, *, auth=None):
+        body=metadata(frame.body)
+        if any(k.startswith('cache_') for k in body):
+            if self.managed_control is None:
+                raise ValueError('production-not-ready: no accepted managed native control/profile')
+            return self.managed_control.execute(self,frame,auth,timeout)
         with self.command_lock:
-            if self.failure:
+            return self._exchange_locked(frame,timeout)
+
+    def _exchange_locked(self,frame,timeout):
+        # Caller owns command_lock for the entire begin/read/end transaction.
+        if self.failure:
+            self.notify()
+            raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
+        expected = self.identity
+        if frame.realm != self.realm:
+            raise ValueError('execution realm mismatch')
+        if (frame.node, frame.boot, frame.session, frame.generation) != (
+                expected['node'], expected['boot_id'], expected['agent_session'], expected['incarnation']):
+            raise ValueError('actual Guest boot/session/incarnation mismatch')
+        body = metadata(frame.body)
+        if len(frame.body) > 1800 or frame.kind != POOL or body.get('schema') != 2:
+            raise ValueError('pool command/schema bound')
+        item = {'ready': threading.Event()}
+        key = (frame.request, frame.correlation)
+        try:
+            with self.failure_lock:
+                if self.failure:raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
+                self.pending[key] = item
+            # Registration is the admission point. Never hold failure_lock
+            # across serial IO: a blocked send must not delay receiver-side
+            # panic notice or waking this already in-flight Unknown request.
+            self.send('v2 %d %d %s' % (*key, frame.body.hex()))
+            if not item['ready'].wait(timeout) or self.failure:
+                raise RuntimeError('same Guest operation outcome unknown') from self.failure
+            receipt = item['response']
+            if receipt.get('phase') != 'completed':
                 self.notify()
-                raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
-            expected = self.identity
-            if frame.realm != self.realm:
-                raise ValueError('execution realm mismatch')
-            if (frame.node, frame.boot, frame.session, frame.generation) != (
-                    expected['node'], expected['boot_id'], expected['agent_session'], expected['incarnation']):
-                raise ValueError('actual Guest boot/session/incarnation mismatch')
-            body = metadata(frame.body)
-            if len(frame.body) > 1800 or frame.kind != POOL or body.get('schema') != 2:
-                raise ValueError('pool command/schema bound')
-            item = {'ready': threading.Event()}
-            key = (frame.request, frame.correlation)
-            try:
-                with self.failure_lock:
-                    if self.failure:raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
-                    self.pending[key] = item
-                # Registration is the admission point. Never hold failure_lock
-                # across serial IO: a blocked send must not delay receiver-side
-                # panic notice or waking this already in-flight Unknown request.
-                self.send('v2 %d %d %s' % (*key, frame.body.hex()))
-                if not item['ready'].wait(timeout) or self.failure:
-                    raise RuntimeError('same Guest operation outcome unknown') from self.failure
-                receipt = item['response']
-                if receipt.get('phase') != 'completed':
-                    self.notify()
-                if body['op']=='bootstrap_prepare' and receipt.get('canary_prepared') is True:
-                    self.root_pid=receipt['guest_pid']
-                self.event({'event': 'guest-completion', 'node': frame.node, 'request': frame.request,
-                            'correlation': frame.correlation, 'op': body['op'], 'receipt': receipt,
-                            'host_monotonic_ns': time.monotonic_ns(), 'clock_domain': 'B-host'})
-                return frame.completion(receipt)
-            except BaseException:
-                self.notify()  # Before removing pending ownership or any diagnostics.
-                raise
-            finally:
-                with self.failure_lock:self.pending.pop(key, None)
+            if body['op']=='bootstrap_prepare' and receipt.get('canary_prepared') is True:
+                self.root_pid=receipt['guest_pid']
+            self.event({'event': 'guest-completion', 'node': frame.node, 'request': frame.request,
+                        'correlation': frame.correlation, 'op': body['op'], 'receipt': receipt,
+                        'host_monotonic_ns': time.monotonic_ns(), 'clock_domain': 'B-host'})
+            return frame.completion(receipt)
+        except BaseException:
+            self.notify()  # Before removing pending ownership or any diagnostics.
+            raise
+        finally:
+            with self.failure_lock:self.pending.pop(key, None)
 
     def prepare_close(self):
         self.send('prepare-quit')
@@ -360,7 +370,8 @@ class GuestNode:
 
 
 class BridgeServer:
-    def __init__(self, path, node):
+    def __init__(self, path, node, daemon_auth):
+        self.daemon_auth=daemon_auth
         self.path, self.node = Path(path), node
         self.listener = socket.socket(socket.AF_UNIX)
         self.listener.bind(str(self.path))
@@ -379,12 +390,15 @@ class BridgeServer:
                 except socket.timeout:
                     continue
                 with connection:
+                    from daemon_peer_auth import PeerRejected
+                    try:authenticated=self.daemon_auth.verify(connection)
+                    except PeerRejected:continue # Untrusted peers cannot poison the actual Guest.
                     connection.settimeout(130)
                     count, = struct.unpack('!I', exact(connection, 4))
                     if not 68 <= count <= 65536+68+4*65535:
                         raise ValueError('bridge frame size limit')
                     request = Frame.decode(exact(connection, count))
-                    response = self.node.exchange(request).encode()
+                    response = self.node.exchange(request,auth=authenticated).encode()
                     connection.sendall(struct.pack('!I', len(response))+response)
         except BaseException as error:
             self.node.fail(error,'bridge-endpoint-failure')

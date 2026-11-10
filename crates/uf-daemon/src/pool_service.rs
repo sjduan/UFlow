@@ -641,6 +641,14 @@ pub fn run(endpoint: &str, root: &Path, python: &str, budget: u64,
 }
 
 #[cfg(test)]
+pub(crate) fn managed_read_cache_host_service(catalog:Catalog,root:&Path)->Service {
+    Service{shared:Arc::new((Mutex::new(catalog),Condvar::new())),provider:Mutex::new(None),remote:None,
+        provider_session:"provider".into(),provider_loaded:json!({"HOST_cache_transport_double":true}),root:root.into(),
+        admin:"HOST_ONLY".into(),persisted:Mutex::new(0),stop:AtomicBool::new(false),drop_reply_once:AtomicBool::new(false),
+        durability_unknown:AtomicBool::new(false),_responsibility_authority:None}
+}
+
+#[cfg(test)]
 pub(crate) fn run_reconciliation_fixture(endpoint:&str,root:&Path,config:&Path,proof:&Value) -> Result<(),String> {
     run_inner(endpoint,root,"unused-no-POSIX-provider",128<<20,Some(config),Some(proof),None)
 }

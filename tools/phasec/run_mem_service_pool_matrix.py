@@ -17,6 +17,11 @@ import uuid
 from mem_service_pool_bridge import GuestNode, BridgeServer, notify_failure
 from uflow.mem_service_pool_v2 import exchange, PoolV2Error, PoolV2Unknown
 from pool_peer_io import PeerIO
+from daemon_peer_auth import DaemonPeer
+
+def capture_catalog_peer(daemon,build):
+    return DaemonPeer.capture(daemon.pid,Path(build['daemon']),build['daemon_sha256'])
+
 from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
 from pool_startup import Startup
 from pool_matrix_preflight import worker_serial_preflight
@@ -84,6 +89,8 @@ def matrix(root,config,build):
         raise ValueError('production-not-ready: accepted versioned current E witness/profile/metadata and exact execution context required before producer/lower/original authority IO')
     if config.get('terminal_current_execution') is not None and config.get('qemu_profile') is None:
         raise ValueError('current-c064 successor requires the accepted private QEMU profile; no legacy fallback')
+    if config.get('managed_cache_profile') is not None:
+        raise ValueError('production-not-ready: accepted new managed native alias/profile/wrapper and execution context required before IO')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
     qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
     if config.get('qemu_profile') is not None:
@@ -147,6 +154,7 @@ def matrix(root,config,build):
         '--pool-budget-bytes',str(128*M),'--pool-mem-service-config',str(provider_config)],env=env,
         stdout=daemon_log,stderr=subprocess.STDOUT,pass_fds=(int(os.environ['UFLOW_ENV_CLOSE_FD']),))
     wait_socket(endpoint,daemon)
+    daemon_auth=capture_catalog_peer(daemon,build)
     imported=json.loads((state/'state.json').read_bytes())
     import_phase=imported['reconciliation']['phase']
     if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476','TerminalDomainDataLostC064V2Protected76','TerminalDomainDataLostC081V3Protected76'):
@@ -186,7 +194,7 @@ def matrix(root,config,build):
             bindings=[]
             for name,node in nodes.items():
                 bridge_endpoint=out/('a.sock' if name=='nodeA' else 'b.sock')
-                server=BridgeServer(bridge_endpoint,node);servers.append(server);server.thread.start()
+                server=BridgeServer(bridge_endpoint,node,daemon_auth);servers.append(server);server.thread.start()
                 identity=node.identity
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
                                  'incarnation':identity['incarnation'],'socket':str(bridge_endpoint),**bootstrap[name],
@@ -380,6 +388,7 @@ def matrix(root,config,build):
         # On failure readers may still produce metadata until the independent
         # monitor closes this process tree. Keep their sink alive for that
         # finite interval; closing it first loses the last failure evidence.
+        daemon_auth.close() # Closing authentication never impersonates a revoke ACK.
         if normal_closed:log.close()
 
 

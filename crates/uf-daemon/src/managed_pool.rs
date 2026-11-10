@@ -66,6 +66,7 @@ impl Pool {
     /// Call only at the backend's confirmed real unmap/drain boundary.
     /// Reconcile both representations before a caller can observe closure.
     pub fn confirm_client_unmapped(&mut self, st: &mut Catalog, client: &str) -> Result<(), String> {
+        if self.ranges.cache.client_pending(client){return Err("cache grant/revoke obligation forbids unmap completion".into());}
         let session=self.clients.get(client).ok_or("client missing at confirmed unmap")?;
         if !session.closing || !session.children.is_empty() ||
             self.ranges.leases.values().any(|l|l.client==client && !matches!(l.state,"Unknown"|"Closed")) {
@@ -92,6 +93,7 @@ impl Pool {
     }
 
     pub fn confirm_closed(&self, st: &Catalog) -> Result<(), String> {
+        if !self.ranges.cache.is_empty(){return Err("native cache grant/revoke/fill obligations prevent pool close".into());}
         for session in self.clients.values() {
             if session.state!="Unmapped" || session.pidfd.is_some() || !session.children.is_empty() ||
                 st.clients.contains_key(&session.catalog_id) ||
@@ -134,7 +136,7 @@ impl Pool {
                "canonical":self.canonical,"state":self.state})
     }
     pub fn frozen(&self) -> bool {
-        (self.backend == "mem_service_obmm" && self.ranges.leases.values().any(|l| l.state == "Unknown")) || self.clients.values().any(|client| {
+        self.ranges.cache.has_unknown() || (self.backend == "mem_service_obmm" && self.ranges.leases.values().any(|l| l.state == "Unknown")) || self.clients.values().any(|client| {
             client.state == "Unknown" || client.children.values().any(|child| child.unknown)
         })
     }
@@ -626,6 +628,7 @@ impl State {
                 Ok(json!({"unknown_retained":true,"pool_frozen":pool.frozen()}))
             }
             "BeginPoolUnregister" => {
+                if pool.ranges.cache.client_pending(client_id){return Err("native cache revoke ACK required before unmap".into());}
                 if session.state == "Unmapped" {
                     return Ok(json!({"stopping":true}));
                 }

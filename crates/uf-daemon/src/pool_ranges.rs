@@ -50,6 +50,7 @@ pub struct Ranges {
     pub blocks: BTreeMap<u64, Allocation>,
     pub leases: BTreeMap<String, RangeLease>,
     next_version: u64,
+    pub(crate) cache:crate::managed_read_cache::Book,
 }
 
 fn overlap(a: u64, n: u64, b: u64, m: u64) -> bool {
@@ -147,6 +148,7 @@ impl Ranges {
             return Err("stale block, access, or subrange bounds/alignment".into());
         }
         let offset = allocation.offset + byte_offset;
+        if mode=="w"{self.cache.guard_writer(offset,nbytes)?;}
         if self.leases.values().any(|lease| {
             lease.state != "Closed"
                 && overlap(offset, nbytes, lease.offset, lease.nbytes)
@@ -248,6 +250,7 @@ impl Ranges {
         content: &str,
         nbytes: u64,
     ) -> Result<u64, String> {
+        self.cache.guard_writer(lease.offset,lease.nbytes)?;
         if self.leases[&lease.token].state != "Active"
             || lease.mode != "w"
             || lease.nbytes != nbytes
@@ -271,6 +274,7 @@ impl Ranges {
     }
 
     pub fn release(&mut self, lease: &RangeLease) -> Result<(), String> {
+        if self.cache.lease_pending(&lease.token){return Err("native cache revoke ACK required before range release".into());}
         let current = self.leases.get_mut(&lease.token).unwrap();
         if current.state == "Unknown" {
             return Err("unknown native obligation cannot be normally released".into());
@@ -290,6 +294,7 @@ impl Ranges {
     }
 
     pub fn reconcile_unmapped(&mut self, client: &str) {
+        if self.cache.client_pending(client){return;} // Native unmap/death cannot impersonate cache-end ACK.
         // Invoked only after explicit native-drain attestation plus confirmed
         // parent unmap/FD close and drained exited children; never on timeout/death.
         let unknown = self
@@ -307,14 +312,15 @@ impl Ranges {
     }
 
     pub fn snapshot(&self) -> Value {
-        json!({"allocations":self.blocks.values().map(|block| {
+        let mut snapshot=json!({"allocations":self.blocks.values().map(|block| {
             let mut value=block.json();
             value["segments"]=json!(block.segments.iter().map(|part| json!({"offset":part.start,"nbytes":part.end-part.start,
                 "content_version":part.version,"content_id":part.content,"state":part.state})).collect::<Vec<_>>());
             value
         }).collect::<Vec<_>>(),"leases":self.leases.values().filter(|lease| lease.state!="Closed").map(|lease| {
             let mut value=lease.identity(); value["state"]=json!(if lease.state=="Unknown" {"Unknown"} else if lease.mode=="w" {"Writing"} else {"Reading"}); value
-        }).collect::<Vec<_>>()})
+        }).collect::<Vec<_>>()});
+        if !self.cache.is_empty(){snapshot["managed_cache_obligations"]=self.cache.snapshot();}snapshot
     }
 }
 
