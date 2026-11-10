@@ -43,6 +43,10 @@ def main(root,source,name):
  launch=out/'uf-daemon'
  with (target/'debug/uf-daemon').open('rb') as src,launch.open('xb') as dst:shutil.copyfileobj(src,dst);dst.flush();os.fsync(dst.fileno())
  launch.chmod(0o755);assert launch.stat().st_nlink==1
+ with launch.open('rb') as f:os.fsync(f.fileno())
+ descriptor=os.open(out,os.O_RDONLY|os.O_DIRECTORY)
+ try:os.fsync(descriptor)
+ finally:os.close(descriptor)
  run([cargo,'test','--locked','-p','uf-daemon','--target-dir',target,'-j','4','--no-run','--message-format=json'],'test-artifacts',1200)
  rows=[json.loads(s) for s in (out/'test-artifacts.log').read_text().splitlines() if s.startswith('{')]
  tests=[Path(v['executable']) for v in rows if v.get('reason')=='compiler-artifact' and v.get('target',{}).get('name')=='uf-daemon' and v.get('profile',{}).get('test') and v.get('executable')];assert len(tests)==1;rust=tests[0]
