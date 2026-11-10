@@ -70,7 +70,7 @@ impl Case {
             let mut ledger=DdrResources::inherit_terminal_source(&p)?;p.matches_ledger(&parsed(&bounded(&old.join("before128.json"),1<<20)?)?)?;ledger.apply_terminal_loss(&p)?;
             let after=parsed(&bounded(&old.join("resulting76.json"),1<<20)?)?;
             if after["resource_ledger"]!=ledger.snapshot() || parsed(&bounded(&old.join("permanent-fences.json"),1<<20)?)?!=p.fences || after["reconciliation"]["terminal_domain_fences"]!=p.fences ||
-                after["B_conservative_bytes"]!=76<<20 || after["normal_SDK_ACK"]!=false{return Err("ancestor rederived76/fences changed".into());}
+                after["B_conservative_bytes"]!=76<<20 || after["normal_SDK_ACK"]!=false{return Err(format!("ancestor{} rederived76/fences changed: ledger={} fence={} reconciliation={}",index+1,after["resource_ledger"]==ledger.snapshot(),parsed(&bounded(&old.join("permanent-fences.json"),1<<20)?)?==p.fences,after["reconciliation"]["terminal_domain_fences"]==p.fences));}
             let claim=parsed(&bounded(&old.join("service-admission-claim.json"),1<<20)?)?;
             ledger.reserve_unique("canary:nodeA",2<<20)?;ledger.reserve_unique("canary:nodeB",2<<20)?;
             let first=p.fences["minimum_next_object_id"].as_u64().ok_or("ancestor object highwater")?;
