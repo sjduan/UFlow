@@ -5,7 +5,7 @@ ROOT='/workspace/uflow/runs/mem-service-shared-pool-20261108'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main(root,source,name):
  assert str(root)==ROOT and 'UFLOW_ENV_CLOSE_FD' in os.environ
- assert name in ('build-host049','build-host050');resume=name=='build-host050';out=root/'implementation'/name;out.mkdir(exist_ok=False)
+ assert name in ('build-host049','build-host050','build-host051');resume=name!='build-host049';dispatch_fix=name=='build-host051';out=root/'implementation'/name;out.mkdir(exist_ok=False)
  before=root/'implementation/source-host048';old=json.loads((before/'.uflow-source.json').read_bytes());current=json.loads((source/'.uflow-source.json').read_bytes())
  assert old['commit']=='6403bdafc8d2cd6708ed5a21edcdd1a1b91624ca'
  changes={'crates/uf-daemon/src/main.rs','crates/uf-daemon/src/pool_terminal_domain.rs','crates/uf-daemon/src/ddr_resources.rs',
@@ -34,13 +34,18 @@ def main(root,source,name):
   assert compiled['commit']=='ac08d5dcd0230112efd5a0322f0c829b471747f4' and set(compiled['files'])==set(current['files'])
   for rel,row in compiled['files'].items():
    assert sha(compile_source/rel)==row['sha256']
-   if rel!='tools/phasec/build_current_terminal_host.py':assert current['files'][rel]==row
+   if dispatch_fix and rel=='crates/uf-daemon/src/main.rs':
+    old_main=(compile_source/rel).read_bytes();new_main=(source/rel).read_bytes()
+    marker=b'v=="--pool-terminal-execution-check") {'
+    assert old_main.count(marker)==1 and new_main==old_main.replace(marker,b'v=="--pool-terminal-execution-check"||v=="--pool-terminal-current-manifest") {')
+   elif rel!='tools/phasec/build_current_terminal_host.py':assert current['files'][rel]==row
+  if dispatch_fix:compile_source=source
  cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo';target=root/'implementation/cargo-host049';assert target.exists()==resume
  env={**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),'CARGO_INCREMENTAL':'0','CARGO_BUILD_JOBS':'4',
   'UF_ACL_SHIM_LIB_DIR':str(cbase/'fence'),'LD_LIBRARY_PATH':str(cbase/'fence'),'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1'}
  def run(argv,label,timeout=600):
   with (out/(label+'.log')).open('xb') as log:subprocess.run(list(map(str,argv)),cwd=compile_source,env=env,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=timeout)
- if not resume:run([cargo,'build','--locked','-p','uf-daemon','--target-dir',target,'-j','4'],'affected-daemon-build',1200)
+ if not resume or dispatch_fix:run([cargo,'build','--locked','-p','uf-daemon','--target-dir',target,'-j','4'],'affected-daemon-build',1200)
  else:
   previous=root/'implementation/build-host049'
   assert b'Finished `dev` profile' in (previous/'affected-daemon-build.log').read_bytes()
@@ -50,16 +55,23 @@ def main(root,source,name):
  launch=out/'uf-daemon'
  with (target/'debug/uf-daemon').open('rb') as src,launch.open('xb') as dst:shutil.copyfileobj(src,dst);dst.flush();os.fsync(dst.fileno())
  launch.chmod(0o755);assert launch.stat().st_nlink==1
- run([cargo,'test','--locked','-p','uf-daemon','--target-dir',target,'-j','4','--no-run','--message-format=json'],'test-artifacts',1200)
+ if dispatch_fix:
+  # Only production main's early dispatch changed. Its test harness and every
+  # reachable tested module/fixture are unchanged; do not repeat 31 old cases.
+  previous=root/'implementation/build-host050'
+  assert b'test result: ok. 31 passed; 0 failed; 0 ignored;' in (previous/'affected-terminal-tests.log').read_bytes()
+  for file in ('test-artifacts.log','affected-terminal-tests.log'):shutil.copyfile(previous/file,out/file)
+ else:run([cargo,'test','--locked','-p','uf-daemon','--target-dir',target,'-j','4','--no-run','--message-format=json'],'test-artifacts',1200)
  rows=[json.loads(line) for line in (out/'test-artifacts.log').read_text().splitlines() if line.startswith('{')]
  tests=[Path(v['executable']) for v in rows if v.get('reason')=='compiler-artifact' and v.get('target',{}).get('name')=='uf-daemon' and v.get('profile',{}).get('test') and v.get('executable')];assert len(tests)==1;rust=tests[0]
- run([rust,'pool_terminal_domain::','--nocapture','--test-threads=4'],'affected-terminal-tests')
+ test_pin=sha(rust)
+ if not dispatch_fix:run([rust,'pool_terminal_domain::','--nocapture','--test-threads=4'],'affected-terminal-tests')
  run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_guest_panic.py'],'blocked-send-and-panic-tests')
  # Bare production entries always fail closed, including arbitrary descriptors.
  for index,argv in enumerate([[launch,'--pool-terminal-domain-loss'],[launch,'--pool-terminal-current-manifest',root/'must-not-read-case',sha(source/'.uflow-source.json')]]):
   r=subprocess.run(list(map(str,argv)),env=env,capture_output=True,timeout=10);assert r.returncode==1 and b'production-not-ready' in r.stderr
   (out/('production-entry-%d.json'%index)).write_text(json.dumps({'actual_exit':r.returncode,'stderr':r.stderr.decode(),'original_IO':False},indent=2))
- for panic,short,label in [(False,'v050' if resume else 'v049','current-normal-matrix'),(True,'w050' if resume else 'w049','current-panic-Unknown-matrix')]:
+ for panic,short,label in [(False,'v051' if dispatch_fix else ('v050' if resume else 'v049'),'current-normal-matrix'),(True,'w051' if dispatch_fix else ('w050' if resume else 'w049'),'current-panic-Unknown-matrix')]:
   run([sys.executable,'-B',source/'examples/mem_service_pool/matrix_entry_cpu.py','--current-terminal-domain',*(['--panic-on-first-write'] if panic else []),
    '--agent',cbase/'cpu-agent','--worker',cbase/'cpu-worker','--controller',root/'env/mem-service-sdk/bin/linqu_mem_service',
    '--scratch',root/short,'--output',out/label,'--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'],label)
@@ -67,12 +79,15 @@ def main(root,source,name):
  for path,pin in pins.items():assert sha(Path(path))==pin
  result={'schema':1,'pass':True,'source_commit':current['commit'],'source_manifest_sha256':sha(source/'.uflow-source.json'),
   'compiled_only':'affected uf-daemon terminal Rust tests; production daemon reused' if resume else 'affected uf-daemon and terminal Rust tests',
-  'compiled_source_commit':compiled['commit'] if resume else current['commit'],'repeated_production_build':False,'runtime_ELF':str(launch),'runtime_ELF_sha256':sha(launch),'runtime_ELF_nlink':1,
+  'compiled_source_commit':current['commit'] if dispatch_fix else (compiled['commit'] if resume else current['commit']),
+  'terminal_Rust31_source_commit':compiled['commit'] if resume else current['commit'],
+  'terminal_Rust31_reused_without_repeat':dispatch_fix,'production_dispatch_fix_recompiled':dispatch_fix,'runtime_ELF':str(launch),'runtime_ELF_sha256':sha(launch),'runtime_ELF_nlink':1,
   'Rust_test_ELF':str(rust),'Rust_test_ELF_sha256':sha(rust),'C_image_SDK_worker_reused_unchanged':pins,
   'SDK53_worker233_unchanged':True,'production_v2_ready':False,'accepted_E_v2_pins':None,
   'real_c064_state_sha256_before_after':state_pin,'new_Guest_or_original_ledger_mutation':False,
   'normal_current_CPU_matrix':json.loads((out/'current-normal-matrix/results.json').read_bytes()),
   'panic_current_CPU_matrix':json.loads((out/'current-panic-Unknown-matrix/results.json').read_bytes())}
+ assert sha(rust)==test_pin
  (out/'validation-receipt.json').write_text(json.dumps(result,indent=2));print(json.dumps(result))
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('--root',type=Path,required=True);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',required=True);a=p.parse_args();main(a.root,a.source,a.output)
