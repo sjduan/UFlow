@@ -68,3 +68,14 @@ class OwnedProcessTests(unittest.TestCase):
         with patch.object(collector,'process_identity',side_effect=changing),self.assertRaises(ValueError):self.capture()
     def test_missing_ram_sized_vma_is_incomplete_not_fabricated(self):
         value=self.capture(ram_bytes=1<<50);self.assertTrue(value['missing_evidence'])
+
+    def test_profile_identity_rechecks_actual_executable_and_records_host_provenance(self):
+        from qemu_profile_gate import _host_fixture_identity
+        identity=_host_fixture_identity(Path(sys.executable),self.pin)
+        record={'pid':self.child.pid,'birth':self.identity['birth'],'argv':self.argv}
+        value=collector._observe_profiled(record,{'memory_mib':1},self.owner,identity,_host_fixture=True)
+        self.assertTrue(value['qemu_profile_provenance']['HOST_fixture_only'])
+        self.assertFalse(value['RAM_or_transport_contents_read'])
+        with self.assertRaisesRegex(ValueError,'production-validated'):collector._observe_profiled(record,{'memory_mib':1},self.owner,identity)
+        with self.assertRaises(ValueError):collector._observe_profiled(record,{'memory_mib':1},self.owner,_host_fixture_identity(Path(sys.executable),'0'*64),_host_fixture=True)
+        with self.assertRaisesRegex(ValueError,'executable path'):collector._observe_profiled(record,{'memory_mib':1},self.owner,_host_fixture_identity(Path('/wrong'),self.pin),_host_fixture=True)

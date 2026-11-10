@@ -21,6 +21,7 @@ from pool_matrix_contract import guard_intervals, guard_chunks, CANARY_BYTES
 from pool_startup import Startup
 from pool_matrix_preflight import worker_serial_preflight
 from kernel_profile_gate import launch_gate
+from qemu_profile_gate import launch_qemu_gate
 from verify_c039_prestart import verify_new_fm
 
 U,M=65536,1024*1024
@@ -80,6 +81,7 @@ def matrix(root,config,build):
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
+    qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
     for path,digest in ((Path(build['image']),build['image_sha256']),
                         (Path(build['daemon']),build['daemon_sha256']),
                         (Path(build['fence_shim']),build['fence_shim_sha256']),
@@ -150,7 +152,7 @@ def matrix(root,config,build):
                 from collect_owned_qemu_metadata import capture_owned_starts
                 starts=out/'guest-starts.json'
                 capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
-                                     root/'env/guest-kit004/uflow_guest_group.py')
+                                     root/'env/guest-kit004/uflow_guest_group.py',qemu_identity=qemu_identity)
             isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:

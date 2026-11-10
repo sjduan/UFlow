@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 import stat
 import time
+from qemu_profile_gate import capture_identity, launch_qemu_gate, _require_host_identity, _require_production_identity
 
 ROOT=Path('/workspace/uflow/runs/mem-service-shared-pool-20261108')
 QEMU_SHA='56fab4e5d8c50c559f76c8ddbae9d6e1661e4764a6f927db2c3706e8199e5d4c'
@@ -92,11 +93,22 @@ def selected_launch_environment(parent,config,node):
             'direct_child_proc_environment_observed':False,'full_environment_read':False}
 
 
-def capture_owned_starts(starts_path,expected_starts_sha,config,group_source):
+def _observe_profiled(record,node,owner,identity,*,_host_fixture=False):
+    """Same process/argv/FD/VMA guards, independently bound executable identity."""
+    if _host_fixture:identity=_require_host_identity(identity)
+    else:identity=_require_production_identity(identity)
+    if Path(record['argv'][0])!=identity.binary:raise ValueError('exact validated QEMU executable path required')
+    value=_observe_owned(record['pid'],record['birth'],record['argv'],identity.sha256,owner,node['memory_mib']<<20)
+    value['qemu_profile_provenance']=identity.metadata()
+    return value
+
+
+def capture_owned_starts(starts_path,expected_starts_sha,config,group_source,qemu_identity=None):
     """Inline owner callback, enabled only in a reviewed future terminal run."""
     starts_path=Path(starts_path);run=starts_path.parent
     if (run.parent!=ROOT/'runs' or not re.fullmatch(r'c\d{3}',run.name) or starts_path.name!='guest-starts.json' or
             run.resolve()!=run or Path(config['output'])!=run):raise ValueError('exact new task Guest starts scope')
+    identity=capture_identity(config,qemu_identity if qemu_identity is not None else launch_qemu_gate(ROOT,config))
     raw=bounded(starts_path,65536)
     if hashlib.sha256(raw).hexdigest()!=expected_starts_sha:raise ValueError('frozen starts pin')
     if hashlib.sha256(bounded(group_source,65536)).hexdigest()!=GROUP_SHA:raise ValueError('frozen group source pin')
@@ -105,12 +117,12 @@ def capture_owned_starts(starts_path,expected_starts_sha,config,group_source):
         raise ValueError('exact two distinct owned Guest records')
     owner=process_identity(os.getpid());result=[];begin=time.monotonic_ns()
     for record in starts:
-        if Path(record['argv'][0])!=ROOT/'build/qemu/qemu-system-aarch64':raise ValueError('fixed QEMU executable only')
         node=next(v for v in config['nodes'] if v['id']==record['node'])
-        value=_observe_owned(record['pid'],record['birth'],record['argv'],QEMU_SHA,owner,node['memory_mib']<<20)
+        value=_observe_profiled(record,node,owner,identity)
         value['node']=record['node'];value['selected_launch_environment']=selected_launch_environment(os.environ,config,record['node'])
         result.append(value)
     report={'schema':1,'kind':'own-QEMU-metadata-capture','owner':owner,'starts_sha256':expected_starts_sha,'group_source_sha256':GROUP_SHA,
+            'qemu_profile_provenance':identity.metadata(),
             'start_host_ns':begin,'end_host_ns':time.monotonic_ns(),'clock_domain':'B-host','processes':result,
             'scope':'process/namespace/argv/executable/FD/VMA metadata; environment is explicit source-derived inference',
             'normal_SDK_ACK':False,'authority_to_mutate_ledger':False,'authority_to_launch_Guest':False}
