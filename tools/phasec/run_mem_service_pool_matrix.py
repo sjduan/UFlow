@@ -80,6 +80,8 @@ def matrix(root,config,build):
     if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('accepted E0 supervisor required')
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
+    if config.get('terminal_current_execution') is not None and config.get('qemu_profile') is None:
+        raise ValueError('current-c064 successor requires the accepted private QEMU profile; no legacy fallback')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
     qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
     if config.get('qemu_profile') is not None:
@@ -358,7 +360,10 @@ def matrix(root,config,build):
         lower.send_signal(signal.SIGTERM)
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
-        if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None:
+        if config.get('terminal_current_execution') is not None:
+            event({'event':'profile-metadata-final-audit-deferred-until-E0-result-and-ownership-exist',
+                   'normal_native_or_SDK_release_ACK_inferred':False})
+        elif config.get('terminal_execution') is not None:
             from pool_run_metadata import complete_run
             result=complete_run(out,Path(config['metadata_completion_directory']),
                                 qemu_identity=qemu_identity if config.get('qemu_profile') is not None else None)

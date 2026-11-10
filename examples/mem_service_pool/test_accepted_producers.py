@@ -8,6 +8,7 @@ import types
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
+sys.path.insert(0,str(Path(__file__).parents[2]/'sdk/python'))
 import accepted_producers as ap
 import terminal_current_adapter as adapter
 import qemu_profile_gate as qemu
@@ -55,5 +56,12 @@ class AcceptedProducerTests(unittest.TestCase):
         self.assertEqual(qemu.binding(),qemu._selection(anchor))
         with patch.object(qemu,'ap_bound',side_effect=AssertionError('unreviewed selection must not read')):
             with self.assertRaisesRegex(ValueError,'exact accepted'):qemu.launch_qemu_gate(qemu.ROOT,{'qemu_profile':{'ready':True},'qemu_binary':anchor['binary']['path']})
+    def test_current_successor_cannot_fall_back_to_legacy_before_launch_gate(self):
+        import os
+        import run_mem_service_pool_matrix as driver
+        config={'output':'/cpu/runs/1','terminal_current_execution':{'path':'CPU fixture only'}}
+        with patch.dict(os.environ,{'UFLOW_ENV_CLOSE_FD':'5'}),patch.object(Path,'is_dir',return_value=True), \
+             patch.object(driver,'launch_gate',side_effect=AssertionError('must reject before producer/launch IO')):
+            with self.assertRaisesRegex(ValueError,'no legacy fallback'):driver.matrix(Path('/cpu'),config,{'source':'/cpu/source'})
 
 if __name__=='__main__':unittest.main()

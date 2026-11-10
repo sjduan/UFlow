@@ -13,7 +13,7 @@ import re
 import stat
 import sys
 import types
-from accepted_producers import accepted_anchors,ap_bound,ap_decode,ap_fresh_modules
+from accepted_producers import accepted_anchors,ap_bound,ap_decode,ap_fresh_modules,ap_canonical
 
 ROOT=Path('/workspace/uflow/runs/mem-service-shared-pool-20261108')
 LEGACY_BINARY=ROOT/'build/qemu/qemu-system-aarch64'
@@ -137,7 +137,7 @@ def _validate_accepted(root,config,anchor,seal):
     modes={'uflow_qemu_evidence':anchor['module_modes']['uflow_qemu_evidence'],'uflow_qemu_profile':anchor['module_modes']['validator']}
     with ap_fresh_modules(rows,modes,('uflow_qemu_evidence','uflow_qemu_profile')) as modules:
         value=modules['uflow_qemu_profile'].validate(Path(anchor['manifest']['path']),anchor['manifest']['sha256'],Path(anchor['binary']['path']))
-        require(type(value) is dict and value==expected,'actual full nested producer result differs from separately accepted output')
+        require(type(value) is dict and value==expected and ap_canonical(value)==ap_canonical(expected),'actual full nested producer result differs from separately accepted output')
     for row in [anchor['manifest'],anchor['binary'],*refs]:ap_bound(row,256<<20 if row==anchor['binary'] else 8<<20)
     return _identity(anchor['binary']['path'],anchor['binary']['sha256'],{**value,
         'external_validator':anchor['validator'],'accepted_dependencies':anchor['dependencies'],

@@ -1,0 +1,63 @@
+{
+  "schema": 2,
+  "interface": "mem-service-profile-metadata-v2",
+  "producer_commit": "6aaf99a2e52dbf6cd82b39b833a570a096bd1e47",
+  "delivery_manifest_sha256": "ea4cc21459de2ae23fcfb84e0d31e2c9721c8f6b53dbf025be04776d5c689a23",
+  "release_manifest": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/release-manifest.json",
+    "bytes": 5560,
+    "sha256": "3cb3b4558004bc80473a3349bc16d78959602c5247e10e01d03c968b7e467c5c"
+  },
+  "modules": {
+    "uflow_profile_metadata_v2": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/uflow_profile_metadata_v2.py",
+      "bytes": 35200,
+      "sha256": "d512f1d5b9dbfe7e2c89d8dc4f11fe807fc480a222b1a0f69600b23afa021ecf"
+    },
+    "uflow_qemu_evidence": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/uflow_qemu_evidence.py",
+      "bytes": 6591,
+      "sha256": "0dc9cbe9909bca7d53dcc6aa58b72f72942e699999ecf420055528cbd98c0995"
+    },
+    "uflow_qemu_metadata": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/uflow_qemu_metadata.py",
+      "bytes": 25585,
+      "sha256": "3edf6eb9e99cfe1a194d273bd11ae0e21f2ddcd3fff7fed2fd835ec9f5c227e5"
+    },
+    "uflow_qemu_profile": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/uflow_qemu_profile.py",
+      "bytes": 10439,
+      "sha256": "e295a26c99216ac027dd64f54ed323b211bc529ee7fb6753dac4e422bc7fb43e"
+    }
+  },
+  "module_modes": {
+    "uflow_profile_metadata_v2": "0755",
+    "uflow_qemu_evidence": "0755",
+    "uflow_qemu_metadata": "0755",
+    "uflow_qemu_profile": "0755"
+  },
+  "documentation": {
+    "bytes": 9075,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/README.md",
+    "sha256": "a920479bcbfe730a7fc7f9e415f3634e8c78a275104f1f1db9fe071a025bc2da"
+  },
+  "interface_reference": {
+    "bytes": 2194,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/interface.json",
+    "sha256": "3ac1bfdabe6f3524e6e24646a7373129077a326f6ca4d8ba2b1bbe542073116b"
+  },
+  "historical_baseline": {
+    "bytes": 27333,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c064-profile-metadata-v1/release-v1/historical-baseline.json",
+    "sha256": "df6e5b587bd7e7479a6e617e444e83d297f222bbf66f51e29c22ada5533d6163"
+  },
+  "historical_inventory_canonical_sha256": "56d8276f2c6e6b317202af70ebe3dd53a007e1cbaa130fc2281ee421de13358d",
+  "profile_manifest_sha256": "eb667be0a3c40b61ebb15d3cd487137e9febf45cbd67b86b7f48254ae330601c",
+  "qemu_binary_sha256": "3c34d92dc970359036a969bd109a61086e23e5d3b0d908c9143ee62beb006779",
+  "writer_source_sha256": "42c93476fb56219f8e04301c3bcb24d85f48be969406f679f538fff981fb904d",
+  "expected_production_entry_kind": "validated-profile-metadata-v2",
+  "expected_production_union_status": "PASS_READONLY_CLOSED_UNION_ONLY",
+  "production_cases_and_final_plan": null,
+  "actual_corrected_Guest_metadata_registration_or_production_union_tested": false,
+  "required_case_review": "Populate only after actual run result and ownership evidence exist; bind real case source/config/capture and full registry heads to manager-reviewed runtime. C reviews generated digests, manager independently verifies actual delivery. Never pin invented future cases or re-use HOST fixture."
+}
