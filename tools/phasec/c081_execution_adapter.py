@@ -11,7 +11,7 @@ def c081_manifest_gate(path,external_sha,policy):
 def c081_source_file(path,row):
     # Empty tracked package markers are legitimate Git source. Evidence/data
     # readers retain their nonempty invariant; this exception is source-only.
-    if row['bytes']!=0:return ap_read(path,8<<20,int(row['mode'][-3:],8))
+    if row['bytes']!=0:return ap_read(path,16<<20,int(row['mode'][-3:],8))
     path=Path(path)
     ap_require(path.is_absolute() and path.resolve(strict=True)==path and path.is_relative_to(AP_ROOT),'canonical bound empty source required')
     fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0)|getattr(os,'O_CLOEXEC',0))

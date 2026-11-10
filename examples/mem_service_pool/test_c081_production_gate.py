@@ -8,6 +8,12 @@ from accepted_c081_v3 import v3_anchors,v3_policy
 from managed_gate_v3 import runtime_admission,require_runtime
 
 class ProductionGateTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform=='linux','actual production source root')
+    def test_real_reviewed_eleven_MiB_CPU_metadata_fixture_fits_source_gate(self):
+        path=Path(__file__).resolve().parent/'reconciliation/closed-c039-cpu-documents.json'
+        self.assertGreater(path.stat().st_size,8<<20)
+        raw=adapter.c081_source_file(path,{'bytes':path.stat().st_size,'mode':'100644'})
+        self.assertEqual(len(raw),11633943)
     @unittest.skipUnless(sys.platform=='linux','actual POSIX source identity')
     def test_empty_tracked_source_is_allowed_but_changed_bytes_mode_and_alias_are_not(self):
         with tempfile.TemporaryDirectory() as directory:
