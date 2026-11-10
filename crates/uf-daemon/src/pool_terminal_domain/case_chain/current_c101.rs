@@ -60,4 +60,3 @@ pub(crate) fn production_audit_consumed(path:&Path,sha:&str)->Result<Value,Strin
     if checked!=expected_claim{return Err("consumed one-claim/reserve122123 metadata drift".into());}
     Ok(json!({"path":root.join("commit.json"),"bytes":raw.len(),"sha256":digest(&raw)}))
 }
-
