@@ -38,6 +38,40 @@ def save(ev, path, value):
     return {'path': str(path), 'bytes': len(raw), 'sha256': ev.digest(raw)}
 
 
+def journal_diagnostics(run, reader):
+    """Inspect both bounded serial sources before enforcing strict admission.
+
+    Capture completeness describes transport only. E still independently
+    validates frames and publication; this diagnostic grants no registration.
+    """
+    rows, captured = {}, {}
+    for node in ('nodeA', 'nodeB'):
+        path = Path(run) / (node + '.serial.log')
+        row = {'path': str(path), 'complete': False}
+        try:
+            raw, _ = reader(path, 64 << 20)
+        except FileNotFoundError:
+            row.update(status='missing-serial-file')
+        except (OSError, RuntimeError, ValueError) as error:
+            row.update(status='unavailable-serial-file', detail=str(error)[:512])
+        else:
+            source = {'path': str(path), 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
+            row['source'] = source
+            try:
+                text = raw.decode('ascii')
+            except UnicodeDecodeError:
+                row.update(status='non-ascii-serial')
+            else:
+                summary, data = capture(text)
+                row.update(summary)
+                captured[node] = (source, text, data)
+        rows[node] = row
+    return {'schema': 1, 'kind': 'per-node-journal-completeness-v1', 'nodes': rows,
+            'all_serial_captures_complete': all(r['complete'] for r in rows.values()),
+            'E_registration_or_publication_proven': False, 'SDK_ACK_or_replay_claimed': False,
+            'ledger_mutation': False}, captured
+
+
 def register_and_audit(directory, requests, original_carriers, births, endpoints, modules):
     """Shared actual API path for prepared future runs and HOST fixtures."""
     pins, md, ev = modules
@@ -78,6 +112,10 @@ def complete_run(run, directory):
     directory.mkdir(parents=True, exist_ok=False)
     modules = accepted()
     pins, md, ev = modules
+    diagnostics, captured = journal_diagnostics(run, ev.read)
+    save(ev, directory / 'journal-completeness.json', diagnostics)
+    adapter.require(diagnostics['all_serial_captures_complete'],
+                    'complete actual worker serial journal required; see per-node journal-completeness.json')
     template = ev.document(pins['domain_plan'])
     graph = ev.document(template['source_graph'])
     def ref(path, maximum=64 << 20):
@@ -94,10 +132,7 @@ def complete_run(run, directory):
             bindings.append((index, md.descriptor_binding(controls, index)))
     journals, captures, logs, qemu_lines = {}, {}, {}, {}
     for node in ('nodeA', 'nodeB'):
-        serial = ref(run / (node + '.serial.log'))
-        text = ev.bound(serial, 64 << 20).decode('ascii')
-        summary, raw = capture(text)
-        adapter.require(summary['complete'], 'complete actual worker serial journal required')
+        serial, text, raw = captured[node]
         capture_ref = {'format': 'captured-serial-v1', 'source': serial, 'bytes': len(raw), 'sha256': ev.digest(raw)}
         frames = md.journal_frames(capture_ref)
         end_line = next(line for line in text.splitlines() if line.startswith('UFPOOL_JOURNAL_END '))

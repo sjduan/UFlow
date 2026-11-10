@@ -6,8 +6,10 @@ is relayed only for managed lifecycle/directory ops, never GET/PUT/materialize.
 There is one host lower authority, not a second simulation Catalog.
 """
 import json
+import hashlib
 import os
 from pathlib import Path
+import re
 import socket
 import struct
 import threading
@@ -17,7 +19,20 @@ from uflow._pool_bridge_v2 import Frame, POOL, metadata
 LOWER = struct.Struct('<IHHQIIIIIIQ')  # Frozen public native little-endian aarch64 ABI.
 
 
-def notify_failure():
+class NoticeOnce:
+    """One nonblocking supervisor notice per C process or injected node scope."""
+    def __init__(self,callback):
+        self.callback,self.sent,self.lock=callback,False,threading.Lock()
+
+    def __call__(self):
+        with self.lock:
+            if self.sent:return False
+            self.sent=True
+            self.callback()
+            return True
+
+
+def _supervisor_notice():
     descriptor = os.environ.get('UFLOW_ENV_CLOSE_FD')
     if descriptor is None:
         raise RuntimeError('accepted independent environment monitor required')
@@ -25,6 +40,26 @@ def notify_failure():
         os.write(int(descriptor), b'!')
     except BlockingIOError:
         pass  # Already pending notice; never wait in an exceptional boundary.
+
+
+_process_notice=NoticeOnce(_supervisor_notice)
+
+
+def notify_failure():
+    return _process_notice()
+
+
+class GuestFatalPanic(RuntimeError):
+    def __init__(self,node,line):
+        self.serial_line=line[:1024]
+        self.serial_line_sha256=hashlib.sha256(line.encode('utf-8')).hexdigest()
+        super().__init__('Guest '+node+' fatal kernel panic; pending operations remain Unknown: '+self.serial_line)
+
+
+def fatal_kernel_panic(line):
+    # Match a complete kernel console record, not quoted payload, a warning,
+    # RCU stall or worker text containing the words "kernel panic".
+    return re.fullmatch(r'(?:\[\s*[0-9]+(?:\.[0-9]+)?\]\s*)?Kernel panic - not syncing:\s+\S.*',line) is not None
 
 
 def exact(connection, size, deadline=None, capture=None):
@@ -116,7 +151,7 @@ class GuestNode:
     def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10):
         self.channel, self.identity, self.lower_socket, self.event = channel, identity, lower_socket, event
         self.realm = realm
-        self.notify,self.lower_timeout=notify,lower_timeout
+        self.notify,self.lower_timeout=NoticeOnce(notify),lower_timeout
         self.root_pid,self.root_birth=0,0
         self.worker=None
         self.directory=None
@@ -125,7 +160,29 @@ class GuestNode:
         self.pending, self.lock, self.command_lock = {}, threading.Lock(), threading.Lock()
         self.started, self.drained, self.stop = threading.Event(), threading.Event(), threading.Event()
         self.failure = None
+        self.first_failure = None
+        self.failure_lock = threading.RLock()
         self.thread = threading.Thread(target=self.pump, name='pool-'+identity['node'])
+
+    def fail(self,error,cause='guest-control-failure'):
+        """Keep the first cause and wake every waiter before diagnostic IO."""
+        with self.failure_lock:
+            if self.failure is not None:return False
+            observed=time.monotonic_ns()
+            try:
+                self.notify()  # First exceptional side effect; no logging first.
+            finally:
+                self.failure=error
+                self.first_failure={'event':'guest-bridge-failure','node':self.identity['node'],
+                    'boot_id':self.identity['boot_id'],'agent_session':self.identity['agent_session'],
+                    'incarnation':self.identity['incarnation'],'cause':cause,'detail':str(error)[:2048],
+                    'host_monotonic_ns':observed,'pending_outcome':'Unknown','responsibility_retained':True,
+                    'SDK_ACK_or_side_effect_absence_inferred':False}
+                if isinstance(error,GuestFatalPanic):
+                    self.first_failure.update(serial_line=error.serial_line,serial_line_sha256=error.serial_line_sha256)
+                for item in list(self.pending.values()):item['ready'].set()
+        self.event(dict(self.first_failure))
+        return True
 
     def send(self, line):
         with self.lock:
@@ -197,6 +254,9 @@ class GuestNode:
                     line = self.channel.line(time.monotonic()+.25)
                 except (socket.timeout, TimeoutError):
                     continue
+                if fatal_kernel_panic(line):
+                    self.fail(GuestFatalPanic(self.identity['node'],line),'guest-kernel-panic')
+                    return
                 if line.startswith('UFPOOL_RPC '):
                     _, identifier,role,pid,birth,control,correlation,encoded=line.split(' ',7)
                     self.relay(int(identifier),bytes.fromhex(encoded),{'role':role,'pid':int(pid),'birth':int(birth),
@@ -222,10 +282,9 @@ class GuestNode:
                     self.event({'event':'worker-log','node':self.identity['node'],'pid':int(pid),'birth':int(birth),
                         'stream':stream,'bytes':len(data),'hex':encoded})
                 elif line.startswith('UFPOOL_WORKER_EXIT '):
-                    self.notify()
-                    self.failure=RuntimeError('actual worker exited; original context retained')
-                    for item in list(self.pending.values()):item['ready'].set()
+                    self.fail(RuntimeError('actual worker exited; original context retained'),'worker-exit')
                     self.event({'event':'worker-exit','node':self.identity['node'],'raw':line})
+                    return
                 elif line.startswith('UFPOOL_REPLY '):
                     _, request, correlation, encoded = line.split(' ', 3)
                     key = (int(request), int(correlation))
@@ -245,11 +304,7 @@ class GuestNode:
                     raise RuntimeError('Guest reported failure before diagnostics: '+line)
                 # Kernel/boot lines remain in serial raw logs; no parsing as ACK.
         except BaseException as error:
-            self.notify()  # Must precede event serialization or cleanup.
-            self.failure = error
-            for item in list(self.pending.values()):
-                item['ready'].set()
-            self.event({'event': 'guest-bridge-failure', 'node': self.identity['node'], 'detail': str(error)})
+            self.fail(error)
 
     def exchange(self, frame, timeout=120):
         # Serial transport lock is per node and held for one bounded operation;
@@ -269,9 +324,11 @@ class GuestNode:
                 raise ValueError('pool command/schema bound')
             item = {'ready': threading.Event()}
             key = (frame.request, frame.correlation)
-            self.pending[key] = item
             try:
-                self.send('v2 %d %d %s' % (*key, frame.body.hex()))
+                with self.failure_lock:
+                    if self.failure:raise RuntimeError('same Guest context already failed; operation remains unknown') from self.failure
+                    self.pending[key] = item
+                    self.send('v2 %d %d %s' % (*key, frame.body.hex()))
                 if not item['ready'].wait(timeout) or self.failure:
                     raise RuntimeError('same Guest operation outcome unknown') from self.failure
                 receipt = item['response']
@@ -287,7 +344,7 @@ class GuestNode:
                 self.notify()  # Before removing pending ownership or any diagnostics.
                 raise
             finally:
-                self.pending.pop(key, None)
+                with self.failure_lock:self.pending.pop(key, None)
 
     def prepare_close(self):
         self.send('prepare-quit')
@@ -327,8 +384,8 @@ class BridgeServer:
                     response = self.node.exchange(request).encode()
                     connection.sendall(struct.pack('!I', len(response))+response)
         except BaseException as error:
-            notify_failure()
-            self.failure = error
+            self.node.fail(error,'bridge-endpoint-failure')
+            self.failure = self.node.failure
 
     def close(self):
         self.stop.set()

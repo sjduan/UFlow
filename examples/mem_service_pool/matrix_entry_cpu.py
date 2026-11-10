@@ -2,22 +2,24 @@
 QEMU, old import, canaries, platform, worker and Image are isolated CPU doubles.
 No production verifier/lineage/Guest/OBMM/device is executed.
 """
-import argparse,copy,ctypes,hashlib,json,os,subprocess,sys,time,types
+import argparse,copy,ctypes,hashlib,json,os,queue,subprocess,sys,time,types
 from pathlib import Path
 from unittest.mock import patch
 from startup_cpu_probe import Harness,Channel,birth
-from mem_service_pool_bridge import GuestNode,BridgeServer
+from mem_service_pool_bridge import GuestNode,BridgeServer,NoticeOnce
 from uflow.mem_service_pool_v2 import exchange,PoolV2Error,PoolV2Unknown
 import run_mem_service_pool_matrix as driver
 
 def main():
  p=argparse.ArgumentParser()
  p.add_argument('--terminal-domain',action='store_true')
+ p.add_argument('--panic-on-first-write',action='store_true',help='CPU-only serial fault; assert actual Catalog Unknown retains budget')
  for k in ('agent','worker','controller','scratch','output','rust-tests','source','image','shim'):p.add_argument('--'+k,type=Path,required=True)
  a=p.parse_args()
  if 'UFLOW_ENV_CLOSE_FD' not in os.environ:raise RuntimeError('admitted build required')
  if ctypes.CDLL(None).prctl(36,1,0,0,0):raise RuntimeError('subreaper required')
  a.scratch.mkdir();a.output.mkdir();h=Harness(a,0,lower=False);servers=[];catalog=[];observed=[];states=[]
+ notice=NoticeOnce(h.notice)
  out=a.scratch/'runs/1';out.mkdir(parents=True);env=a.scratch/'env';env.mkdir()
  (env/'mem-service-sdk').symlink_to(a.controller.parent.parent,target_is_directory=True)
  sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
@@ -44,7 +46,7 @@ def main():
   else:child=real_popen(argv,**kwargs)
   h.children.append((child,birth(child.pid)));return child
  def node(*args,**kwargs):
-  n=GuestNode(*args,**kwargs,notify=h.notice);h.nodes[n.identity['node']]=n;return n
+  n=GuestNode(*args,**kwargs,notify=notice);h.nodes[n.identity['node']]=n;return n
  def bridge(*args):
   s=BridgeServer(*args);servers.append(s);return s
  def state():return json.loads((out/'state/state.json').read_bytes())
@@ -79,7 +81,24 @@ def main():
    child=popen([str(a.agent),str(h.path/name),name,'cpu-matrix-'+name,'metadata-only-no-OBMM'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=err,
     env={**os.environ,'UFLOW_POOL_FIXTURE_WORKER':str(a.worker),'UFLOW_POOL_FIXTURE_MODE':'matrix-data','UFLOW_POOL_FIXTURE_MEMORY':str(memory)})
    c=Channel(child,raw);line=c.line(time.monotonic()+5);assert line.startswith('UFLOW_ENV_IDENTITY ')
-   identity=json.loads(line.split(' ',1)[1]);assert identity['engine']=='cpu-fixture';channels[name]=c;identities.append(identity)
+   identity=json.loads(line.split(' ',1)[1]);assert identity['engine']=='cpu-fixture'
+   if a.panic_on_first_write and name=='nodeA':
+    class PanicChannel:
+     def __init__(self,base):self.base=base;self.rows=queue.Queue();self.injected=None
+     def send(self,line):
+      if line.startswith('v2 ') and json.loads(bytes.fromhex(line.split(' ',3)[3])).get('op')=='write':
+       assert self.injected is None,'never retry Unknown write';self.injected=time.monotonic()
+       self.rows.put('[   13.867342] Kernel panic - not syncing: Oops: Fatal exception in interrupt')
+      else:self.base.send(line)
+     def line(self,deadline):
+      while time.monotonic()<deadline:
+       try:return self.rows.get_nowait()
+       except queue.Empty:pass
+       try:return self.base.line(min(deadline,time.monotonic()+.03))
+       except TimeoutError:pass
+      raise TimeoutError('bounded CPU injected serial deadline')
+    c=PanicChannel(c)
+   channels[name]=c;identities.append(identity)
   control(channels,identities)
   final=state();assert final['charged_bytes']==final['retained_bytes']==12<<20 and final['active_bytes']==0
   assert final['creation_reserved_bytes']==final['retained_reserved_bytes']==64<<20 and final['active_reserved_bytes']==0
@@ -128,9 +147,31 @@ def main():
  try:
   with patch.dict(sys.modules,{'uflow_guest_group':types.SimpleNamespace(run=group_run)}),patch.object(driver.subprocess,'Popen',popen), \
       patch.object(driver,'GuestNode',node),patch.object(driver,'BridgeServer',bridge),patch.object(driver,'exchange',routed), \
-      patch.object(driver,'notify_failure',h.notice),patch.object(driver,'launch_gate',capability), \
+      patch.object(driver,'notify_failure',notice),patch.object(driver,'launch_gate',capability), \
       patch.object(driver,'verify_new_fm',lambda *a:{'CPU_fake_QEMU_no_FM':True,'independent':True}):
-   driver.matrix(a.scratch,config,build)
+   try:driver.matrix(a.scratch,config,build)
+   except (RuntimeError,PoolV2Unknown):
+    if not a.panic_on_first_write:raise
+    failed=h.nodes['nodeA'];assert failed.first_failure['cause']=='guest-kernel-panic'
+    elapsed=time.monotonic()-failed.channel.injected;assert elapsed<5,elapsed
+    current=state();assert total(current)==128<<20
+    assert current['charged_bytes']==64<<20 and current['retained_bytes']==12<<20
+    assert current['creation_reserved_bytes']==current['retained_reserved_bytes']==64<<20
+    pool=current['pools'][0];assert pool['frozen'] and pool['release_result'] is None
+    assert any(lease['state']=='Unknown' for lease in pool['ranges']['leases'])
+    if a.terminal_domain:assert set(current['resource_ledger']['terminal_domain_loss_tombstones'])=={'110','111','112'}
+    events=[json.loads(s) for s in (out/'pool-events.jsonl').read_text().splitlines()]
+    first=next(e for e in events if e['event']=='guest-bridge-failure' and e['node']=='nodeA')
+    assert first['cause']=='guest-kernel-panic' and first['responsibility_retained']
+    assert not any(e['event'] in ('E2-direction','E4-two-layer-release') for e in events)
+    notices=[e for e in h.events if e['event']=='first-notice']
+    assert len(notices)==1 and notices[0]['host_monotonic_ns']>=first['host_monotonic_ns']
+    result={'pass':True,'CPU_injected_serial_fault_only':True,'actual_Rust_Catalog_retained_Unknown':True,
+      'elapsed_seconds':elapsed,'B_total_bytes':total(current),'charged_bytes':current['charged_bytes'],
+      'reserved_bytes':current['creation_reserved_bytes'],'first_failure':first,
+      'normal_SDK_ACK_or_side_effect_absence_inferred':False,'real_Guest_or_original_authority_used':False}
+    (a.output/'results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result));return
+   if a.panic_on_first_write:raise AssertionError('CPU injected failure did not reach actual bridge/Catalog')
   events=[json.loads(s) for s in (out/'pool-events.jsonl').read_text().splitlines()]
   assert [s['total'] for s in states]==[(128 if a.terminal_domain else 80)<<20,76<<20,80<<20,128<<20,76<<20]
   directions=[e for e in events if e['event']=='E2-direction'];assert [e['nbytes'] for e in directions[:2]]==[20<<20,20<<20]
