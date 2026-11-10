@@ -732,7 +732,9 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     let mut catalog = Catalog::new(-1, Vec::new());
     catalog.ddr_resources.limit = budget;
     let restore_original=|st:&mut Catalog|if let Some(config)=remote.as_ref().and_then(|p|p.reconciliation.as_ref()) {
-        if config.get("terminal_case_execution_manifest").is_some(){
+        if config.get("terminal_c101_execution_manifest").is_some(){
+            crate::pool_terminal_domain::case_chain::current_c101::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
+        } else if config.get("terminal_case_execution_manifest").is_some(){
             crate::pool_terminal_domain::case_chain::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
         } else if config.get("terminal_c064_execution_manifest").is_some(){
             crate::pool_terminal_domain::current::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)

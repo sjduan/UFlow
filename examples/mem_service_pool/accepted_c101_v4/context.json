@@ -1,0 +1,335 @@
+{
+  "schema": 4,
+  "interface": "mem-service-current-private-domain-v4",
+  "kind": "captured-current-private-domain-context-v4",
+  "run": "c101",
+  "observation": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/terminal-context004/observation.json",
+    "bytes": 7810,
+    "sha256": "e315e5a7bb974f62a61916119402ce5d37720a047f952f1b50956e2b43a57ec3"
+  },
+  "ownership": {
+    "c100": {
+      "schema": 3,
+      "interface": "mem-service-observed-ownership-v3",
+      "kind": "monitor-result-ownership-v3",
+      "run": "c100",
+      "expected_exit": 0,
+      "monitor_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/monitor/result.json",
+        "bytes": 4297,
+        "sha256": "a3457288c62754073d75484c5f1bb001554d25f634cd9de6f8a6a497c70c5a6d"
+      },
+      "run_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/result.json",
+        "bytes": 5096,
+        "sha256": "0dc3be8269271272046f56059c11b22237262f08bfc4c2ddede53451bc7ed279"
+      },
+      "monitor_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/monitor/config.json",
+        "bytes": 821,
+        "sha256": "3936fc7064c02cdcd0fb6ea5451043bcd09433cf464a974fec252829fab2f621"
+      },
+      "supervisor_start": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/monitor/supervisor-start.json",
+        "bytes": 37,
+        "sha256": "e9196b234e31bd109254bc55caf7deea51215d56a1ae88df4ea1ee374da3ee94"
+      },
+      "launch_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c100-v1/c100.json",
+        "bytes": 1365,
+        "sha256": "6302097ee0bde2940da1ebbb84ca97b45a6950d0f1bc1e79560e8680268f41dc"
+      },
+      "E0_runner": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/runners/3d3616a3f5ac25ab2ab6f40aaea75c41c30518d590cf3c22fd7451382495decb/uflow_env_runner.py",
+        "bytes": 15055,
+        "sha256": "c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727"
+      },
+      "supervisor_sources": {
+        "task_supervisor.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_supervisor.py",
+          "bytes": 30825,
+          "sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827"
+        },
+        "task_lifecycle.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_lifecycle.py",
+          "bytes": 7384,
+          "sha256": "9370260295844d433ac9273a255304b6b5e66d52c26b58cde758460dd594ad8c"
+        },
+        "task_resources.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_resources.py",
+          "bytes": 17962,
+          "sha256": "bdc057af7a5790c7ab181289072326b7a81fc397d6d08c6a6b5e08066e01f607"
+        }
+      },
+      "optional_history": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/monitor/ownership-history.json",
+        "bytes": 3458,
+        "sha256": "454e5243f96d2ac81ee7132f8596dae877c04198dc9252b08e33e8ea672fb6b3"
+      }
+    },
+    "c101": {
+      "schema": 3,
+      "interface": "mem-service-observed-ownership-v3",
+      "kind": "monitor-result-ownership-v3",
+      "run": "c101",
+      "expected_exit": 1,
+      "monitor_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/monitor/result.json",
+        "bytes": 8761,
+        "sha256": "6ca64cd84266b3471ba304d25736da46aef5f3e90e860189f4d252fa74f08cac"
+      },
+      "run_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/result.json",
+        "bytes": 9730,
+        "sha256": "c38a0618d934d2296a5c1e90606f0f16c1571c2a1b6705edb4681b82ea02ccf3"
+      },
+      "monitor_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/monitor/config.json",
+        "bytes": 884,
+        "sha256": "e1808434300ad1500e6785d4c1f8686bdd45ae3a9f4b69372b1ada9327cc5ff1"
+      },
+      "supervisor_start": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/monitor/supervisor-start.json",
+        "bytes": 37,
+        "sha256": "5abbe85bde878aec516b3a90c310f6df4dcecca6319ef0395d4e65772b5e2cec"
+      },
+      "launch_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c100-v1/c101.json",
+        "bytes": 1490,
+        "sha256": "f8ca100792108629af5a813c9337ce248669065b02e7e11009ab4b948d1e2fd7"
+      },
+      "E0_runner": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/runners/3d3616a3f5ac25ab2ab6f40aaea75c41c30518d590cf3c22fd7451382495decb/uflow_env_runner.py",
+        "bytes": 15055,
+        "sha256": "c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727"
+      },
+      "supervisor_sources": {
+        "task_supervisor.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_supervisor.py",
+          "bytes": 30825,
+          "sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827"
+        },
+        "task_lifecycle.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_lifecycle.py",
+          "bytes": 7384,
+          "sha256": "9370260295844d433ac9273a255304b6b5e66d52c26b58cde758460dd594ad8c"
+        },
+        "task_resources.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_resources.py",
+          "bytes": 17962,
+          "sha256": "bdc057af7a5790c7ab181289072326b7a81fc397d6d08c6a6b5e08066e01f607"
+        }
+      },
+      "optional_history": null
+    },
+    "c102": {
+      "schema": 3,
+      "interface": "mem-service-observed-ownership-v3",
+      "kind": "monitor-result-ownership-v3",
+      "run": "c102",
+      "expected_exit": 1,
+      "monitor_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/monitor/result.json",
+        "bytes": 2726,
+        "sha256": "48062ee2c9b0d8f12fe5d55ee592f94faba5cb8f0c8d40dc314e2a3a577a9eeb"
+      },
+      "run_result": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/result.json",
+        "bytes": 3143,
+        "sha256": "504fe337dc80dd92b99abf7a76f17c3b3965b3aeeb8400ee9f2714b4b2de3604"
+      },
+      "monitor_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/monitor/config.json",
+        "bytes": 883,
+        "sha256": "ad93585a64637ac73289b57b42146886925d69bf6b4a0e1c4d7bddd524ae73b5"
+      },
+      "supervisor_start": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/monitor/supervisor-start.json",
+        "bytes": 37,
+        "sha256": "dd9be856b5b6772d9babb74317c9d1557591f9c2e1a8a8dd667eab53af1f4ec0"
+      },
+      "launch_config": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c100-v1/c102.json",
+        "bytes": 1364,
+        "sha256": "25980805701783a162e465a0578b055829faaeb4bb5e97f522fb20c0af699da8"
+      },
+      "E0_runner": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/runners/3d3616a3f5ac25ab2ab6f40aaea75c41c30518d590cf3c22fd7451382495decb/uflow_env_runner.py",
+        "bytes": 15055,
+        "sha256": "c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727"
+      },
+      "supervisor_sources": {
+        "task_supervisor.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_supervisor.py",
+          "bytes": 30825,
+          "sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827"
+        },
+        "task_lifecycle.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_lifecycle.py",
+          "bytes": 7384,
+          "sha256": "9370260295844d433ac9273a255304b6b5e66d52c26b58cde758460dd594ad8c"
+        },
+        "task_resources.py": {
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/supervisor/task_resources.py",
+          "bytes": 17962,
+          "sha256": "bdc057af7a5790c7ab181289072326b7a81fc397d6d08c6a6b5e08066e01f607"
+        }
+      },
+      "optional_history": null
+    }
+  },
+  "helper": {
+    "bytes": 9218,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/env/guest-kit004/uflow_guest_audit.py",
+    "sha256": "647a2b7c24f086f4128879ac3ab98e3f0cf981c4211f1129a2fe0f1a4453c33e"
+  },
+  "prior_accepted_context": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/context-binding-v6/accepted-context.json",
+    "bytes": 1764,
+    "sha256": "e6241411f9217661c6ccf5376120c67a5c096629c501c48f02bfb4238fb8175c"
+  },
+  "observed_profile": {
+    "manifest": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/profile-manifest.json",
+      "bytes": 8554,
+      "sha256": "d0900df0212660ff6fb3cc60e11a8cb06545aeac190e0edb6729bf8eedd54dc9"
+    },
+    "validator": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_qemu_profile_v1.py",
+      "bytes": 12739,
+      "sha256": "a225f345d48046d228e33a98161c02a1b17a556453a13d2d2869ab33e2ea931b"
+    }
+  },
+  "prior_chains": {
+    "c044": {
+      "commit.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c044-terminal-domain-loss-v1/commit.json",
+        "bytes": 592,
+        "sha256": "31c4ab9126df335b4d25492fc6574c0c997237cab603ba8003fe8abf959c0ab4"
+      },
+      "service-admission-claim.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c044-terminal-domain-loss-v1/service-admission-claim.json",
+        "bytes": 10317,
+        "sha256": "e571f2e683ad08fb9720928d5c1dd795318c66a434190dc6e7956148de5a6fcd"
+      }
+    },
+    "c064": {
+      "commit.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c064-terminal-domain-loss-v2/commit.json",
+        "bytes": 1057,
+        "sha256": "782e5fd0b1e34fcc3ec5a70e0682d5554fe873e9106deef918a4abbdc0096625"
+      },
+      "service-admission-claim.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c064-terminal-domain-loss-v2/service-admission-claim.json",
+        "bytes": 11476,
+        "sha256": "45963e3038796a5af98affe0a4f048eca256a566a0958e639463afd6cd271322"
+      }
+    },
+    "c100": {
+      "before128.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/before128.json",
+        "bytes": 11583,
+        "sha256": "f8a727bba2bf0522faf318d2b42009791aa8a93ab5f3e9baae2744c4cd162e16"
+      },
+      "commit.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/commit.json",
+        "bytes": 1057,
+        "sha256": "90a2fe2ba165dbafda522dfd4efdd3ab83eb1ee8006c3422ed0901b04c1a22b1"
+      },
+      "historical-state.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/historical-state.json",
+        "bytes": 89240,
+        "sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26"
+      },
+      "inherited-backing-identities.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/inherited-backing-identities.json",
+        "bytes": 1689,
+        "sha256": "bb63489a912bd711618a212a2560b848f7f4e2085999b89e932d958e4efea5a4"
+      },
+      "intent.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/intent.json",
+        "bytes": 56773,
+        "sha256": "0b50e8df24f2bf99c572f8b3af23ae054feb80357e8939a6dea6c982301904aa"
+      },
+      "permanent-fences.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/permanent-fences.json",
+        "bytes": 11260,
+        "sha256": "c57a875b38a02e61ddd45bd5614ef82d64c8f27b300879eb526fdf9d58e72822"
+      },
+      "resulting76.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/resulting76.json",
+        "bytes": 43615,
+        "sha256": "fbfe5a75056e27f90f0bb9e82372ca31229b90cea30433476ca94fc21e16b1ba"
+      },
+      "service-admission-claim.json": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/service-admission-claim.json",
+        "bytes": 12635,
+        "sha256": "404628be4f3c1607944e06f4355ffbfe344970d2c05917856812af523e27cc27"
+      }
+    }
+  },
+  "expected": {
+    "daemon_inputs": [
+      74,
+      27,
+      32
+    ],
+    "config_ancestry": [
+      {
+        "target": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/qemu-bundle",
+        "absent_components": [
+          "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/qemu-bundle"
+        ],
+        "ancestor": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2",
+        "identity": {
+          "dev": 63,
+          "inode": 208138369,
+          "uid": 0,
+          "file_type": 16384,
+          "bytes": 4096,
+          "mtime_ns": 1794293466913909430,
+          "ctime_ns": 1794293466913909430,
+          "mode": 493
+        }
+      },
+      {
+        "target": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu/qemu.conf",
+        "absent_components": [
+          "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu/qemu.conf",
+          "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu",
+          "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc"
+        ],
+        "ancestor": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1",
+        "identity": {
+          "dev": 63,
+          "inode": 208117927,
+          "uid": 0,
+          "file_type": 16384,
+          "bytes": 4096,
+          "mtime_ns": 1794294762799364320,
+          "ctime_ns": 1794294762799364320,
+          "mode": 493
+        }
+      },
+      {
+        "target": "/usr/local/etc/qemu/qemu.conf",
+        "absent_components": [
+          "/usr/local/etc/qemu/qemu.conf",
+          "/usr/local/etc/qemu"
+        ],
+        "ancestor": "/usr/local/etc",
+        "identity": {
+          "dev": 63,
+          "inode": 189278306,
+          "uid": 0,
+          "file_type": 16384,
+          "bytes": 4096,
+          "mtime_ns": 1764744150000000000,
+          "ctime_ns": 1783389367154164812,
+          "mode": 493
+        }
+      }
+    ]
+  }
+}

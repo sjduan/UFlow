@@ -49,5 +49,8 @@ def _host_serial_binding(wrapper,channel,peer):
         check(deadline-time.monotonic()>=5,'original W deadline cannot fit bounded metadata pair');peer.recheck();r=channel.managed_write(wire);peer.recheck();check(time.monotonic()<deadline,'source-defined W wrapper completion is late');return r
     return {'pid':peer._expected['pid'],'recheck':peer.recheck,'control':control,'requires_full_five_seconds':True}
 
-def production_binding(*args,**kwargs):
-    raise ValueError('production-not-ready: stable W interface is not final accepted profile/current-c101 context')
+def production_binding(*args,admission=None,**kwargs):
+    from managed_gate_v4 import require_runtime
+    admission=require_runtime(admission)
+    check(not kwargs and len(args)==3 and args[0] is admission.modules['wrapper'],'only accepted c1e W wrapper can control its owning channel')
+    return _host_serial_binding(*args)

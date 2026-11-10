@@ -4,6 +4,8 @@
 use super::*;
 const FILES:&[&str]=&["intent.json","historical-state.json","before128.json","permanent-fences.json","inherited-backing-identities.json","resulting76.json","commit.json"];
 mod producer_context;
+mod producer_context_v4;
+pub(crate) mod current_c101;
 
 fn production_case(path:&Path,sha:&str,phase:&str)->Result<Case,String>{
     let context=producer_context::execution(path,sha,phase)?;let row=&context["case"];let p=Path::new(row["path"].as_str().ok_or("actual case path")?);

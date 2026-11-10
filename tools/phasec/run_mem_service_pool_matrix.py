@@ -86,6 +86,12 @@ def matrix(root,config,build):
     out=Path(config['output']);source=Path(build['source'])
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
     admission=None
+    v4=config.get('terminal_c101_execution') is not None
+    if v4:
+        if any(config.get(k) is not None for k in ('terminal_case_execution','terminal_execution','terminal_current_execution','managed_cache_profile','qemu_profile')):
+            raise ValueError('exclusive current-c101 W/R execution namespace required before IO')
+        from managed_gate_v4 import runtime_admission
+        admission=runtime_admission(config,build)
     if config.get('terminal_case_execution') is not None:
         from managed_gate_v3 import runtime_admission
         admission=runtime_admission(config,build)
@@ -93,9 +99,12 @@ def matrix(root,config,build):
         raise ValueError('current-c064 successor requires the accepted private QEMU profile; no legacy fallback')
     if config.get('managed_cache_profile') is not None and admission is None:
         raise ValueError('production-not-ready: actual v3 execution admission required before producer/lower/original IO')
+    if config.get('managed_write_profile') is not None and not v4:
+        raise ValueError('production-not-ready: actual v4 execution admission required before producer/lower/original IO')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
     if admission is not None:
-        from managed_gate_v3 import selected_identity
+        if v4:from managed_gate_v4 import selected_identity
+        else:from managed_gate_v3 import selected_identity
         qemu_identity=selected_identity(admission)
     else:qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
     if config.get('qemu_profile') is not None:
@@ -152,9 +161,11 @@ def matrix(root,config,build):
                         'terminal_c064_execution_manifest_sha256':execution['sha256']}
     cache_execution=None
     if admission is not None:
-        execution=config['terminal_case_execution'];reconciliation={'terminal_case_execution_manifest':execution['path'],'terminal_case_execution_manifest_sha256':execution['sha256']}
+        execution=config['terminal_c101_execution' if v4 else 'terminal_case_execution'];key='terminal_c101_execution_manifest' if v4 else 'terminal_case_execution_manifest'
+        reconciliation={key:execution['path'],key+'_sha256':execution['sha256']}
         cache_execution={**execution,'accepted_context':admission.anchors['accepted_context']}
-    provider_config.write_text(json.dumps({**({'managed_cache_execution':cache_execution} if cache_execution is not None else {}),'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
+    managed_config={('managed_write_execution' if v4 else 'managed_cache_execution'):cache_execution} if cache_execution is not None else {}
+    provider_config.write_text(json.dumps({**managed_config,'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
         'home':'nodeA','deferred_bootstrap':True,'readiness_file':str(prepared_config),
         'nodes':[{'node':name,'socket':str(out/('a.sock' if name=='nodeA' else 'b.sock'))} for name in ('nodeA','nodeB')],
         'reconciliation':reconciliation},indent=2))
@@ -168,7 +179,7 @@ def matrix(root,config,build):
     daemon_auth=capture_catalog_peer(daemon,build)
     imported=json.loads((state/'state.json').read_bytes())
     import_phase=imported['reconciliation']['phase']
-    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476','TerminalDomainDataLostC064V2Protected76','TerminalDomainDataLostC081V3Protected76'):
+    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476','TerminalDomainDataLostC064V2Protected76','TerminalDomainDataLostC081V3Protected76','TerminalDomainDataLostC101V4Protected76'):
         raise RuntimeError('single-ledger conservative76 quarantine and new canary reservation not established; no Guest')
     event({'event':'terminal-domain-succession-established-before-Guest' if import_phase.startswith('TerminalDomainDataLost') else 'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
         'retained_reserved_bytes':RETAINED_RESERVED,'kernel_capability':capability,
@@ -181,6 +192,8 @@ def matrix(root,config,build):
         peers=[]
         pool=None
         managed=None
+        managed_write=None
+        native_routes=None
         publication=None
         try:
             if config.get('terminal_execution') is not None or config.get('terminal_current_execution') is not None or admission is not None:
@@ -189,10 +202,17 @@ def matrix(root,config,build):
                 capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
                                      Path(admission.anchors['code_and_data']['wrapper']['path']) if admission is not None else root/'env/guest-kit004/uflow_guest_group.py',qemu_identity=qemu_identity)
             if admission is not None:
-                from current_fm_isolation import verify_c081_fm
-                isolation=verify_c081_fm(out,admission)
+                if v4:from current_fm_isolation import verify_c101_fm as verify_admitted_fm
+                else:from current_fm_isolation import verify_c081_fm as verify_admitted_fm
+                isolation=verify_admitted_fm(out,admission)
                 from managed_cache_control import PublicationBook,production_controller
-                publication=PublicationBook();managed=production_controller(publication,admission=admission,channels=channels,starts=json.loads((out/'guest-starts.json').read_bytes()),event=event)
+                publication=PublicationBook();starts=json.loads((out/'guest-starts.json').read_bytes())
+                if v4:
+                    from managed_native_routes_v4 import production_routes
+                    from managed_write_control import production_controller as write_controller
+                    native_routes=production_routes(admission,publication,channels,starts)
+                    managed_write=write_controller(publication,admission=admission,native_routes=native_routes,event=event)
+                managed=production_controller(publication,admission=admission,channels=channels,starts=starts,event=event,native_routes=native_routes)
             elif config.get('terminal_current_execution') is not None:
                 from current_fm_isolation import verify_current_fm
                 isolation=verify_current_fm(out)
@@ -200,7 +220,7 @@ def matrix(root,config,build):
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
                 name=identity['node']
-                nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm,**({'managed_control':managed,'publication_book':publication} if admission is not None else {}))
+                nodes[name]=GuestNode(channels[name],identity,lower_socket,event,realm,**({'managed_control':managed,'managed_write_control':managed_write,'publication_book':publication} if admission is not None else {}))
                 nodes[name].thread.start()
                 nodes[name].send('start')
             for node in nodes.values():
@@ -217,7 +237,7 @@ def matrix(root,config,build):
                 bindings.append({'node':name,'boot_id':identity['boot_id'],'agent_session':identity['agent_session'],
                                  'incarnation':identity['incarnation'],'socket':str(bridge_endpoint),**bootstrap[name],
                                  'startup':readiness[name]})
-            prepared_config.write_text(json.dumps({**({'managed_cache_execution':cache_execution} if cache_execution is not None else {}),'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
+            prepared_config.write_text(json.dumps({**managed_config,'schema':2,'backend':'mem_service_obmm','realm':realm,'session':session,
                                                    'home':'nodeA','nodes':bindings},indent=2))
             activated=exchange(endpoint,'ActivateManagedBootstrap',{'admin_token':admin})
             if activated['bootstrap_activated'] is not True:raise RuntimeError('actual current bootstrap not committed into one ledger')
@@ -370,6 +390,9 @@ def matrix(root,config,build):
             event({'event':'E4-two-layer-release','retired':retired,'catalog_before_canary_close':final,'shutdown':shutdown})
             if managed is not None:
                 managed.close();event({'event':'managed-cache-normal-close','outstanding':0,'audit_records':len(managed.audit),'payload_bytes':0})
+            if managed_write is not None:
+                managed_write.close();event({'event':'managed-write-normal-close','outstanding':0,'audit_records':len(managed_write.audit),'payload_bytes':0})
+            if native_routes is not None:native_routes.close()
             for server in servers:server.close()
             for node in nodes.values():node.prepare_close()
             (out/'E1-E4.json').write_text(json.dumps({'state':'passed','real_Guest_mapping':all(i['engine']=='initramfs' for i in identities),
@@ -384,6 +407,8 @@ def matrix(root,config,build):
                    'error_type':type(error).__name__,'detail':str(error)[:1600],
                    'unknown_not_reconciled_by_process_death':True})
             raise
+        finally:
+            if native_routes is not None:native_routes.close()
     normal_closed=False
     try:
         run(config,control=callback)
@@ -391,7 +416,7 @@ def matrix(root,config,build):
         if lower.wait(timeout=10)!=0:raise RuntimeError('lower metadata daemon shutdown failed')
         event({'event':'normal-control-daemons-reaped','lower_pid':lower.pid,'lower_wait':0})
         if admission is not None:
-            event({'event':'managed-v3-postclose-audit-deferred-to-real-monitor-result','normal_native_or_SDK_release_ACK_inferred':False})
+            event({'event':'managed-v4-postclose-audit-deferred-to-real-monitor-result' if v4 else 'managed-v3-postclose-audit-deferred-to-real-monitor-result','normal_native_or_SDK_release_ACK_inferred':False})
         elif config.get('terminal_current_execution') is not None:
             event({'event':'profile-metadata-final-audit-deferred-until-E0-result-and-ownership-exist',
                    'normal_native_or_SDK_release_ACK_inferred':False})

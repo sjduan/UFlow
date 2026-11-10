@@ -148,6 +148,7 @@ def binding():return _selection(_ACCEPTED_PROFILE)
 
 
 def launch_qemu_gate(root,config):
+    if 'managed_write_profile' in config:raise ValueError('production-not-ready: actual v4 E0 RuntimeAdmission required before managed W/R profile IO')
     require(Path(root)==ROOT,'fixed task root required')
     if 'managed_cache_profile' in config:raise ValueError('production-not-ready: actual v3 E0 RuntimeAdmission required before new managed profile IO')
     if 'qemu_profile' in config:
@@ -161,6 +162,9 @@ def launch_qemu_gate(root,config):
 
 def capture_identity(config,identity):
     _require_production_identity(identity)
+    if 'managed_write_profile' in config:
+        from managed_gate_v4 import capture_binding
+        return capture_binding(config,identity)
     if 'managed_cache_profile' in config:
         from managed_gate_v3 import capture_binding
         return capture_binding(config,identity)

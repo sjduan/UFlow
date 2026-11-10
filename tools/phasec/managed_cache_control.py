@@ -22,7 +22,11 @@ def codec():
     path=Path(__file__).parents[2]/'examples/mem_service_pool/managed_cache_contract/v2/uflow_managed_cache_codec_v2.py'
     raw=path.read_bytes();check(sha(raw)==CODEC_SHA,'external E codec pin mismatch')
     module=types.ModuleType('_pinned_managed_codec');exec(compile(raw,str(path),'exec'),module.__dict__);return module
-def production_controller(publication=None,*args,admission=None,channels=None,starts=None,event=None):
+def production_controller(publication=None,*args,admission=None,channels=None,starts=None,event=None,native_routes=None):
+    if native_routes is not None:
+        from managed_native_routes_v4 import require_routes
+        routes=require_routes(native_routes,admission,publication);check(not args,'exact admitted R constructor required')
+        controller=_ManagedController(publication,routes.read);controller.event=event;return controller
     from managed_gate_v3 import require_runtime
     from managed_interface_v2 import production_binding
     from daemon_peer_auth import DaemonPeer

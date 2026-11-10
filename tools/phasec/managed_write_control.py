@@ -31,10 +31,17 @@ def authority(frame):
     claimed=b.pop('write_authority_sha256');check(re.fullmatch('[0-9a-f]{64}',claimed) and claimed==sha(canonical(b)),'W server authority digest mismatch')
     b['write_authority_sha256']=claimed;return b
 
-def production_controller(*args,**kwargs):
-    # The old v6/R admission cannot opt into a new W native mode or a new
-    # current-c101 context. Fail before interpreting caller/channel arguments.
-    raise ValueError('production-not-ready: final accepted E W codec/profile and current-c101 context required before control IO')
+def production_controller(publication=None,*args,admission=None,native_routes=None,event=None,**kwargs):
+    from managed_gate_v4 import require_runtime
+    admission=require_runtime(admission)  # Before caller/channel interpretation.
+    from managed_native_routes_v4 import require_routes
+    from managed_write_interface_v1 import _NativeProtocol
+    from accepted_producers import ap_bound
+    import types
+    routes=require_routes(native_routes,admission,publication);check(not args and not kwargs,'exact admitted W constructor required')
+    ref=admission.anchors['code_and_data']['write_codec'];raw=ap_bound(ref,128<<10,0o644)
+    codec=types.ModuleType('_accepted_c1e_W_codec');codec.__file__=ref['path'];exec(compile(raw,codec.__file__,'exec'),codec.__dict__)
+    controller=_WriteController(publication,routes.write,_NativeProtocol(codec));controller.event=event;return controller
 
 class _WriteController:
     def __init__(self,publication,bindings,protocol):

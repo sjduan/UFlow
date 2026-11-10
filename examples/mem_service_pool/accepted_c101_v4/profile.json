@@ -1,0 +1,187 @@
+{
+  "schema": 2,
+  "interface": "mem-service-private-qemu-managed-write-profile-v2",
+  "profile_id": "mem-service-uflow-catalog-managed-write-v1",
+  "managed_cache": {
+    "feature": "uflow-managed-lease-cache-v1",
+    "version": 1,
+    "wire_bytes": 220,
+    "property": "uflow-managed-cache-control-v1",
+    "object_path": "/machine",
+    "argv_extension": [
+      "-global",
+      "ubc.uflow-managed-cache-v1=on"
+    ],
+    "scope": "UFlow-Catalog-managed-only",
+    "data_quota_bytes": 8388608,
+    "one_active_grant_per_QEMU": true,
+    "authority": "actual authenticated Catalog executing range R lease"
+  },
+  "managed_write": {
+    "feature": "uflow-managed-write-v1",
+    "version": 1,
+    "wire_bytes": 220,
+    "property": "uflow-managed-write-control-v1",
+    "object_path": "/machine",
+    "argv_extension": [
+      "-global",
+      "ubc.uflow-managed-write-v1=on"
+    ],
+    "scope": "UFlow-Catalog-exclusive-W-with-native-RW-verification",
+    "staged_data_bytes": 4096,
+    "dirty_mask_bytes": 512,
+    "read_data_quota_bytes": 8388608,
+    "one_active_R_or_W_grant_per_QEMU": true,
+    "authority": "actual authenticated Catalog Executing W and Writing lease; RW native map",
+    "normal_completion": "strict native flush/end acknowledgment with zero dirty and in-flight IO"
+  },
+  "runtime_tested": false,
+  "authority_to_boot_or_replace_existing_binary": false,
+  "base_profile": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/profile-manifest.json",
+    "bytes": 8554,
+    "sha256": "d0900df0212660ff6fb3cc60e11a8cb06545aeac190e0edb6729bf8eedd54dc9"
+  },
+  "qemu_binary": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/release-v1/qemu-system-aarch64",
+    "bytes": 128119120,
+    "sha256": "5ac05e7288f1a940502558cc3d8a6c2dfef0067d0eaa3ec59d9fa41d22755949"
+  },
+  "sources": {
+    "hw/ub/hisi/ubc_msgq.c": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/hisi/ubc_msgq.c",
+      "bytes": 45011,
+      "sha256": "5fe751c935473fb851d3df5cc99c8fcb0242ccd7290cc197083d35ca00bea892"
+    },
+    "hw/ub/ub_ummu.c": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/ub_ummu.c",
+      "bytes": 100240,
+      "sha256": "1733a722372b5ba352fefa2b0afdfb0c7468fa8f81f0b48e9d66f86e07462d3f"
+    },
+    "hw/ub/uflow_managed_cache.inc": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/uflow_managed_cache.inc",
+      "bytes": 18060,
+      "sha256": "0b81660aab975c48e378b1c51c2ac3533433f091398f48c38eeaff0f3cc40e9b"
+    },
+    "include/hw/ub/uflow_bounded_log.h": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/include/hw/ub/uflow_bounded_log.h",
+      "bytes": 2218,
+      "sha256": "6ae3bdf0c9d86ebeccdd3f28f81fbc1b9d000f7025afddbf7df15083dcda843a"
+    },
+    "include/hw/ub/uflow_managed_write_core.h": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/include/hw/ub/uflow_managed_write_core.h",
+      "bytes": 6748,
+      "sha256": "d009de5edbb6da7de9613f1961ac858fb0ea290e6d73dc9289c7d07836d0b09e"
+    },
+    "hw/ub/ub_ubc.c": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/ub_ubc.c",
+      "bytes": 614828,
+      "sha256": "cf06d5b48b5f59f33ea3fb36f965f000f89ec2c95b7bf2e0ef4eabd464359bec"
+    },
+    "include/hw/ub/uflow_managed_cache_control.h": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/include/hw/ub/uflow_managed_cache_control.h",
+      "bytes": 425,
+      "sha256": "dda68a46cc6017487d774a179ddab71933bc6d6a66365edf8e56f75422d07922"
+    },
+    "include/hw/ub/uflow_managed_cache_core.h": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/include/hw/ub/uflow_managed_cache_core.h",
+      "bytes": 7409,
+      "sha256": "5790a04c701054fefa93377885c9043d6a4ebbb63f0758a51a8dcbc922cc29b5"
+    },
+    "include/hw/ub/ub_ummu.h": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/include/hw/ub/ub_ummu.h",
+      "bytes": 4887,
+      "sha256": "36e0a936a23beb5ed5e99068534ae0c5e20f95f69f201c386581194700dbd91d"
+    },
+    "hw/ub/uflow_managed_write.inc": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/uflow_managed_write.inc",
+      "bytes": 14203,
+      "sha256": "72a3fd8d4214a9c08620fc1d59d7b3000e7a71f69bd6e85fee10c9d7de94b6e2"
+    },
+    "hw/ub/gsva_coherence.c": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/candidate-r003/hw/ub/gsva_coherence.c",
+      "bytes": 57704,
+      "sha256": "7a67948d8d56e60f88652f234b33c5c30e32bd044e17c988850ca44d4877ec8a"
+    }
+  },
+  "compilation": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/objects-r003/result.json",
+    "bytes": 4313,
+    "sha256": "26adf8ac964874593f4fe118880583195e843672e8f44cf4c9d8fc009a294f72"
+  },
+  "changed_object": {
+    "parent_argument": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/objects-r003/ub_ubc.o",
+    "object": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/objects-r003/ub_ubc.o",
+      "bytes": 1972744,
+      "sha256": "c5085a5d7b42f982373a75e9c700a50d14ffc5f0987f86e780e588c25b563f83"
+    }
+  },
+  "compilation_dependencies": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/compiler-dependencies.json",
+    "bytes": 116177,
+    "sha256": "e79fa54c15af6941bb26e08b56a23b9b15b3d68a72395cb46b4ba594e38dba9b"
+  },
+  "control_command": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/control-command.json",
+    "bytes": 55234,
+    "sha256": "619961117c2373137cb12153538220d920f84be9617a5f98b347c87018bdac20"
+  },
+  "candidate_command": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/candidate-command.json",
+    "bytes": 55233,
+    "sha256": "74b214726c4101b70fa72fe48ba8ac121c9092b8e6c2331dc4602fe9cb5757bd"
+  },
+  "control_binary": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/qemu-control",
+    "bytes": 128060120,
+    "sha256": "a17087127825c40b5fa8740c484a987535495e03f72ba14ed5c40c2f259b135b"
+  },
+  "linked_candidate": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/qemu-candidate",
+    "bytes": 128119120,
+    "sha256": "5ac05e7288f1a940502558cc3d8a6c2dfef0067d0eaa3ec59d9fa41d22755949"
+  },
+  "reused_inputs": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/reused-inputs.json",
+    "bytes": 623232,
+    "sha256": "9c91e5fdc2c7147b144b89cf283097a5bdee496b6fb114a402d5523c396cace1"
+  },
+  "link_result": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/link-r001/result.json",
+    "bytes": 867,
+    "sha256": "e95246205d973d3f5ac5b13c01ec05e6cbd805085d0fa119c5dd1b1e23851c2e"
+  },
+  "HOST_proofs": {
+    "transport": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/transport-tests005/result.json",
+      "bytes": 12260,
+      "sha256": "d2e713e0a33b4f2297f8bb438e0448219f1ac5685e7df6a1d5ced32954b4cf1e"
+    },
+    "edges": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/transport-tests005/edges.json",
+      "bytes": 5940,
+      "sha256": "2082f7f83bc85492df61bd15bed74228918ae0923b0915c03a9f01b9e365ee94"
+    },
+    "codec_wrapper": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/control-tests001/result.json",
+      "bytes": 4113,
+      "sha256": "7661639eceae297e3503b1777734c71a1799258f02a4510d37e713f09989a24b"
+    }
+  },
+  "runtime_wrapper": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/release-v1/uflow_managed_guest_group_v2.py",
+    "bytes": 21436,
+    "sha256": "9bd5df060abfa26b2527557e14b755c701b9b3323cb57d6c5466ffa6691765b2"
+  },
+  "runtime_R_codec": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/release-v1/uflow_managed_cache_codec_v2.py",
+    "bytes": 9594,
+    "sha256": "7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db"
+  },
+  "runtime_W_codec": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/release-v1/uflow_managed_write_codec_v1.py",
+    "bytes": 10928,
+    "sha256": "e5627711dc76a5441a7c957733983bff10dfd7d38fe1cf787b3b535e0de05c08"
+  }
+}

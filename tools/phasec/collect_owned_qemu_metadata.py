@@ -112,7 +112,11 @@ def capture_owned_starts(starts_path,expected_starts_sha,config,group_source,qem
     raw=bounded(starts_path,65536)
     if hashlib.sha256(raw).hexdigest()!=expected_starts_sha:raise ValueError('frozen starts pin')
     group_sha=GROUP_SHA
-    if config.get('managed_cache_profile') is not None:
+    if config.get('managed_write_profile') is not None:
+        from accepted_c101_v4 import v4_anchors
+        ref=v4_anchors()['code_and_data']['wrapper'];group_sha=ref['sha256']
+        if str(group_source)!=ref['path']:raise ValueError('actual c1e W/R wrapper runtime path required')
+    elif config.get('managed_cache_profile') is not None:
         from accepted_c081_v3 import v3_anchors
         ref=v3_anchors()['code_and_data']['wrapper'];group_sha=ref['sha256']
         if str(group_source)!=ref['path']:raise ValueError('actual managed wrapper runtime path required')

@@ -30,6 +30,7 @@ pub struct MemServicePoolProvider {
     active: OnceLock<Box<MemServicePoolProvider>>,
     activation: Mutex<()>,
     managed_cache_execution:Option<Value>,
+    managed_write_execution:Option<Value>,
     // No production constructor until the new native profile has been accepted.
     #[cfg(test)]
     managed_cache_host_test: bool,
@@ -82,8 +83,11 @@ impl MemServicePoolProvider {
     pub fn load(path: &Path) -> Result<Self, String> {
         let data = std::fs::read(path).map_err(|e| e.to_string())?;
         let c = parse(&data)?;
-        fields(&c, &["schema", "backend", "realm", "session", "home", "nodes"], &["deferred_bootstrap","readiness_file","reconciliation","managed_cache_execution"])?;
+        fields(&c, &["schema", "backend", "realm", "session", "home", "nodes"], &["deferred_bootstrap","readiness_file","reconciliation","managed_cache_execution","managed_write_execution"])?;
+        if c.get("managed_cache_execution").is_some()&&c.get("managed_write_execution").is_some(){return Err("distinct execution contexts cannot be mixed before IO".into());}
         let managed_cache_execution=if c.get("managed_cache_execution").is_some(){Some(crate::pool_terminal_domain::case_chain::validate_managed_binding(&c["managed_cache_execution"])?)}else{None};
+        let managed_write_execution=if c.get("managed_write_execution").is_some(){Some(crate::pool_terminal_domain::case_chain::current_c101::validate_managed_binding(&c["managed_write_execution"])?)}else{None};
+        if managed_cache_execution.is_some()&&managed_write_execution.is_some(){return Err("distinct execution contexts cannot be mixed".into());}
         if c["schema"] != 2 || c["backend"] != "mem_service_obmm" { return Err("explicit mem_service config v2 required".into()); }
         let deferred=c["deferred_bootstrap"]==true;
         if c.get("deferred_bootstrap").is_some_and(|value|!value.is_boolean()) || (!deferred && !c["reconciliation"].is_null()) {
@@ -131,7 +135,7 @@ impl MemServicePoolProvider {
             nodes, home, sequence: AtomicU64::new(BUSINESS_SEQUENCE), bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
             deferred_bootstrap:deferred,readiness_file:c["readiness_file"].as_str().map(PathBuf::from),
             reconciliation:if c["reconciliation"].is_null(){None}else{Some(c["reconciliation"].clone())},
-            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution,
+            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution,managed_write_execution,
             #[cfg(test)] managed_cache_host_test:false,
             #[cfg(test)] managed_write_host_test:false })
     }
@@ -214,12 +218,12 @@ impl MemServicePoolProvider {
     }
 
     fn managed_write_enabled(&self)->bool {
-        #[cfg(test)] {self.managed_write_host_test}
-        #[cfg(not(test))] {false} // New W profile/context acceptance is required.
+        #[cfg(test)] {self.managed_write_host_test||self.managed_write_execution.is_some()}
+        #[cfg(not(test))] {self.managed_write_execution.is_some()}
     }
     fn managed_cache_enabled(&self)->bool {
-        #[cfg(test)] {self.managed_cache_host_test||self.managed_cache_execution.is_some()}
-        #[cfg(not(test))] {self.managed_cache_execution.is_some()}
+        #[cfg(test)] {self.managed_cache_host_test||self.managed_cache_execution.is_some()||self.managed_write_execution.is_some()}
+        #[cfg(not(test))] {self.managed_cache_execution.is_some()||self.managed_write_execution.is_some()}
     }
     fn next_sequence(&self)->Result<u64,String>{
         self.sequence.fetch_update(Ordering::Relaxed,Ordering::Relaxed,|n|n.checked_add(1))
@@ -381,7 +385,7 @@ impl MemServicePoolProvider {
             let _guard=self.activation.lock().map_err(|_|"bootstrap activation poisoned")?;
             if !self.deferred_bootstrap || self.active.get().is_some() {return Err("bootstrap already activated or not staged".into());}
             let mut active=Self::load(self.readiness_file.as_ref().ok_or("readiness file missing")?)?;
-            if active.managed_cache_execution!=self.managed_cache_execution || active.deferred_bootstrap || active.realm!=self.realm || active.session!=self.session || active.home!=self.home ||
+            if active.managed_write_execution!=self.managed_write_execution || active.managed_cache_execution!=self.managed_cache_execution || active.deferred_bootstrap || active.realm!=self.realm || active.session!=self.session || active.home!=self.home ||
                 active.nodes.iter().any(|(name,node)|node["socket"]!=self.nodes[name]["socket"]) {
                 return Err("prepared readiness does not bind this pending authority".into());
             }
@@ -703,7 +707,7 @@ mod tests {
             let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,"worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":8,"readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
             identity["startup"]=json!({"worker":worker,"directory_epoch":2});identity["socket"]=json!(socket.to_str().unwrap());
             let status=json!({"schema":2,"phase":"completed","node":"nodeB","boot_id":"boot-b","incarnation":8,"readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,"directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2});
-            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:true,managed_write_host_test:false};
+            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_write_execution:None,managed_cache_host_test:true,managed_write_host_test:false};
             let(entered_tx,entered_rx)=mpsc::channel();let(resume_tx,resume_rx)=mpsc::channel();
             let transport_lease=lease_json.clone();
             let transport=thread::spawn(move||{
@@ -745,7 +749,7 @@ mod tests {
             let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,"worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":8,"readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
             identity["startup"]=json!({"worker":worker,"directory_epoch":2});identity["socket"]=json!(socket.to_str().unwrap());
             let status=json!({"schema":2,"phase":"completed","node":"nodeB","boot_id":"boot-b","incarnation":8,"readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,"directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2});
-            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:enabled};
+            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_write_execution:None,managed_cache_host_test:false,managed_write_host_test:enabled};
             let(entered_tx,entered_rx)=mpsc::channel();let(resume_tx,resume_rx)=mpsc::channel();
             let transport_lease=lease_json.clone();
             let transport=thread::spawn(move||{
@@ -817,7 +821,7 @@ mod tests {
                 ("nodeB".into(),json!({"boot_id":"fresh-b","agent_session":"fresh-b","incarnation":19}))].into_iter().collect(),
             home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),
             bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:true,readiness_file:None,reconciliation:None,
-            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
+            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_write_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
         assert!(fresh().reject_retained_reuse(&st).is_ok());
         for c in st.managed_pools.reconciliation["retained_canaries"].as_array().unwrap(){
             let mut p=fresh();p.realm=c["backing"]["realm"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
@@ -843,7 +847,7 @@ mod tests {
             ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
         let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
             nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
-            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
+            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_write_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
         let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
         provider.admit_bootstrap(&mut st).unwrap();
         assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);
