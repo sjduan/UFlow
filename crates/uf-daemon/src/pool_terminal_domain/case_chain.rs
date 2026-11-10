@@ -10,6 +10,19 @@ pub(crate) fn production_manifest(_path:&Path,_external_sha:&str)->Result<Value,
 
 struct Case {descriptor:Value,descriptor_sha:String}
 struct Lineage {pins:Value,previous:Value,previous_fences:Value,backings:Value}
+// DdrResources stores resources/reservations in HashMaps. Historical array
+// order is not identity; normalize only these keyed sets, rejecting duplicates
+// and comparing every original row/witness and every other field exactly.
+fn normalized_ledger(value:&Value)->Result<Value,String>{
+    let mut result=value.clone();result["resources"]=json!(rows(value)?);
+    let mut reservations=BTreeMap::new();
+    for row in value["retained_uncertain_reservations"].as_array().ok_or("typed uncertain reservation set")?{
+        let key=row["key"].as_str().ok_or("reservation key")?;
+        if reservations.insert(key.to_string(),row.clone()).is_some(){return Err("duplicate retained reservation".into());}
+    }
+    result["retained_uncertain_reservations"]=json!(reservations);Ok(result)
+}
+fn ledger_equal(a:&Value,b:&Value)->Result<bool,String>{Ok(normalized_ledger(a)?==normalized_ledger(b)?)}
 impl Case {
     fn parse(raw:&[u8],pin:&str)->Result<Self,String>{
         if digest(raw)!=pin{return Err("case external digest mismatch".into());}
@@ -69,13 +82,13 @@ impl Case {
             }
             let mut ledger=DdrResources::inherit_terminal_source(&p)?;p.matches_ledger(&parsed(&bounded(&old.join("before128.json"),1<<20)?)?)?;ledger.apply_terminal_loss(&p)?;
             let after=parsed(&bounded(&old.join("resulting76.json"),1<<20)?)?;
-            if after["resource_ledger"]!=ledger.snapshot() || parsed(&bounded(&old.join("permanent-fences.json"),1<<20)?)?!=p.fences || after["reconciliation"]["terminal_domain_fences"]!=p.fences ||
-                after["B_conservative_bytes"]!=76<<20 || after["normal_SDK_ACK"]!=false{return Err(format!("ancestor{} rederived76/fences changed: ledger={} fence={} reconciliation={}",index+1,after["resource_ledger"]==ledger.snapshot(),parsed(&bounded(&old.join("permanent-fences.json"),1<<20)?)?==p.fences,after["reconciliation"]["terminal_domain_fences"]==p.fences));}
+            if !ledger_equal(&after["resource_ledger"],&ledger.snapshot())? || parsed(&bounded(&old.join("permanent-fences.json"),1<<20)?)?!=p.fences || after["reconciliation"]["terminal_domain_fences"]!=p.fences ||
+                after["B_conservative_bytes"]!=76<<20 || after["normal_SDK_ACK"]!=false{return Err(format!("ancestor{} rederived76/fences changed",index+1));}
             let claim=parsed(&bounded(&old.join("service-admission-claim.json"),1<<20)?)?;
             ledger.reserve_unique("canary:nodeA",2<<20)?;ledger.reserve_unique("canary:nodeB",2<<20)?;
             let first=p.fences["minimum_next_object_id"].as_u64().ok_or("ancestor object highwater")?;
             if claim["kind"]!="SuccessorServiceAdmissionPending" || claim["source_terminal_commit_sha256"]!=digest(&bounded(&old.join("commit.json"),1<<20)?) ||
-                claim["resource_ledger"]!=ledger.snapshot() || claim["canary_charge_objects"]!=json!({"nodeA":first,"nodeB":first+1}) ||
+                !ledger_equal(&claim["resource_ledger"],&ledger.snapshot())? || claim["canary_charge_objects"]!=json!({"nodeA":first,"nodeB":first+1}) ||
                 claim["conservative_B_bytes"]!=80<<20 || claim["native_SDK_ACK"]!=false || claim["Guest_identity_known"]!=false || claim["business_admission_enabled"]!=false{return Err("complete original consumed claim required".into());}
             reject_fenced(&after["reconciliation"],&claim["namespace"])?;
             for id in p.terminal_ids(){backings.insert(id.to_string(),rows(p.source_ledger())?.get(id).ok_or("original historical backing")?.clone());}
@@ -147,7 +160,8 @@ fn recover(dir:&Path,state_path:&Path,case:&Case,verify:impl Fn(&[u8],&Lineage)-
     if intent["kind"]!="VersionedCurrentTerminalLossPending"||intent["version"]!=case.version()||intent["case"]!=case.descriptor||intent["case_sha256"]!=case.descriptor_sha||intent["lineage"]!=lineage.pins||intent["verified_candidate"]!=p.proof||intent["proof_sha256"]!=p.proof_sha||intent["source_state_sha256"]!=case.sha()||intent["source_revision"]!=case.revision()||intent["resource_ids"]!=json!(case.ids())||intent["normal_SDK_ACK"]!=false||bounded(&path.join("historical-state.json"),1<<20)?!=original{return Err("committed source/lineage/intent changed".into());}
     p.matches_ledger(&parsed(&bounded(&path.join("before128.json"),1<<20)?)?)?;let mut ledger=DdrResources::inherit_terminal_source(&p)?;ledger.apply_terminal_loss(&p)?;
     let after=parsed(&bounded(&path.join("resulting76.json"),1<<20)?)?;
-    if after!=result(case,&p,&path,&ledger)||parsed(&bounded(&path.join("inherited-backing-identities.json"),1<<20)?)?!=p.prior_backings{return Err("rederived ledger/backing/fences changed".into());}
+    let mut expected=result(case,&p,&path,&ledger);let mut actual=after.clone();expected["resource_ledger"]=normalized_ledger(&expected["resource_ledger"])?;actual["resource_ledger"]=normalized_ledger(&actual["resource_ledger"])?;
+    if actual!=expected||parsed(&bounded(&path.join("inherited-backing-identities.json"),1<<20)?)?!=p.prior_backings{return Err("rederived ledger/backing/fences changed".into());}
     let a=TerminalAuthority{_original_lock:lock,ledger:Some(ledger),reconciliation:after["reconciliation"].clone(),path,source_sha:case.sha().into(),revision:case.revision()+1};a.validate_commit()?;Ok(a)
 }
 

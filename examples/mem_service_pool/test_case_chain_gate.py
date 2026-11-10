@@ -10,7 +10,7 @@ class ChainGateTests(unittest.TestCase):
         with patch.dict(os.environ,{'UFLOW_ENV_CLOSE_FD':'5'}),patch.object(Path,'is_dir',return_value=True),patch.object(driver,'launch_gate',side_effect=AssertionError('no producer IO')):
             with self.assertRaisesRegex(ValueError,'production-not-ready'):driver.matrix(Path('/cpu'),{'output':'/cpu/runs/1','terminal_case_execution':{'ready':True}},{'source':'/cpu/source'})
     def test_unchanged_SDK_alone_exceeds_deadline_even_if_callback_cost_is_zero(self):
-        v=model(20<<20);self.assertEqual(v['minimum_scalar_read_calls'],4*(20<<20));self.assertGreater(v['unchanged_SDK_two_pass_floor_seconds'],2000)
+        v=model(20<<20);self.assertEqual(v['minimum_scalar_read_calls'],6*(20<<20));self.assertGreater(v['unchanged_SDK_four_pass_floor_seconds'],4000)
         self.assertGreater(v['C_only_eight_byte_callback_loads_still_scalar_SDK_estimated_seconds'],120)
         self.assertFalse(v['isolated_benchmark']);self.assertFalse(v['SDK_or_visibility_hash_byte_guards_removed'])
 if __name__=='__main__':unittest.main()

@@ -52,6 +52,7 @@ def main(root,source,name):
  for pattern in ['test_case_chain_gate.py','test_result_ownership.py','test_normal_journal_shutdown.py']:
   run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p',pattern],pattern,45)
  run([sys.executable,'-B',source/'tools/phasec/pool_access_cost_model.py','--sdk-provider',root/'env/mem-service-sdk/src/lingqu/mem_service/mem_service_provider.c',
+  '--obmm-provider',root/'src/ub_sim/mem_service/components/mem_service/providers/mem_service_provider_obmm.c',
   '--source',source,'--output',out/'full-pipeline-cost-model.json'],'full-pipeline-source-counter-model')
  sys.path.insert(0,str(source/'tools/phasec'))
  from result_ownership import collect
@@ -65,7 +66,7 @@ def main(root,source,name):
  for p,pin in {**frozen,**real}.items():assert sha(Path(p))==pin
  value={'schema':3,'pass':True,'source':str(source),'source_commit':manifest['commit'],'source_manifest_sha256':sha(source/'.uflow-source.json'),
   'daemon':str(launch),'daemon_sha256':sha(launch),'daemon_single_link':True,'Rust_test_ELF':str(rust),'Rust_test_ELF_sha256':sha(rust),
-  'targeted_new_Rust_behavioral_tests':7,'shared_fence_compatibility_Rust_tests':1,'Rust_harness_entries':3,'targeted_Python_tests':8,'Python_skips':0,
+  'targeted_new_Rust_behavioral_tests':8,'shared_fence_compatibility_Rust_tests':1,'Rust_harness_entries':3,'targeted_Python_tests':8,'Python_skips':0,
   'changed_C_TUs_only':{'pool_agent.o':sha(out/'pool_agent.o'),'pool-guest-init':sha(out/'pool-guest-init')},
   'C_image_SDK_worker_reused_without_rebuild':frozen,'new_production_C_image_created':False,
   'normal_journal_source_order_fixed_and_HOST_child_order_tested':True,'full_scalar_SDK_pipeline_model':json.loads((out/'full-pipeline-cost-model.json').read_bytes()),

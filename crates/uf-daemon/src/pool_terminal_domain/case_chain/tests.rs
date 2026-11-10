@@ -27,6 +27,12 @@ impl Drop for Fixture{fn drop(&mut self){if self.cleanup{assert_eq!(self.root.pa
 fn catalog()->Catalog{let mut c=Catalog::new(-1,vec![]);c.ddr_resources.limit=128<<20;c}
 fn namespace(f:&Fixture)->Value{json!({"realm":"simulated:chain-new","session":"chain-new-session","nodes":[{"node":"nodeA","socket":f.root.join("new-a.sock")},{"node":"nodeB","socket":f.root.join("new-b.sock")}]})}
 
+#[test]fn chain_unordered_resource_identity_set_accepts_reordering_not_duplicates_or_changed_backing(){
+ let f=Fixture::new();let source=parsed(&fs::read(&f.state).unwrap()).unwrap();let ledger=&source["resource_ledger"];let mut reordered=ledger.clone();reordered["resources"].as_array_mut().unwrap().reverse();assert!(ledger_equal(ledger,&reordered).unwrap());
+ let first=reordered["resources"][0].clone();reordered["resources"].as_array_mut().unwrap().push(first);assert!(ledger_equal(ledger,&reordered).is_err());
+ let mut changed=ledger.clone();changed["resources"][0]["backing"]["resource"]=json!("different-backing");assert!(!ledger_equal(ledger,&changed).unwrap());
+}
+
 #[test]fn chain_production_rejects_any_caller_before_original_io(){
  let f=Fixture::new();for pin in [CASE_SHA,"true",""]{assert!(production_manifest(&f.root.join("must-not-read"),pin).unwrap_err().contains("no descriptor/state/authority/verifier IO"));}
  assert!(!f.dir.join(f.case.successor()).exists());assert_eq!(digest(&fs::read(&f.state).unwrap()),f.case.sha());
