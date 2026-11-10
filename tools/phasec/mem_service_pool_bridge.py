@@ -148,10 +148,11 @@ def worker_idle_reply(identity,worker,origin,op,fields,public,reply):
 
 
 class GuestNode:
-    def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10, managed_control=None, publication_book=None):
+    def __init__(self, channel, identity, lower_socket, event, realm, *, notify=notify_failure, lower_timeout=10, managed_control=None, publication_book=None, managed_write_control=None):
         self.channel, self.identity, self.lower_socket, self.event = channel, identity, lower_socket, event
         self.realm = realm
         self.managed_control,self.publication_book=managed_control,publication_book
+        self.managed_write_control=managed_write_control
         self.notify,self.lower_timeout=NoticeOnce(notify),lower_timeout
         self.root_pid,self.root_birth=0,0
         self.worker=None
@@ -311,6 +312,10 @@ class GuestNode:
 
     def exchange(self, frame, timeout=120, *, auth=None):
         body=metadata(frame.body)
+        if any(k.startswith('write_') for k in body):
+            if self.managed_write_control is None:
+                raise ValueError('production-not-ready: no accepted managed W control/profile')
+            return self.managed_write_control.execute(self,frame,auth,timeout)
         if any(k.startswith('cache_') for k in body):
             if self.managed_control is None:
                 raise ValueError('production-not-ready: no accepted managed native control/profile')

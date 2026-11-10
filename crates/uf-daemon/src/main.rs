@@ -25,6 +25,7 @@ mod direct_transfer;
 mod external_ddr;
 mod managed_pool;
 mod managed_read_cache;
+mod managed_write;
 mod mem_service_pool;
 mod pool_reconciliation;
 mod pool_retained8;

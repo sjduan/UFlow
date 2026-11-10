@@ -33,6 +33,7 @@ pub struct MemServicePoolProvider {
     // No production constructor until the new native profile has been accepted.
     #[cfg(test)]
     managed_cache_host_test: bool,
+    #[cfg(test)] managed_write_host_test:bool,
 }
 
 const CANARY_BYTES: u64 = 2 << 20;
@@ -131,7 +132,7 @@ impl MemServicePoolProvider {
             deferred_bootstrap:deferred,readiness_file:c["readiness_file"].as_str().map(PathBuf::from),
             reconciliation:if c["reconciliation"].is_null(){None}else{Some(c["reconciliation"].clone())},
             active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution,
-            #[cfg(test)] managed_cache_host_test:false })
+            #[cfg(test)] managed_cache_host_test:false,managed_write_host_test:false })
     }
 
     fn reject_retained_reuse(&self, st:&Catalog)->Result<(),String> {
@@ -211,6 +212,10 @@ impl MemServicePoolProvider {
             "fidelity":"functional-simulation","payload_rpc_bytes":0})
     }
 
+    fn managed_write_enabled(&self)->bool {
+        #[cfg(test)] {self.managed_write_host_test}
+        #[cfg(not(test))] {false} // New W profile/context acceptance is required.
+    }
     fn managed_cache_enabled(&self)->bool {
         #[cfg(test)] {self.managed_cache_host_test||self.managed_cache_execution.is_some()}
         #[cfg(not(test))] {self.managed_cache_execution.is_some()}
@@ -586,7 +591,7 @@ impl MemServicePoolProvider {
                 if session.birth!=peer.birth || req["access_generation"]!=session.access_id {return Err("client birth/access mismatch".into());}
                 let node=st.access_bindings[&session.access_id].accessor_node_id.clone();
                 if op=="BeginPoolUnregister" {
-                    if p.ranges.cache.client_pending(client){return Err("native cache must be acknowledged revoked before unmap".into());}
+                    if p.ranges.cache.client_pending(client)||p.ranges.write.client_pending(client){return Err("native cache must be acknowledged revoked before unmap".into());}
                     if p.ranges.leases.values().any(|l|l.client==client && matches!(l.state,"Active"|"Executing")) {return Err("drain range obligations before unmap".into());}
                     p.clients.get_mut(client).unwrap().closing=true;return Ok((node,None,None));
                 }
@@ -594,12 +599,17 @@ impl MemServicePoolProvider {
                 if session.closing || session.state!="Mapped" {return Err("mapped live client required".into());}
                 let lease=p.validate_lease(&req["lease"],client,session.access_id)?;
                 if p.ranges.leases[&lease.token].state!="Active" {return Err("range already executing/unknown/closed".into());}
+                p.ranges.write.guard_access(lease.offset,lease.nbytes)?;
                 if lease.mode=="w"{p.ranges.cache.guard_writer(lease.offset,lease.nbytes)?;}
                 number(req,"pattern_id")?;
                 p.ranges.leases.get_mut(&lease.token).unwrap().state="Executing";
                 let managed=if self.managed_cache_enabled()&&lease.mode=="r" {
                     let prepared=crate::managed_read_cache::Authority::mint(p,st,&lease,&self.nodes[&node],&self.realm,text(req,"operation_id")?,control)
                         .and_then(|grant|p.ranges.cache.begin(grant,&req["pattern_id"]));
+                    match prepared{Ok(body)=>Some(body),Err(error)=>{p.ranges.leases.get_mut(&lease.token).unwrap().state="Active";return Err(error);}}
+                }else if self.managed_write_enabled()&&lease.mode=="w" {
+                    let prepared=crate::managed_write::Authority::mint(p,st,&lease,&self.nodes[&node],&self.realm,text(req,"operation_id")?,control)
+                        .and_then(|grant|p.ranges.write.begin(grant,&req["pattern_id"]));
                     match prepared{Ok(body)=>Some(body),Err(error)=>{p.ranges.leases.get_mut(&lease.token).unwrap().state="Active";return Err(error);}}
                 }else{None};
                 Ok((node,Some(lease),managed))
@@ -614,7 +624,7 @@ impl MemServicePoolProvider {
                     let p=state.pools.get_mut(pool_id).unwrap();
                     if p.ranges.leases[&lease.token].state!="Executing" || p.clients[client].state!="Mapped" {
                         p.ranges.unknown(&lease);
-                        if cached{p.ranges.cache.uncertain(control);}
+                        if cached{if lease.mode=="w"{p.ranges.write.uncertain(control);}else{p.ranges.cache.uncertain(control);}}
                         st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();
                         return Err("uncertainty/death during execution remains sticky; no commit".into());
                     }
@@ -623,7 +633,11 @@ impl MemServicePoolProvider {
                             && receipt["all_bytes"]==true && receipt["pins"]==0 && receipt["visible"]==true
                             && receipt["pattern_id"]==req["pattern_id"] => {
                             if cached {
-                                if let Err(error)=p.ranges.cache.finish(control,&receipt){
+                                // Reject incomplete SDK data before consuming the independent W ACK.
+                                let finish=if lease.mode=="w" {
+                                    match text(&receipt,"checksum"){Ok(s) if !s.is_empty()=>p.ranges.write.finish(control,&receipt),_=>{p.ranges.write.uncertain(control);Err("missing actual W checksum".into())}}
+                                }else{p.ranges.cache.finish(control,&receipt)};
+                                if let Err(error)=finish{
                                     p.ranges.unknown(&lease);st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();return Err(error);
                                 }
                             }
@@ -634,7 +648,7 @@ impl MemServicePoolProvider {
                                 Ok(json!({"committed":true,"content_version":version,"receipt":receipt}))
                             } else {Ok(json!({"verified":true,"content_version":lease.version,"receipt":receipt}))}
                         }
-                        other=>{p.ranges.unknown(&lease);if cached{p.ranges.cache.uncertain(control);}
+                        other=>{p.ranges.unknown(&lease);if cached{if lease.mode=="w"{p.ranges.write.uncertain(control);}else{p.ranges.cache.uncertain(control);}}
                             st.leases.get_mut(&lease.catalog_id).unwrap().state="Unknown".into();Err(format!("same lease/bytes outcome unknown: {other:?}"))}
                     }
                 });
@@ -688,7 +702,7 @@ mod tests {
             let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,"worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":8,"readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
             identity["startup"]=json!({"worker":worker,"directory_epoch":2});identity["socket"]=json!(socket.to_str().unwrap());
             let status=json!({"schema":2,"phase":"completed","node":"nodeB","boot_id":"boot-b","incarnation":8,"readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,"directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2});
-            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:true};
+            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:true,managed_write_host_test:false};
             let(entered_tx,entered_rx)=mpsc::channel();let(resume_tx,resume_rx)=mpsc::channel();
             let transport_lease=lease_json.clone();
             let transport=thread::spawn(move||{
@@ -711,6 +725,55 @@ mod tests {
             service.catalog(|state,_|{let p=&mut state.pools.get_mut("pool").unwrap();assert_eq!(p.ranges.leases[&lease_token].state,"Executing");assert!(!p.ranges.cache.is_empty());assert!(p.ranges.cache.guard_writer(0,65536).is_err());assert!(p.ranges.release(&lease).is_err());Ok(())}).unwrap();
             resume_tx.send(()).unwrap();let result=execute.join().unwrap();transport.join().unwrap();assert_eq!(result.is_err(),corrupt);
             service.catalog(|state,st|{let p=&state.pools["pool"];assert_eq!(p.ranges.cache.is_empty(),!corrupt);assert_eq!(p.ranges.leases[&lease_token].state,if corrupt{"Unknown"}else{"Active"});assert_eq!(st.ddr_resources.charged_bytes(),131072);if corrupt{assert!(p.frozen());assert_eq!(st.leases[&lease.catalog_id].state,"Unknown");}Ok(())}).unwrap();
+            drop(service);std::fs::remove_dir_all(&root).unwrap();
+        }
+    }
+    #[test]
+    fn real_w_execute_requires_flush_end_before_commit_and_stays_unknown_on_races(){
+        use std::{os::unix::net::UnixListener,sync::{Arc,mpsc},thread};
+        for scenario in 0..7 {
+            let corrupt=(1..=5).contains(&scenario);let enabled=scenario!=6;
+            let(mut st,mut state,lease,mut identity)=crate::managed_write::tests::fixture();
+            let root=std::env::temp_dir().join(format!("uf-write-host-{}",opaque_id().unwrap()));std::fs::create_dir(&root).unwrap();
+            let socket=root.join("b.sock");let listener=UnixListener::bind(&socket).unwrap();
+            let access=state.pools["pool"].clients[&lease.client].access_id;
+            state.pools.get_mut("pool").unwrap().ranges.leases.get_mut(&lease.token).unwrap().state="Active";
+            st.access_bindings.get_mut(&access).unwrap().opaque_token=b"{}".to_vec();
+            let lease_json=state.pools["pool"].lease_json(&lease,access);st.managed_pools=state;
+            let service=Arc::new(crate::pool_service::managed_read_cache_host_service(st,&root));
+            let worker=json!({"schema":2,"phase":"completed","worker_alive":true,"worker_ready":true,"worker_refresh_count":2,"worker_pid":41,"worker_birth":721,"incarnation":8,"readiness_generation":1,"capabilities":1,"lease_ms":1000,"refresh_age_ms":10});
+            identity["startup"]=json!({"worker":worker,"directory_epoch":2});identity["socket"]=json!(socket.to_str().unwrap());
+            let status=json!({"schema":2,"phase":"completed","node":"nodeB","boot_id":"boot-b","incarnation":8,"readiness_generation":1,"capabilities":1,"channel_ready":true,"directory_registered":true,"directory_ready":true,"required_count":2,"active_count":2,"lease_ms":1000,"directory_epoch":2});
+            let provider=MemServicePoolProvider{session:"provider".into(),realm:"realm".into(),nodes:[("nodeB".into(),identity)].into_iter().collect(),home:"nodeB".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:enabled};
+            let(entered_tx,entered_rx)=mpsc::channel();let(resume_tx,resume_rx)=mpsc::channel();
+            let transport_lease=lease_json.clone();
+            let transport=thread::spawn(move||{
+                for expected in ["worker_state","provider_status","write"] {
+                    let(mut stream,_)=listener.accept().unwrap();let frame=BridgeFrame::read_from(&mut stream).unwrap();let body:Value=serde_json::from_slice(&frame.body).unwrap();assert_eq!(body["op"],expected);
+                    let receipt=if expected=="worker_state"{worker.clone()}else if expected=="provider_status"{status.clone()}else{
+                        if enabled {assert_eq!(body["write_lease_generation"],transport_lease["lease_generation"]);assert_eq!(body["write_control_generation"],frame.request_id);assert_eq!(body["content_version"],0);assert!(body.get("write_content_id").is_none());}else{assert!(body.get("write_version").is_none());}
+                        entered_tx.send(()).unwrap();resume_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                        let mut r=json!({"schema":2,"phase":"completed","nbytes":body["nbytes"],"offset":body["offset"],"pattern_id":body["pattern_id"],"all_bytes":true,"visible":true,"pins":0,"checksum":"0123456789abcdef"});
+                        if enabled {for(k,v)in crate::managed_write::tests::ack(&body).as_object().unwrap(){r[k]=v.clone();}}
+                        match scenario{1=>r["write_dirty_bytes"]=json!(1),2=>r["write_flush_confirmed"]=json!(false),3=>r["write_end_confirmed"]=json!(false),4=>{r.as_object_mut().unwrap().remove("checksum");},_=>{}}
+                        r};
+                    let mut reply=frame;reply.message_type=BridgeMessageType::Completion;reply.body=serde_json::to_vec(&receipt).unwrap();reply.write_to(&mut stream).unwrap();
+                }
+            });
+            let service_exec=Arc::clone(&service);let lease_token=lease.token.clone();let client=lease.client.clone();
+            let execute=thread::spawn(move||{
+                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_provider::pidfd(pid).unwrap()};
+                provider.execute(&service_exec,&peer,&json!({"op":"ExecutePoolRange","operation_id":"host-real-w-execute","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":client,"access_generation":access,"access_binding_v2":{},"lease":lease_json,"pattern_id":17}))
+            });
+            entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            service.catalog(|state,st|{let p=state.pools.get_mut("pool").unwrap();assert_eq!(p.ranges.leases[&lease_token].state,"Executing");assert_eq!(st.leases[&lease.catalog_id].state,"Writing");
+                assert_eq!(p.ranges.write.is_empty(),!enabled);assert!(p.ranges.cache.is_empty());assert_eq!(p.ranges.blocks[&lease.block].segments.last().unwrap().version,0);
+                if enabled{assert!(p.ranges.write.guard_access(65536,65536).is_err());assert!(p.ranges.release(&lease).is_err());assert!(p.ranges.commit(&lease,"early",65536).is_err());assert!(p.confirm_client_unmapped(st,&lease.client).is_err());}
+                if scenario==5{p.ranges.unknown(&lease);}
+                Ok(())}).unwrap();
+            resume_tx.send(()).unwrap();let result=execute.join().unwrap();transport.join().unwrap();assert_eq!(result.is_err(),corrupt);
+            service.catalog(|state,st|{let p=&state.pools["pool"];assert_eq!(p.ranges.write.is_empty(),!corrupt);assert_eq!(p.ranges.leases[&lease_token].state,if corrupt{"Unknown"}else{"Closed"});assert_eq!(st.ddr_resources.charged_bytes(),131072);
+                if corrupt{assert!(p.frozen());assert_eq!(st.leases[&lease.catalog_id].state,"Unknown");assert_eq!(p.ranges.blocks[&lease.block].segments.last().unwrap().version,0);}else{assert_eq!(st.leases[&lease.catalog_id].state,"Closed");assert_eq!(p.ranges.blocks[&lease.block].segments.last().unwrap().content,"0123456789abcdef");}Ok(())}).unwrap();
             drop(service);std::fs::remove_dir_all(&root).unwrap();
         }
     }
@@ -753,7 +816,7 @@ mod tests {
                 ("nodeB".into(),json!({"boot_id":"fresh-b","agent_session":"fresh-b","incarnation":19}))].into_iter().collect(),
             home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),
             bootstrap_unknown:AtomicBool::new(false),deferred_bootstrap:true,readiness_file:None,reconciliation:None,
-            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false};
+            active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
         assert!(fresh().reject_retained_reuse(&st).is_ok());
         for c in st.managed_pools.reconciliation["retained_canaries"].as_array().unwrap(){
             let mut p=fresh();p.realm=c["backing"]["realm"].as_str().unwrap().into();assert!(p.reject_retained_reuse(&st).is_err());
@@ -779,7 +842,7 @@ mod tests {
             ("nodeB".into(),json!({"boot_id":"boot-b","incarnation":8}))].into_iter().collect();
         let mut provider=MemServicePoolProvider {session:"test".into(),realm:"simulated:test".into(),
             nodes,home:"nodeA".into(),sequence:AtomicU64::new(BUSINESS_SEQUENCE),bootstrap:BTreeMap::new(),bootstrap_unknown:AtomicBool::new(false),
-            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false};
+            deferred_bootstrap:false,readiness_file:None,reconciliation:None,active:OnceLock::new(),activation:Mutex::new(()),managed_cache_execution:None,managed_cache_host_test:false,managed_write_host_test:false};
         let mut st=Catalog::new(-1,Vec::new());st.ddr_resources.limit=128<<20;
         provider.admit_bootstrap(&mut st).unwrap();
         assert_eq!(provider.bootstrap.len(),2);assert_eq!(st.ddr_resources.charged_bytes(),4<<20);
