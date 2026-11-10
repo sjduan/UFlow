@@ -7,7 +7,7 @@ from accepted_c081_v3 import v3_anchors,v3_sources,v3_context,v3_terminal_proof,
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main(root,source,name):
-    assert str(root)=='/workspace/uflow/runs/mem-service-shared-pool-20261108' and name=='build-host067' and source==root/'implementation/source-host067'
+    generation=name[-3:];assert str(root)=='/workspace/uflow/runs/mem-service-shared-pool-20261108' and name.startswith('build-host') and generation.isdigit() and len(name)==13 and source==root/'implementation'/('source-host'+generation)
     assert 'UFLOW_ENV_CLOSE_FD' in os.environ
     out=root/'implementation'/name;out.mkdir(exist_ok=False)
     manifest=json.loads((source/'.uflow-source.json').read_bytes())
@@ -23,7 +23,7 @@ def main(root,source,name):
     for rel,pin in image['installed_sdk_manifest'].items():assert sha(root/'env/mem-service-sdk'/rel)==pin
     for path,row in image['official_worker_reused']['source_and_headers_link_inputs'].items():assert sha(Path(path))==row['sha256']
     cbase=root/'implementation/build-host046';base=json.loads((cbase/'build-receipt.json').read_bytes())
-    cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo';target=root/'implementation/cargo-host067';assert not target.exists()
+    cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo';target=root/'implementation'/('cargo-host'+generation);assert not target.exists()
     env={**os.environ,'PATH':str(Path(cargo).parent)+os.pathsep+os.environ.get('PATH',''),'CARGO_INCREMENTAL':'0','CARGO_BUILD_JOBS':'4',
         'UF_ACL_SHIM_LIB_DIR':str(cbase/'fence'),'LD_LIBRARY_PATH':str(cbase/'fence'),'PYTHONPATH':str(source/'sdk/python'),'PYTHONDONTWRITEBYTECODE':'1'}
     commands=[]
@@ -49,7 +49,7 @@ def main(root,source,name):
     assert json.loads((out/'actual-compiled-v6-readonly-verify.log').read_bytes())==proof
     run([sys.executable,'-B',source/'examples/mem_service_pool/matrix_entry_cpu.py','--chain-terminal-domain',
         '--agent',root/'implementation/build-host066/cpu-agent','--worker',cbase/'cpu-worker','--controller',root/'env/mem-service-sdk/bin/linqu_mem_service',
-        '--scratch',root/'z067','--output',out/'authenticated-three-generation-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'],
+        '--scratch',root/('z'+generation),'--output',out/'authenticated-three-generation-CPU-matrix','--rust-tests',rust,'--source',source,'--image',cbase/'pool-agent','--shim',cbase/'fence/libuf_acl_shim.so'],
         'authenticated-three-generation-CPU-matrix',900)
     assert sha(state)==state_pin and not (authority/policy['successor']).exists()
     for path,pin in real.items():assert sha(Path(path))==pin

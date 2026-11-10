@@ -30,12 +30,12 @@ def v3_source_rows(a):
 def v3_sources(a):
     # Complete source closure is checked BEFORE first execution, including
     # same-release dependency copies used inside E's fresh module loaders.
-    rows=v3_source_rows(a);bodies={p:ap_bound(row,128<<10,0o644) for p,row in rows.items()}
+    rows=v3_source_rows(a);bodies={p:ap_bound(row,128<<10,0o755) for p,row in rows.items()}
     def load(role):
         row=a['code_and_data'][role];module=types.ModuleType('_accepted_v6_'+role);module.__file__=row['path']
         exec(compile(bodies[row['path']],row['path'],'exec'),module.__dict__);return module
     result={role:load(role) for role in ['terminal_producer','metadata_producer','ownership_producer','profile_validator','wrapper']}
-    for p,row in rows.items():ap_require(ap_bound(row,128<<10,0o644)==bodies[p],'accepted source changed during fresh loading')
+    for p,row in rows.items():ap_require(ap_bound(row,128<<10,0o755)==bodies[p],'accepted source changed during fresh loading')
     return result
 def v3_context(a,modules):
     raw=ap_bound(a['accepted_context'],128<<10);value=ap_decode(raw);d=a['code_and_data']
