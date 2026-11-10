@@ -1,7 +1,7 @@
 {
   "schema": 4,
   "kind": "C101CompiledExecutionPolicyV4",
-  "config_directory": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c103-v1",
+  "config_directory": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c103-v2",
   "nonce": "f1eb2408-f2ad-4a9c-a39a-c6c57788dd3d",
   "phases": {
     "terminal-only": "c103",

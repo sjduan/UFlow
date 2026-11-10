@@ -2,7 +2,6 @@
   "schema": 3,
   "interface": "current-terminal-chain-case-v1",
   "kind": "C101TerminalProductionCaseV4",
-  "HOST_fixture_only": true,
   "source_run": "c101",
   "current_state": {
     "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/state/state.json",
@@ -189,8 +188,6 @@
   ],
   "future_business_id": 124,
   "fresh_native_generation": 1,
-  "production_producer_context": null,
-  "production_execution_package": null,
   "normal_SDK_ACK": false,
   "consumer_anchor_sha256": "584f34c0a8acaaeca826fbf37d47b07fff514c8906fd3b127e31272f12a660d9",
   "accepted_context": {

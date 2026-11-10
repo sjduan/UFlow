@@ -4,7 +4,7 @@ const ANCHOR_SHA:&str="584f34c0a8acaaeca826fbf37d47b07fff514c8906fd3b127e31272f1
 const ANCHORS:&str=include_str!("../../../../../examples/mem_service_pool/accepted_c101_v4/anchors.json");
 const HOST_CLOSEOUT:&str=include_str!("../../../../../examples/mem_service_pool/accepted_c101_v4/host-closeout.json");
 const HOST_CLOSEOUT_SHA:&str="d089fa7bc5c95789c8c103b6d611177719c0304486d23fa8d2937d123d0fdcb1";
-const POLICY_SHA:&str="48e7153e479acd0b033681d32a2ea8c28beacd584d18db634649d7b7b26fa746";
+const POLICY_SHA:&str="46d44bc4aa71125e06624db940c6d20383e194e3239651310e02fa97d3c80169";
 const POLICY:&str=include_str!("../../../../../examples/mem_service_pool/accepted_c101_v4/execution-policy.json");
 const RECORDED:&[u8]=include_bytes!("../../../../../examples/mem_service_pool/accepted_c101_v4/candidate.json");
 const CASE:&[u8]=include_bytes!("../../../../../examples/mem_service_pool/accepted_c101_v4/case-template.json");
@@ -47,7 +47,7 @@ pub(super) fn readonly_case()->Result<Case,String>{Case::parse(CASE,&digest(CASE
 pub(super) fn validate_case(case:&Case)->Result<(),String>{
  if case.descriptor!=parsed(CASE)?||case.descriptor_sha!=digest(CASE){return Err("whole compiled actual c101 case required".into());}
  let a=accepted()?;let d=&case.descriptor;
- if d["kind"]!="C101TerminalProductionCaseV4" || d["consumer_anchor_sha256"]!=ANCHOR_SHA || d["accepted_context"]!=a["accepted_context"] || d["accepted_candidate"]!=a["current_candidate"] || d["source_run"]!="c101" || d["source_revision"]!=598 || d["current_state"]["sha256"]!=a["current_state_sha256"] || d.get("CPU_fixture_only_not_E_accepted_proof").is_some(){return Err("accepted current production case is distinct from HOST fixture".into());}Ok(())
+ if d["kind"]!="C101TerminalProductionCaseV4" || d["consumer_anchor_sha256"]!=ANCHOR_SHA || d["accepted_context"]!=a["accepted_context"] || d["accepted_candidate"]!=a["current_candidate"] || d["source_run"]!="c101" || d["source_revision"]!=598 || d["current_state"]["sha256"]!=a["current_state_sha256"] || ["CPU_fixture_only_not_E_accepted_proof","HOST_fixture_only","production_producer_context","production_execution_package"].iter().any(|k|d.get(*k).is_some()){return Err("accepted current production case is distinct from HOST fixture".into());}Ok(())
 }
 #[cfg(test)]mod tests{
  #[test]fn wrong_execution_namespace_hash_and_fixture_never_reach_original_io(){

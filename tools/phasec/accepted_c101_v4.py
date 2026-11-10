@@ -6,9 +6,9 @@ from pathlib import Path
 if 'ap_read' not in globals():
     from accepted_producers import ap_read,ap_bound,ap_decode,ap_require,ap_canonical,AP_ROOT
 V4_SHA='584f34c0a8acaaeca826fbf37d47b07fff514c8906fd3b127e31272f12a660d9'
-POLICY_V4_SHA='48e7153e479acd0b033681d32a2ea8c28beacd584d18db634649d7b7b26fa746'
+POLICY_V4_SHA='46d44bc4aa71125e06624db940c6d20383e194e3239651310e02fa97d3c80169'
 V4_CONTEXT_SHA='996f1ecf6abf9755090ff3c1122322c87873be44324e4261c1eec5ea925d83a8'
-V4_CASE_SHA='5d61fe240f01c6fd31f2b4a3721a4532ea92be1b1a181e5de8c294fa71f9020f'
+V4_CASE_SHA='bb2445f7b0668dc29c0c3e6de76de1e1b2104d46c6c39059a9225baed867fc9b'
 V4_HOST_CLOSEOUT_SHA='d089fa7bc5c95789c8c103b6d611177719c0304486d23fa8d2937d123d0fdcb1'
 
 def v4_host_closeout(a,raw=None):

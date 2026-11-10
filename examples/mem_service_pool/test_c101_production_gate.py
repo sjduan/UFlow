@@ -40,6 +40,7 @@ class ProductionGateTests(unittest.TestCase):
         a=v4_anchors();policy=v4_policy();root=Path(__file__).parent/'accepted_c101_v4';case=json.loads((root/'case-template.json').read_bytes())
         self.assertEqual(case['accepted_context'],a['accepted_context']);self.assertIn('/recovery-release-v2/',case['accepted_context']['path'])
         self.assertEqual(case['accepted_candidate'],a['code_and_data']['terminal_candidate']);self.assertEqual(case['resource_ids'],[119,120,121]);self.assertEqual(case['future_canary_ids'],[122,123]);self.assertEqual(case['future_business_id'],124)
+        self.assertFalse(set(case)&{'HOST_fixture_only','production_producer_context','production_execution_package','CPU_fixture_only_not_E_accepted_proof'})
         self.assertEqual(policy['phases'],{'terminal-only':'c103','successor':'c104','postclose-audit':'c105'})
     def test_postclose_failure_never_appends_a_normal_registration(self):
         import managed_metadata_v4 as audit
