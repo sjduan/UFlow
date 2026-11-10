@@ -82,6 +82,9 @@ def matrix(root,config,build):
     if not out.is_relative_to(root/'runs') or not out.is_dir():raise ValueError('admitted unique Guest job required')
     capability=launch_gate(root,config)  # Before lower/Catalog/lineage/Guest or token creation.
     qemu_identity=launch_qemu_gate(root,config)  # Independent QEMU release; before any new authority/process/Guest.
+    if config.get('qemu_profile') is not None:
+        from profile_metadata_gate import require_profile_metadata_ready
+        require_profile_metadata_ready(qemu_identity)  # Do not discover an unbound audit API after business.
     for path,digest in ((Path(build['image']),build['image_sha256']),
                         (Path(build['daemon']),build['daemon_sha256']),
                         (Path(build['fence_shim']),build['fence_shim_sha256']),
@@ -160,7 +163,10 @@ def matrix(root,config,build):
                 starts=out/'guest-starts.json'
                 capture_owned_starts(starts,hashlib.sha256(starts.read_bytes()).hexdigest(),config,
                                      root/'env/guest-kit004/uflow_guest_group.py',qemu_identity=qemu_identity)
-            isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
+            if config.get('terminal_current_execution') is not None:
+                from current_fm_isolation import verify_current_fm
+                isolation=verify_current_fm(out)
+            else:isolation=verify_new_fm(out,source/'examples/mem_service_pool/reconciliation/closed-c039-prestart-assessment.json')
             event({'event':'new-FM-isolated-before-canary','proof':isolation})
             for identity in identities:
                 name=identity['node']
