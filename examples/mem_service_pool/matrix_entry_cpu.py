@@ -201,7 +201,8 @@ def main():
   assert any(e['operation']==0x73 and e['origin']['role']=='root' and e['status']==0 for e in calls)
   original=json.loads((out/'E1-E4.json').read_bytes());assert original['capacity']==48<<20 and original['final_B_total_bytes']==76<<20
   result={'pass':True,'actual_matrix_and_nested_callback':True,'actual_Rust_C_SDK_sockets':True,'actual_CPU_shared_mapping_all_bytes':True,
-   'current_c064_second_generation_HOST_only':a.current_terminal_domain,
+   'current_c064_second_generation_HOST_only':a.current_terminal_domain and not a.chain_terminal_domain,
+   'current_c081_third_generation_HOST_only':a.chain_terminal_domain,
    'budget_sequence':states,'strict_prestart_cancel_before_new_reservation':not a.terminal_domain,'terminal_commit_then_separate_service_process':a.terminal_domain,
    'reserve4_before_real_Guest_identity_then_activate_before48':a.terminal_domain,'new_native_generation_one_allowed':a.terminal_domain,
    'old_c044_boot_fenced_before_actual_activation_RPC':a.terminal_domain,
