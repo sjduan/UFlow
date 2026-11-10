@@ -133,9 +133,9 @@ def matrix(root,config,build):
     wait_socket(endpoint,daemon)
     imported=json.loads((state/'state.json').read_bytes())
     import_phase=imported['reconciliation']['phase']
-    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476'):
+    if imported['charged_bytes']!=RETAINED or imported['retained_bytes']!=RETAINED or imported['creation_reserved_bytes']!=RETAINED_RESERVED+4*M or imported['retained_reserved_bytes']!=RETAINED_RESERVED or import_phase not in ('ClosedC039Prestart76','TerminalDomainDataLostC04476','TerminalDomainDataLostC064V2Protected76'):
         raise RuntimeError('single-ledger conservative76 quarantine and new canary reservation not established; no Guest')
-    event({'event':'terminal-domain-succession-established-before-Guest' if import_phase=='TerminalDomainDataLostC04476' else 'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
+    event({'event':'terminal-domain-succession-established-before-Guest' if import_phase.startswith('TerminalDomainDataLost') else 'closed-c039-prestart-succession-established-before-Guest','charged_bytes':RETAINED,'retained_bytes':RETAINED,
         'retained_reserved_bytes':RETAINED_RESERVED,'kernel_capability':capability,
         'current_canary_reserved_bytes':4*M,'predecessor_cancel64_repeated':False,
         'proof_sha256':imported['reconciliation'].get('terminal_proof_sha256',imported['reconciliation']['proof_sha256']),'original_SDK_close_claimed':False})
