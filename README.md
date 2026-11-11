@@ -16,6 +16,12 @@ UFlow is designed to work with the broader PyPTO serving stack:
 
 ## Current Status
 
+The shared DDR pool framework now includes Simpler/A3 ownership, managed range
+leases, a Python client and the mem_service CPU-Guest provider boundary. Read the
+[framework baseline](docs/shared-pool-framework.md) for architecture, reproducible
+source dependencies, host checks, experimental recovery isolation and known
+validation limits. Four-card regression of this candidate is deferred.
+
 UFlow currently supports:
 
 - Rust daemon runtime with catalog, object lifecycle, transfer planning, transfer execution, stats, and trace modules.

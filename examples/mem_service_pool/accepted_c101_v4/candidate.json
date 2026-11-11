@@ -1,0 +1,3135 @@
+{
+  "A_historical_unqueried_bytes": 134217728,
+  "B_responsibility_unchanged_bytes": 134217728,
+  "FM_payload_destroyed": false,
+  "authority_to_launch_new_Guest": false,
+  "authority_to_mutate_ledger": false,
+  "context": {
+    "bytes": 15644,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c101-write-v1/terminal-context004/context.json",
+    "sha256": "b306940404c66439773e766d5a0915f93a21af36236c1333a3baf8267a88eff5"
+  },
+  "current_eligible_capacity_bytes": 54525952,
+  "eligible_rows": [
+    {
+      "backing": {
+        "generation": 13592320251423412298,
+        "kind": "provider",
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:987a7642-7e11-42d6-a00c-10614f284c30",
+        "resource": "canary:nodeA:148bbb05-1553-4140-b7aa-36670bc5e1da"
+      },
+      "nbytes": 2097152,
+      "object_id": 119
+    },
+    {
+      "backing": {
+        "generation": 16212171895807272555,
+        "kind": "provider",
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:987a7642-7e11-42d6-a00c-10614f284c30",
+        "resource": "canary:nodeB:bc883f9b-e656-4352-a0d8-dcc6a97b119f"
+      },
+      "nbytes": 2097152,
+      "object_id": 120
+    },
+    {
+      "backing": {
+        "generation": 1,
+        "kind": "provider",
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:987a7642-7e11-42d6-a00c-10614f284c30",
+        "resource": "nodeA:13592320251423412298:8150836f-bd51-4797-98b8-788432da3712"
+      },
+      "nbytes": 50331648,
+      "object_id": 121
+    }
+  ],
+  "fences_applied": false,
+  "historical_log_evidence": {
+    "nodeA": {
+      "bytes": 66055,
+      "historical_log_budget_failure_preserved": false,
+      "sha256": "e2dd1dedb53c9b7c231148351588fd04cfb7689a6956789b9b4baa4e68476e3c",
+      "streamed_not_exported": true
+    },
+    "nodeB": {
+      "bytes": 70302,
+      "historical_log_budget_failure_preserved": false,
+      "sha256": "5141cec0759b8f1e464d607b7d656ab69b535ea78a745b59335a013366fb6aae",
+      "streamed_not_exported": true
+    }
+  },
+  "interface": "mem-service-current-private-domain-v4",
+  "journal_A_complete": false,
+  "journal_B_complete": false,
+  "ledger_mutated": false,
+  "marker_terminal_classification": {
+    "QEMU_event_line": 1030,
+    "QEMU_event_sha256": "3506a93caca354af113f5c9f210ca7eacf298d28ae4521e4f0ef302c02f1808a",
+    "bytes": 163,
+    "classification": "quarantined-source-defined-metadata-uncertain-publication",
+    "content_sha256": "67b1f8e35a40ed1d0efc74566728a85b73dca3aecafadac37c440945e6828795",
+    "control_binding": {
+      "boot_id": "148bbb05-1553-4140-b7aa-36670bc5e1da",
+      "control_line_sha256": "8509f9b11211c86c87bfb2f54fe873481b437b2bb16498a0b6ec0e9117d4d3cc",
+      "fields": {
+        "export_cna": 50370,
+        "export_mem_id": 2,
+        "flags": 0,
+        "generation": 14177894576915742721,
+        "node_count": 2,
+        "node_id": 0,
+        "remote_uba": 123145302310912,
+        "size": 50331648,
+        "token_id": 67
+      },
+      "incarnation": 13592320251423412298,
+      "key": "8150836f-bd51-4797-98b8-788432da3712",
+      "node": "nodeA",
+      "opaque_descriptor_hex_sha256": "925b5e57ad2ea81201a1b0c30954f1c03602f89f925b535faf71a75ff3f1ea6b",
+      "token_value_decoded_or_exported": false,
+      "work_generation": 1,
+      "worker_birth": 876,
+      "worker_pid": 89
+    },
+    "control_line": 92,
+    "dev": 63,
+    "fields": {
+      "export_cna": 50370,
+      "export_mem_id": 2,
+      "flags": 0,
+      "generation": 14177894576915742721,
+      "node_count": 2,
+      "node_id": 0,
+      "remote_uba": 123145302310912,
+      "size": 50331648,
+      "token_id": 67
+    },
+    "file_type": 32768,
+    "inode": 207817240,
+    "kernel_inode_aliases": [
+      [
+        63,
+        207817240
+      ],
+      [
+        2064,
+        207817240
+      ]
+    ],
+    "mtime_ns": 1794302746481759740,
+    "normal_registration": false,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/obmm_bootstrap/node0-generation14177894576915742721.ini",
+    "uid": 0
+  },
+  "method": "terminal-private-cpu-domain-v4",
+  "missing_normal_journals": [
+    "nodeA",
+    "nodeB"
+  ],
+  "native_W_grant_observed_in_c101": false,
+  "new_allocation_authority": false,
+  "normal_metadata_publication_proven": false,
+  "normal_metadata_verdict": "INCOMPLETE",
+  "normal_native_or_SDK_release_ACK": false,
+  "original_launch_closure": {
+    "actual_QEMU_sha256": "a17087127825c40b5fa8740c484a987535495e03f72ba14ed5c40c2f259b135b",
+    "actual_builtin_TCG": {
+      "do_qemu_init_tcg_accel_ops_register_types": {
+        "address": 4235504,
+        "bytes": 16,
+        "type": 2
+      },
+      "tcg_accel_class_init": {
+        "address": 11193184,
+        "bytes": 336,
+        "type": 2
+      },
+      "tcg_accel_ops_register_types": {
+        "address": 11347328,
+        "bytes": 12,
+        "type": 2
+      },
+      "tcg_accel_type": {
+        "address": 37175568,
+        "bytes": 104,
+        "type": 1
+      }
+    },
+    "actual_capture": {
+      "bytes": 63978,
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/own-qemu-metadata.json",
+      "sha256": "19b683d9fb90c80d9700f906da6825b76fb51154b0d9ae2f38546e2136c85015"
+    },
+    "actual_kernel": {
+      "Image": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/kernel-profile-sep-v1/release-v2/Image",
+      "Image_sha256": "95165fea380ed231b609d4a2a71cfe9b877cac52b7bc44e39a870c839a676ada",
+      "authority_to_boot_or_replace_existing_Image": false,
+      "embedded_config_sha256": "789fb96c370aa7ad04bcf7aad2df9b97c7145132844459e88a10829fc46f3c78",
+      "interface": "mem-service-private-kernel-profile-v1",
+      "producer_manifest_sha256": "8cdb2550448363a127d6eb30b5cde5fa5c21a2f0427ce30a5b40532779d2b939",
+      "profile_id": "mem-service-gsva-separated-v1",
+      "required_builtin_config": {
+        "CONFIG_IKCONFIG": "y",
+        "CONFIG_IOMMU_API": "y",
+        "CONFIG_UB_UBUS": "y",
+        "CONFIG_UB_UMMU_CORE": "y",
+        "CONFIG_UB_UMMU_CORE_DRIVER": "y",
+        "CONFIG_UB_UMMU_SVA_SEPARATED_PAGES": "y"
+      },
+      "runtime_tested": false,
+      "status": "PASS_HOST_PROFILE_ONLY"
+    },
+    "default_config_source_and_stat_inference": {
+      "anchor_launch_config_ctime_ns": 1794302695887668549,
+      "branches": [
+        {
+          "absent_components": [
+            "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/qemu-bundle"
+          ],
+          "ancestor": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2",
+          "identity": {
+            "bytes": 4096,
+            "ctime_ns": 1794293466913909430,
+            "dev": 63,
+            "file_type": 16384,
+            "inode": 208138369,
+            "mode": 493,
+            "mtime_ns": 1794293466913909430,
+            "uid": 0
+          },
+          "target": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/qemu-bundle"
+        },
+        {
+          "absent_components": [
+            "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu/qemu.conf",
+            "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu",
+            "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc"
+          ],
+          "ancestor": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1",
+          "identity": {
+            "bytes": 4096,
+            "ctime_ns": 1794294762799364320,
+            "dev": 63,
+            "file_type": 16384,
+            "inode": 208117927,
+            "mode": 493,
+            "mtime_ns": 1794294762799364320,
+            "uid": 0
+          },
+          "target": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/etc/qemu/qemu.conf"
+        },
+        {
+          "absent_components": [
+            "/usr/local/etc/qemu/qemu.conf",
+            "/usr/local/etc/qemu"
+          ],
+          "ancestor": "/usr/local/etc",
+          "identity": {
+            "bytes": 4096,
+            "ctime_ns": 1783389367154164812,
+            "dev": 63,
+            "file_type": 16384,
+            "inode": 189278306,
+            "mode": 493,
+            "mtime_ns": 1764744150000000000,
+            "uid": 0
+          },
+          "target": "/usr/local/etc/qemu/qemu.conf"
+        }
+      ],
+      "source_derived_normal_execution_inference": true
+    },
+    "future_W_runtime_observed_in_c101": false,
+    "observed_profile": {
+      "manifest": {
+        "bytes": 8554,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/profile-manifest.json",
+        "sha256": "d0900df0212660ff6fb3cc60e11a8cb06545aeac190e0edb6729bf8eedd54dc9"
+      },
+      "validator": {
+        "bytes": 12739,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_qemu_profile_v1.py",
+        "sha256": "a225f345d48046d228e33a98161c02a1b17a556453a13d2d2869ab33e2ea931b"
+      }
+    },
+    "trust_model": "source-defined controlled normal execution; not hostile-root forensics"
+  },
+  "physical_closure": {
+    "FM_payload_contents_read": false,
+    "births": [
+      [
+        427695,
+        1327828838
+      ],
+      [
+        427863,
+        1327828844
+      ],
+      [
+        428168,
+        1327828856
+      ],
+      [
+        1522299,
+        1331034929
+      ],
+      [
+        1522586,
+        1331034936
+      ],
+      [
+        1523113,
+        1331034947
+      ],
+      [
+        1531414,
+        1331035135
+      ],
+      [
+        1540401,
+        1331035340
+      ],
+      [
+        1540631,
+        1331035345
+      ],
+      [
+        1540657,
+        1331035346
+      ],
+      [
+        1541300,
+        1331035360
+      ],
+      [
+        1542154,
+        1331035379
+      ],
+      [
+        1549702,
+        1331035550
+      ],
+      [
+        1564638,
+        1331035892
+      ],
+      [
+        1583617,
+        1331036323
+      ],
+      [
+        1590398,
+        1331036475
+      ],
+      [
+        1590401,
+        1331036475
+      ],
+      [
+        1633230,
+        1331037443
+      ],
+      [
+        1637283,
+        1331037533
+      ],
+      [
+        1639300,
+        1331037579
+      ],
+      [
+        1641445,
+        1331037628
+      ],
+      [
+        1645584,
+        1327719684
+      ],
+      [
+        1645842,
+        1327719690
+      ],
+      [
+        1646350,
+        1327719702
+      ],
+      [
+        1646452,
+        1327719704
+      ],
+      [
+        1809156,
+        1323758632
+      ],
+      [
+        1809306,
+        1323758638
+      ],
+      [
+        1809458,
+        1323758644
+      ],
+      [
+        1809737,
+        1323758656
+      ],
+      [
+        1811077,
+        1323758710
+      ],
+      [
+        1811198,
+        1323758715
+      ],
+      [
+        1811257,
+        1323758718
+      ],
+      [
+        1814222,
+        1323758841
+      ],
+      [
+        1814223,
+        1323758841
+      ],
+      [
+        1827823,
+        1329204873
+      ],
+      [
+        1827956,
+        1329204878
+      ],
+      [
+        1828233,
+        1329204890
+      ],
+      [
+        1828288,
+        1329204892
+      ],
+      [
+        1828485,
+        1329204901
+      ],
+      [
+        1830899,
+        1330905607
+      ],
+      [
+        1831035,
+        1330905612
+      ],
+      [
+        1831349,
+        1330905624
+      ],
+      [
+        1831756,
+        1330905640
+      ],
+      [
+        1831763,
+        1330905640
+      ],
+      [
+        1832216,
+        1330905659
+      ],
+      [
+        1832625,
+        1329205077
+      ],
+      [
+        1836287,
+        1330905825
+      ],
+      [
+        1836444,
+        1330905832
+      ],
+      [
+        1855625,
+        1330906433
+      ],
+      [
+        1863253,
+        1330906599
+      ],
+      [
+        1863426,
+        1330906602
+      ],
+      [
+        1878664,
+        1330906942
+      ],
+      [
+        1895269,
+        1323762119
+      ],
+      [
+        1913738,
+        1323762880
+      ],
+      [
+        1931813,
+        1329209333
+      ],
+      [
+        1931948,
+        1329209339
+      ],
+      [
+        1932203,
+        1329209351
+      ],
+      [
+        1933325,
+        1323763689
+      ],
+      [
+        1936833,
+        1329209563
+      ],
+      [
+        1940852,
+        1329209743
+      ],
+      [
+        1940938,
+        1329209746
+      ],
+      [
+        1942053,
+        1329209796
+      ],
+      [
+        1942166,
+        1329209801
+      ],
+      [
+        1942179,
+        1329209802
+      ],
+      [
+        1942356,
+        1329209810
+      ],
+      [
+        1946164,
+        1329209982
+      ],
+      [
+        1946167,
+        1329209982
+      ],
+      [
+        1968845,
+        1329210994
+      ],
+      [
+        1969859,
+        1329211039
+      ],
+      [
+        1970977,
+        1329211089
+      ],
+      [
+        2306100,
+        1323779009
+      ],
+      [
+        2306240,
+        1323779015
+      ],
+      [
+        2306511,
+        1323779027
+      ],
+      [
+        2467841,
+        1329233368
+      ],
+      [
+        2467974,
+        1329233374
+      ],
+      [
+        2468231,
+        1329233386
+      ],
+      [
+        2471961,
+        1329233557
+      ],
+      [
+        2472103,
+        1329233563
+      ],
+      [
+        2476116,
+        1329233743
+      ],
+      [
+        2887770,
+        1327763349
+      ],
+      [
+        2887917,
+        1327763355
+      ],
+      [
+        2888206,
+        1327763366
+      ],
+      [
+        2888537,
+        1327763380
+      ],
+      [
+        2888638,
+        1327763383
+      ],
+      [
+        2888705,
+        1327763386
+      ],
+      [
+        2888767,
+        1327763388
+      ],
+      [
+        2888768,
+        1327763388
+      ],
+      [
+        2888771,
+        1327763388
+      ],
+      [
+        2888772,
+        1327763388
+      ],
+      [
+        2888890,
+        1327763392
+      ],
+      [
+        2888979,
+        1327763395
+      ],
+      [
+        2889034,
+        1327763397
+      ],
+      [
+        2889050,
+        1327763398
+      ],
+      [
+        2891745,
+        1327763504
+      ],
+      [
+        2891751,
+        1327763504
+      ],
+      [
+        2891954,
+        1327763512
+      ],
+      [
+        2891959,
+        1327763512
+      ],
+      [
+        2891997,
+        1327763513
+      ],
+      [
+        2892014,
+        1327763514
+      ],
+      [
+        2892019,
+        1327763514
+      ],
+      [
+        2892020,
+        1327763514
+      ],
+      [
+        2892027,
+        1327763514
+      ],
+      [
+        2892232,
+        1327763522
+      ],
+      [
+        2892237,
+        1327763522
+      ],
+      [
+        2892264,
+        1327763523
+      ],
+      [
+        2892302,
+        1327763524
+      ],
+      [
+        2892306,
+        1327763525
+      ],
+      [
+        2892307,
+        1327763525
+      ],
+      [
+        2892310,
+        1327763525
+      ],
+      [
+        2892346,
+        1327763526
+      ],
+      [
+        2892348,
+        1327763526
+      ],
+      [
+        2892367,
+        1327763526
+      ],
+      [
+        2892415,
+        1327763528
+      ],
+      [
+        2892867,
+        1327763545
+      ],
+      [
+        2893129,
+        1327763556
+      ],
+      [
+        2893894,
+        1327763586
+      ],
+      [
+        2893899,
+        1327763586
+      ],
+      [
+        2893918,
+        1327763586
+      ],
+      [
+        2893923,
+        1327763587
+      ],
+      [
+        2893997,
+        1327763589
+      ],
+      [
+        2894157,
+        1327763595
+      ],
+      [
+        2894231,
+        1327763598
+      ],
+      [
+        2894851,
+        1327763623
+      ],
+      [
+        2895851,
+        1327763663
+      ],
+      [
+        2895897,
+        1327763665
+      ],
+      [
+        2897649,
+        1327763732
+      ],
+      [
+        2912241,
+        1327764296
+      ],
+      [
+        2912953,
+        1327764324
+      ],
+      [
+        2912958,
+        1327764324
+      ],
+      [
+        2915461,
+        1327764422
+      ],
+      [
+        2915542,
+        1327764425
+      ],
+      [
+        2938404,
+        1327765307
+      ],
+      [
+        2939138,
+        1327765335
+      ],
+      [
+        2939143,
+        1327765336
+      ],
+      [
+        2942238,
+        1327765460
+      ],
+      [
+        2942513,
+        1327765470
+      ],
+      [
+        2942591,
+        1327765473
+      ],
+      [
+        2942657,
+        1327765476
+      ],
+      [
+        2943267,
+        1327765500
+      ],
+      [
+        2943567,
+        1327765511
+      ],
+      [
+        2943574,
+        1327765511
+      ],
+      [
+        3192424,
+        1327775111
+      ],
+      [
+        3192566,
+        1327775117
+      ],
+      [
+        3192870,
+        1327775129
+      ],
+      [
+        3193035,
+        1327775134
+      ],
+      [
+        3193042,
+        1327775135
+      ],
+      [
+        3311755,
+        1331086685
+      ],
+      [
+        3311893,
+        1331086691
+      ],
+      [
+        3312146,
+        1331086702
+      ],
+      [
+        3316376,
+        1331086888
+      ],
+      [
+        3316526,
+        1331086894
+      ],
+      [
+        3320781,
+        1327780095
+      ],
+      [
+        3320936,
+        1327780101
+      ],
+      [
+        3321255,
+        1327780113
+      ],
+      [
+        3321412,
+        1327780119
+      ],
+      [
+        3321417,
+        1327780119
+      ],
+      [
+        3479753,
+        1327786272
+      ],
+      [
+        3479904,
+        1327786278
+      ],
+      [
+        3480201,
+        1327786290
+      ],
+      [
+        3480364,
+        1327786296
+      ],
+      [
+        3480371,
+        1327786296
+      ],
+      [
+        3681656,
+        1327794086
+      ],
+      [
+        3681799,
+        1327794092
+      ],
+      [
+        3682102,
+        1327794104
+      ],
+      [
+        3682159,
+        1327794106
+      ],
+      [
+        3682313,
+        1327794112
+      ],
+      [
+        3686294,
+        1327794268
+      ],
+      [
+        3883666,
+        1327801911
+      ],
+      [
+        3883842,
+        1327801917
+      ],
+      [
+        3884164,
+        1327801929
+      ],
+      [
+        3885536,
+        1327801982
+      ],
+      [
+        3885665,
+        1327801987
+      ],
+      [
+        3885678,
+        1327801988
+      ],
+      [
+        3885853,
+        1327801995
+      ],
+      [
+        3889815,
+        1327802153
+      ],
+      [
+        3889818,
+        1327802153
+      ],
+      [
+        3917266,
+        1327803182
+      ],
+      [
+        3918503,
+        1327803229
+      ],
+      [
+        3919862,
+        1327803283
+      ]
+    ],
+    "controls_kernel_inactive": [
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/a.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/b.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeA.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeA.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeB.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeB.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/u.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/a.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/b.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/l.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeA.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeA.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeB.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeB.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/u.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/a.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/b.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/l.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeA.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeA.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeB.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeB.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/u.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/a.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/b.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/l.sock",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeA.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeA.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeB.qmp",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeB.serial",
+      "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/u.sock"
+    ],
+    "denied": [],
+    "endpoints": [
+      {
+        "dev": 63,
+        "inode": 208030054,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeA.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030058,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeA.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030055,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeB.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030059,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/nodeB.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030048,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/u.sock",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030078,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/a.sock",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208030079,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/b.sock",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208082342,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeA.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208082346,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeA.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208082341,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeB.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208082345,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/nodeB.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208086058,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeA.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208086062,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeA.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208086057,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeB.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 208086061,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/nodeB.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 207817212,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeA.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 207817216,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeA.serial",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 207817211,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeB.qmp",
+        "uid": 0
+      },
+      {
+        "dev": 63,
+        "inode": 207817215,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/nodeB.serial",
+        "uid": 0
+      }
+    ],
+    "exact_original_births_gone": 179,
+    "files": [
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817538,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817538
+          ],
+          [
+            2064,
+            207817538
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817536,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817536
+          ],
+          [
+            2064,
+            207817536
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207817534,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817534
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817530,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817530
+          ],
+          [
+            2064,
+            207817530
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817529,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817529
+          ],
+          [
+            2064,
+            207817529
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817535,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817535
+          ],
+          [
+            2064,
+            207817535
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817532,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817532
+          ],
+          [
+            2064,
+            207817532
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207817533,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817533
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817531,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817531
+          ],
+          [
+            2064,
+            207817531
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817527,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817527
+          ],
+          [
+            2064,
+            207817527
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830898,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830898
+          ],
+          [
+            2064,
+            207830898
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830900,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830900
+          ],
+          [
+            2064,
+            207830900
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207830895,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830895
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830892,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830892
+          ],
+          [
+            2064,
+            207830892
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830891,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830891
+          ],
+          [
+            2064,
+            207830891
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830889,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830889
+          ],
+          [
+            2064,
+            207830889
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830893,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830893
+          ],
+          [
+            2064,
+            207830893
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207830896,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830896
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830894,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830894
+          ],
+          [
+            2064,
+            207830894
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207830897,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207830897
+          ],
+          [
+            2064,
+            207830897
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840808,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840808
+          ],
+          [
+            2064,
+            207840808
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840810,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840810
+          ],
+          [
+            2064,
+            207840810
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207840806,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840806
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840801,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840801
+          ],
+          [
+            2064,
+            207840801
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840802,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840802
+          ],
+          [
+            2064,
+            207840802
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840799,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840799
+          ],
+          [
+            2064,
+            207840799
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840804,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840804
+          ],
+          [
+            2064,
+            207840804
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207840805,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840805
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840803,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840803
+          ],
+          [
+            2064,
+            207840803
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207840800,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207840800
+          ],
+          [
+            2064,
+            207840800
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981600,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981600
+          ],
+          [
+            2064,
+            206981600
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981598,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981598
+          ],
+          [
+            2064,
+            206981598
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 206981595,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981595
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981592,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981592
+          ],
+          [
+            2064,
+            206981592
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981591,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981591
+          ],
+          [
+            2064,
+            206981591
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981597,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981597
+          ],
+          [
+            2064,
+            206981597
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981593,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981593
+          ],
+          [
+            2064,
+            206981593
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 206981596,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981596
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981594,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981594
+          ],
+          [
+            2064,
+            206981594
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 206981589,
+        "kernel_inode_aliases": [
+          [
+            63,
+            206981589
+          ],
+          [
+            2064,
+            206981589
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030071,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030071
+          ],
+          [
+            2064,
+            208030071
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030069,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030069
+          ],
+          [
+            2064,
+            208030069
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208030067,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030067
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030062,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030062
+          ],
+          [
+            2064,
+            208030062
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030063,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030063
+          ],
+          [
+            2064,
+            208030063
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030068,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030068
+          ],
+          [
+            2064,
+            208030068
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030065,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030065
+          ],
+          [
+            2064,
+            208030065
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "actual_blocks_bytes_now": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208030066,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030066
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "actual_blocks_bytes_now": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030064,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030064
+          ],
+          [
+            2064,
+            208030064
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "actual_blocks_bytes_now": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030060,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030060
+          ],
+          [
+            2064,
+            208030060
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "bytes": 163,
+        "content_sha256": "67b1f8e35a40ed1d0efc74566728a85b73dca3aecafadac37c440945e6828795",
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208030082,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208030082
+          ],
+          [
+            2064,
+            208030082
+          ]
+        ],
+        "mtime_ns": 1794229985126455592,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c044/fm/obmm_bootstrap/node0-generation14177894576915742721.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082356,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082356
+          ],
+          [
+            2064,
+            208082356
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082358,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082358
+          ],
+          [
+            2064,
+            208082358
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208082353,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082353
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082349,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082349
+          ],
+          [
+            2064,
+            208082349
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082350,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082350
+          ],
+          [
+            2064,
+            208082350
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082355,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082355
+          ],
+          [
+            2064,
+            208082355
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082352,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082352
+          ],
+          [
+            2064,
+            208082352
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208082354,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082354
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082351,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082351
+          ],
+          [
+            2064,
+            208082351
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082347,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082347
+          ],
+          [
+            2064,
+            208082347
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "bytes": 163,
+        "content_sha256": "67b1f8e35a40ed1d0efc74566728a85b73dca3aecafadac37c440945e6828795",
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208082370,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208082370
+          ],
+          [
+            2064,
+            208082370
+          ]
+        ],
+        "mtime_ns": 1794270402968596175,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c064/fm/obmm_bootstrap/node0-generation14177894576915742721.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086065,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086065
+          ],
+          [
+            2064,
+            208086065
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086064,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086064
+          ],
+          [
+            2064,
+            208086064
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208086069,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086069
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086074,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086074
+          ],
+          [
+            2064,
+            208086074
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086073,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086073
+          ],
+          [
+            2064,
+            208086073
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086071,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086071
+          ],
+          [
+            2064,
+            208086071
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086067,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086067
+          ],
+          [
+            2064,
+            208086067
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 208086070,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086070
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086068,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086068
+          ],
+          [
+            2064,
+            208086068
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 208086063,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086063
+          ],
+          [
+            2064,
+            208086063
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "QEMU_event_line": 1593,
+        "QEMU_event_sha256": "3506a93caca354af113f5c9f210ca7eacf298d28ae4521e4f0ef302c02f1808a",
+        "bytes": 163,
+        "classification": "quarantined-source-defined-metadata-uncertain-publication",
+        "content_sha256": "67b1f8e35a40ed1d0efc74566728a85b73dca3aecafadac37c440945e6828795",
+        "control_binding": {
+          "boot_id": "aa396fc7-96f8-455a-8d93-bcfc4d4b9e97",
+          "control_line_sha256": "9aa9c811556803fd83dd0774f00833292a3d7059cf46f1c1f53f3e501a0ef872",
+          "fields": {
+            "export_cna": 50370,
+            "export_mem_id": 2,
+            "flags": 0,
+            "generation": 14177894576915742721,
+            "node_count": 2,
+            "node_id": 0,
+            "remote_uba": 123145302310912,
+            "size": 50331648,
+            "token_id": 67
+          },
+          "incarnation": 4800305791732692607,
+          "key": "fb115612-e8a1-4fb6-a0c5-94857280c558",
+          "node": "nodeA",
+          "opaque_descriptor_hex_sha256": "925b5e57ad2ea81201a1b0c30954f1c03602f89f925b535faf71a75ff3f1ea6b",
+          "token_value_decoded_or_exported": false,
+          "work_generation": 1,
+          "worker_birth": 844,
+          "worker_pid": 88
+        },
+        "control_line": 97,
+        "dev": 63,
+        "fields": {
+          "export_cna": 50370,
+          "export_mem_id": 2,
+          "flags": 0,
+          "generation": 14177894576915742721,
+          "node_count": 2,
+          "node_id": 0,
+          "remote_uba": 123145302310912,
+          "size": 50331648,
+          "token_id": 67
+        },
+        "file_type": 32768,
+        "inode": 208086086,
+        "kernel_inode_aliases": [
+          [
+            63,
+            208086086
+          ],
+          [
+            2064,
+            208086086
+          ]
+        ],
+        "mtime_ns": 1794284481123320330,
+        "normal_registration": false,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c081/fm/obmm_bootstrap/node0-generation14177894576915742721.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817226,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817226
+          ],
+          [
+            2064,
+            207817226
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeB_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 101,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817228,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817228
+          ],
+          [
+            2064,
+            207817228
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeA_ubcdev0__1.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207817223,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817223
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817220,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817220
+          ],
+          [
+            2064,
+            207817220
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeB_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 111,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817219,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817219
+          ],
+          [
+            2064,
+            207817219
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeA_ubcdev0__1.status",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817218,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817218
+          ],
+          [
+            2064,
+            207817218
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817221,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817221
+          ],
+          [
+            2064,
+            207817221
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 0,
+        "bytes": 0,
+        "dev": 63,
+        "file_type": 4096,
+        "inode": 207817224,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817224
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4198400,
+        "bytes": 4194336,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817222,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817222
+          ],
+          [
+            2064,
+            207817222
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+        "uid": 0
+      },
+      {
+        "actual_blocks_bytes": 4096,
+        "bytes": 470,
+        "dev": 63,
+        "file_type": 32768,
+        "inode": 207817217,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817217
+          ],
+          [
+            2064,
+            207817217
+          ]
+        ],
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+        "uid": 0
+      },
+      {
+        "QEMU_event_line": 1030,
+        "QEMU_event_sha256": "3506a93caca354af113f5c9f210ca7eacf298d28ae4521e4f0ef302c02f1808a",
+        "bytes": 163,
+        "classification": "quarantined-source-defined-metadata-uncertain-publication",
+        "content_sha256": "67b1f8e35a40ed1d0efc74566728a85b73dca3aecafadac37c440945e6828795",
+        "control_binding": {
+          "boot_id": "148bbb05-1553-4140-b7aa-36670bc5e1da",
+          "control_line_sha256": "8509f9b11211c86c87bfb2f54fe873481b437b2bb16498a0b6ec0e9117d4d3cc",
+          "fields": {
+            "export_cna": 50370,
+            "export_mem_id": 2,
+            "flags": 0,
+            "generation": 14177894576915742721,
+            "node_count": 2,
+            "node_id": 0,
+            "remote_uba": 123145302310912,
+            "size": 50331648,
+            "token_id": 67
+          },
+          "incarnation": 13592320251423412298,
+          "key": "8150836f-bd51-4797-98b8-788432da3712",
+          "node": "nodeA",
+          "opaque_descriptor_hex_sha256": "925b5e57ad2ea81201a1b0c30954f1c03602f89f925b535faf71a75ff3f1ea6b",
+          "token_value_decoded_or_exported": false,
+          "work_generation": 1,
+          "worker_birth": 876,
+          "worker_pid": 89
+        },
+        "control_line": 92,
+        "dev": 63,
+        "fields": {
+          "export_cna": 50370,
+          "export_mem_id": 2,
+          "flags": 0,
+          "generation": 14177894576915742721,
+          "node_count": 2,
+          "node_id": 0,
+          "remote_uba": 123145302310912,
+          "size": 50331648,
+          "token_id": 67
+        },
+        "file_type": 32768,
+        "inode": 207817240,
+        "kernel_inode_aliases": [
+          [
+            63,
+            207817240
+          ],
+          [
+            2064,
+            207817240
+          ]
+        ],
+        "mtime_ns": 1794302746481759740,
+        "normal_registration": false,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/fm/obmm_bootstrap/node0-generation14177894576915742721.ini",
+        "uid": 0
+      }
+    ],
+    "files_deleted": false,
+    "holders": [],
+    "ownership": {
+      "c100": {
+        "SDK_ACK_inferred_from_death": false,
+        "all_named_births_gone": true,
+        "authority_to_launch_Guest": false,
+        "authority_to_mutate_ledger": false,
+        "births": [
+          [
+            1830899,
+            1330905607
+          ],
+          [
+            1831035,
+            1330905612
+          ],
+          [
+            1831349,
+            1330905624
+          ],
+          [
+            1831756,
+            1330905640
+          ],
+          [
+            1831763,
+            1330905640
+          ],
+          [
+            1832216,
+            1330905659
+          ],
+          [
+            1836287,
+            1330905825
+          ],
+          [
+            1836444,
+            1330905832
+          ],
+          [
+            1855625,
+            1330906433
+          ],
+          [
+            1863253,
+            1330906599
+          ],
+          [
+            1863426,
+            1330906602
+          ],
+          [
+            1878664,
+            1330906942
+          ]
+        ],
+        "frozen_supervisor_sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827",
+        "interface": "mem-service-observed-ownership-v3",
+        "kind": "validated-actual-monitor-ownership-v3",
+        "optional_history": "present-separately-bound",
+        "original_actual_exit": 0,
+        "ownership_history_reconstructed": false,
+        "primary_source": {
+          "bytes": 4297,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/monitor/result.json",
+          "sha256": "a3457288c62754073d75484c5f1bb001554d25f634cd9de6f8a6a497c70c5a6d"
+        },
+        "run": "c100",
+        "schema": 3,
+        "top_result": {
+          "bytes": 5096,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c100/result.json",
+          "sha256": "0dc3be8269271272046f56059c11b22237262f08bfc4c2ddede53451bc7ed279"
+        }
+      },
+      "c101": {
+        "SDK_ACK_inferred_from_death": false,
+        "all_named_births_gone": true,
+        "authority_to_launch_Guest": false,
+        "authority_to_mutate_ledger": false,
+        "births": [
+          [
+            1522299,
+            1331034929
+          ],
+          [
+            1522586,
+            1331034936
+          ],
+          [
+            1523113,
+            1331034947
+          ],
+          [
+            1531414,
+            1331035135
+          ],
+          [
+            1540401,
+            1331035340
+          ],
+          [
+            1540631,
+            1331035345
+          ],
+          [
+            1540657,
+            1331035346
+          ],
+          [
+            1541300,
+            1331035360
+          ],
+          [
+            1542154,
+            1331035379
+          ],
+          [
+            1549702,
+            1331035550
+          ],
+          [
+            1564638,
+            1331035892
+          ],
+          [
+            1583617,
+            1331036323
+          ],
+          [
+            1590398,
+            1331036475
+          ],
+          [
+            1590401,
+            1331036475
+          ],
+          [
+            1633230,
+            1331037443
+          ],
+          [
+            1637283,
+            1331037533
+          ],
+          [
+            1639300,
+            1331037579
+          ],
+          [
+            1641445,
+            1331037628
+          ]
+        ],
+        "frozen_supervisor_sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827",
+        "interface": "mem-service-observed-ownership-v3",
+        "kind": "validated-actual-monitor-ownership-v3",
+        "optional_history": "absent-not-reconstructed",
+        "original_actual_exit": 1,
+        "ownership_history_reconstructed": false,
+        "primary_source": {
+          "bytes": 8761,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/monitor/result.json",
+          "sha256": "6ca64cd84266b3471ba304d25736da46aef5f3e90e860189f4d252fa74f08cac"
+        },
+        "run": "c101",
+        "schema": 3,
+        "top_result": {
+          "bytes": 9730,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/result.json",
+          "sha256": "c38a0618d934d2296a5c1e90606f0f16c1571c2a1b6705edb4681b82ea02ccf3"
+        }
+      },
+      "c102": {
+        "SDK_ACK_inferred_from_death": false,
+        "all_named_births_gone": true,
+        "authority_to_launch_Guest": false,
+        "authority_to_mutate_ledger": false,
+        "births": [
+          [
+            3311755,
+            1331086685
+          ],
+          [
+            3311893,
+            1331086691
+          ],
+          [
+            3312146,
+            1331086702
+          ],
+          [
+            3316376,
+            1331086888
+          ],
+          [
+            3316526,
+            1331086894
+          ]
+        ],
+        "frozen_supervisor_sha256": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827",
+        "interface": "mem-service-observed-ownership-v3",
+        "kind": "validated-actual-monitor-ownership-v3",
+        "optional_history": "absent-not-reconstructed",
+        "original_actual_exit": 1,
+        "ownership_history_reconstructed": false,
+        "primary_source": {
+          "bytes": 2726,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/monitor/result.json",
+          "sha256": "48062ee2c9b0d8f12fe5d55ee592f94faba5cb8f0c8d40dc314e2a3a577a9eeb"
+        },
+        "run": "c102",
+        "schema": 3,
+        "top_result": {
+          "bytes": 3143,
+          "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c102/result.json",
+          "sha256": "504fe337dc80dd92b99abf7a76f17c3b3965b3aeeb8400ee9f2714b4b2de3604"
+        }
+      }
+    },
+    "prior_consumed_inventory_only": true,
+    "retained_files": 84
+  },
+  "pool_epoch": "73919fba-95e2-4896-82bb-169361c78397",
+  "pool_id": "8150836f-bd51-4797-98b8-788432da3712",
+  "prior_chains": {
+    "c044": {
+      "commit.json": {
+        "bytes": 592,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c044-terminal-domain-loss-v1/commit.json",
+        "sha256": "31c4ab9126df335b4d25492fc6574c0c997237cab603ba8003fe8abf959c0ab4"
+      },
+      "service-admission-claim.json": {
+        "bytes": 10317,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c044-terminal-domain-loss-v1/service-admission-claim.json",
+        "sha256": "e571f2e683ad08fb9720928d5c1dd795318c66a434190dc6e7956148de5a6fcd"
+      }
+    },
+    "c064": {
+      "commit.json": {
+        "bytes": 1057,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c064-terminal-domain-loss-v2/commit.json",
+        "sha256": "782e5fd0b1e34fcc3ec5a70e0682d5554fe873e9106deef918a4abbdc0096625"
+      },
+      "service-admission-claim.json": {
+        "bytes": 11476,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c064-terminal-domain-loss-v2/service-admission-claim.json",
+        "sha256": "45963e3038796a5af98affe0a4f048eca256a566a0958e639463afd6cd271322"
+      }
+    },
+    "c100": {
+      "before128.json": {
+        "bytes": 11583,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/before128.json",
+        "sha256": "f8a727bba2bf0522faf318d2b42009791aa8a93ab5f3e9baae2744c4cd162e16"
+      },
+      "commit.json": {
+        "bytes": 1057,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/commit.json",
+        "sha256": "90a2fe2ba165dbafda522dfd4efdd3ab83eb1ee8006c3422ed0901b04c1a22b1"
+      },
+      "historical-state.json": {
+        "bytes": 89240,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/historical-state.json",
+        "sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26"
+      },
+      "inherited-backing-identities.json": {
+        "bytes": 1689,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/inherited-backing-identities.json",
+        "sha256": "bb63489a912bd711618a212a2560b848f7f4e2085999b89e932d958e4efea5a4"
+      },
+      "intent.json": {
+        "bytes": 56773,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/intent.json",
+        "sha256": "0b50e8df24f2bf99c572f8b3af23ae054feb80357e8939a6dea6c982301904aa"
+      },
+      "permanent-fences.json": {
+        "bytes": 11260,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/permanent-fences.json",
+        "sha256": "c57a875b38a02e61ddd45bd5614ef82d64c8f27b300879eb526fdf9d58e72822"
+      },
+      "resulting76.json": {
+        "bytes": 43615,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/resulting76.json",
+        "sha256": "fbfe5a75056e27f90f0bb9e82372ca31229b90cea30433476ca94fc21e16b1ba"
+      },
+      "service-admission-claim.json": {
+        "bytes": 12635,
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013/successor-c081-terminal-domain-loss-v3/service-admission-claim.json",
+        "sha256": "404628be4f3c1607944e06f4355ffbfe344970d2c05917856812af523e27cc27"
+      }
+    }
+  },
+  "protected_historical_bytes": 79691776,
+  "provider_session": "789afea2-4d55-4928-a4d5-dfa28d291445",
+  "run": "c101",
+  "schema": 4,
+  "source_runtime_closure": {
+    "Rust_inputs": 74,
+    "actual_compiler": {
+      "bytes": 92807,
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/build-host071/compiler-inputs.json",
+      "sha256": "c09e99cce9c44eea427d02cdc55e32844316f7bdb4fa799ea10b079a2a08fcfe"
+    },
+    "actual_image": {
+      "bytes": 13859680,
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/build-host066/pool-agent.cpio.gz",
+      "sha256": "5c00fbbd5359ce8bf44876f8a610c579a7eef9cefe62c56c8009c49ba284539f"
+    },
+    "daemon_sha256": "927ec837805f4dd3c9393c27cb50ccc773eed8c0030e14d01375fbc93a80d2c8",
+    "embedded_occurrences": 32,
+    "embedded_unique": 27,
+    "fixed_SDK_files": 53,
+    "fixed_worker_inputs": 233,
+    "image_compiler_inputs": {
+      "bytes": 63136,
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/build-host066/compiler-inputs.json",
+      "sha256": "42f539dc0392d04819d74b3a733de8cc152df7a9da3e280d5176ec70809cf7e3"
+    },
+    "image_member_count": 68,
+    "selected_PID1_sha256": "de7061a939b3047374dd4659cea7aa8e7e74e1289a53949f6d30647079d6f5a3",
+    "selected_agent_sha256": "0cbc62862091df055f2b0684fa05c2a14180178dd6ad13f17de4a0c478a54082",
+    "source": {
+      "bytes": 90827,
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/source-host071/.uflow-source.json",
+      "sha256": "1770878e32fcec0f196895ffc59c41795a9584114b358a8511624fcc4f2514ec"
+    },
+    "source_files": 353,
+    "unselected_legacy_receipt_agent_sha256": "592dc8280f093d4bf86eb120225321800f819a9896579749dfa4d6019b68ee61"
+  },
+  "state": {
+    "bytes": 101808,
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/state/state.json",
+    "sha256": "934b30b07df72ab28e96ef173a639f55e64584db46dbdc13518828246ab48796"
+  },
+  "status": "PASS_HOST_TERMINAL_DOMAIN_CANDIDATE_ONLY",
+  "assessment_sha256": "6d0749d9ba7205bde65c6b20f1f90fd22067f2d3f51818872600f571198a5d5b"
+}

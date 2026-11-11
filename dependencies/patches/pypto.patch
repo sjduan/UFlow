@@ -1,0 +1,196 @@
+diff --git a/python/pypto/ir/distributed_compiled_program.py b/python/pypto/ir/distributed_compiled_program.py
+index baea05faa62702f499ca2a587f19a4f16c256189..8e2ab3f13d9a96363ed1bb8159642a7e270bd556 100644
+--- a/python/pypto/ir/distributed_compiled_program.py
++++ b/python/pypto/ir/distributed_compiled_program.py
+@@ -542,6 +542,7 @@ class DistributedCompiledProgram:
+         sub_worker_overrides: dict[str, Callable[..., Any]] | None = None,
+         inherited_host_tensors: "Sequence[torch.Tensor | ReadOnlyHostTensor] | None" = None,
+         startup_timeout_s: float | None = None,
++        chip_service_factories: dict[int, Callable[..., Any]] | None = None,
+     ) -> "DistributedWorker":
+         """Prepare a reusable L3 execution handle (setup once, dispatch many).
+ 
+@@ -614,6 +615,11 @@ class DistributedCompiledProgram:
+             startup_timeout_s: Optional positive finite bound, in seconds, for
+                 the forked worker hierarchy to report startup readiness. ``None``
+                 keeps Simpler's default timeout.
++            chip_service_factories: Optional startup factories indexed by local
++                chip rank. Each runs after device initialization in that chip's
++                allocation-owner process and returns a service with close().
++                Register resident tensors with retain_service_tensor(); unregister
++                and release them before closing the worker. No services run by default.
+ 
+         Returns:
+             A :class:`DistributedWorker`; use it as a context manager or call
+@@ -630,6 +636,7 @@ class DistributedCompiledProgram:
+             sub_worker_overrides=sub_worker_overrides,
+             inherited_host_tensors=inherited_host_tensors,
+             startup_timeout_s=startup_timeout_s,
++            **({"chip_service_factories": chip_service_factories} if chip_service_factories else {}),
+         )
+ 
+     @staticmethod
+diff --git a/python/pypto/runtime/distributed_runner.py b/python/pypto/runtime/distributed_runner.py
+index fa93f3fa5f1e554f27bcc1b55abd2139cce1e8d7..b575c67c072b70036ba3eb9284a9b48055822144 100644
+--- a/python/pypto/runtime/distributed_runner.py
++++ b/python/pypto/runtime/distributed_runner.py
+@@ -583,6 +583,7 @@ def _construct_worker(
+     num_sub: int,
+     enable_sdma: bool = False,
+     startup_timeout_s: float | None = None,
++    chip_service_factories: dict[int, Callable[..., Any]] | None = None,
+ ) -> Any:
+     """Construct a simpler ``Worker(level=3)`` from the distributed config."""
+     if startup_timeout_s is not None and (not math.isfinite(startup_timeout_s) or startup_timeout_s <= 0):
+@@ -605,6 +606,8 @@ def _construct_worker(
+     }
+     if startup_timeout_s is not None:
+         worker_config["startup_timeout_s"] = startup_timeout_s
++    if chip_service_factories:
++        worker_config["chip_service_factories"] = chip_service_factories
+     return Worker(**worker_config)
+ 
+ 
+@@ -1908,6 +1911,7 @@ class DistributedWorker(Worker):
+         sub_worker_overrides: dict[str, Callable[..., Any]] | None = None,
+         inherited_host_tensors: Sequence[torch.Tensor | ReadOnlyHostTensor] | None = None,
+         startup_timeout_s: float | None = None,
++        chip_service_factories: dict[int, Callable[..., Any]] | None = None,
+     ) -> None:
+         super().__init__()  # initialize Worker ABC state (_owned_tensors)
+         # Simpler owns allocations as Buffer objects. PyPTO continues exposing
+@@ -1915,6 +1919,7 @@ class DistributedWorker(Worker):
+         # table at every control-plane operation. The retained handle is also
+         # attached to DeviceTensor for address-free wire TaskArgs.
+         self._device_buffers: dict[tuple[int, int], Any] = {}
++        self._service_tokens: set[str] = set()
+         callbacks = _coalesce_callbacks(callbacks, sub_worker_overrides)
+         reset_persistent_windows = _resolve_persistent_window_reset(persistent, reset_persistent_windows)
+         inherited, self._inherited_host_spans = self._resolve_inherited_host_tensors(inherited_host_tensors)
+@@ -2047,6 +2052,7 @@ class DistributedWorker(Worker):
+                 num_sub,
+                 enable_sdma=enable_sdma,
+                 startup_timeout_s=startup_timeout_s,
++                **({"chip_service_factories": chip_service_factories} if chip_service_factories else {}),
+             )
+             from .tensor_arg import bind_tensor_arg_owner  # noqa: PLC0415
+ 
+@@ -2546,6 +2552,33 @@ class DistributedWorker(Worker):
+         self._w.free(handle)
+         del self._device_buffers[(worker_id, ptr)]
+ 
++    def retain_service_tensor(self, tensor: DeviceTensor, worker_id: int = 0) -> tuple[str, Any]:
++        """Retain a resident allocation for an owner-local chip service.
++
++        The returned canonical descriptor is passed to that service's pin().
++        Release the token only after native unregister has completed.
++        """
++        with self._dispatch_submit_mu:
++            self._require_open("retain_service_tensor")
++            if self._closing:
++                raise RuntimeError("retain_service_tensor: worker is closing")
++            if self._owned_tensors.get((worker_id, tensor.data_ptr)) is not tensor:
++                raise ValueError("retain_service_tensor requires a live tensor owned by the selected worker")
++            buffer = self._device_buffer(tensor.data_ptr, worker_id, "retain_service_tensor")
++            if tensor.buffer is not buffer or tensor.nbytes != buffer.nbytes:
++                raise ValueError("retain_service_tensor requires the complete allocation, not a tensor view")
++            token, descriptor = self._w.retain_service_buffer(buffer)
++            self._service_tokens.add(token)
++            return token, descriptor
++
++    def release_service_tensor(self, token: str) -> None:
++        """Release a registration retain after confirmed owner-local unregister."""
++        with self._dispatch_submit_mu:
++            if token not in self._service_tokens:
++                raise ValueError("release_service_tensor: unknown registration token")
++            self._w.release_service_buffer(token)
++            self._service_tokens.remove(token)
++
+     def committed_device_memory(self, worker_id: int = 0) -> int:
+         """Total device HBM (bytes) committed by chip *worker_id*'s ``MemoryAllocator``
+         (tensors + pooled arenas + runtime buffers). Routes through the underlying
+@@ -3253,6 +3286,10 @@ class DistributedWorker(Worker):
+                 if first_error is None:
+                     first_error = exc
+ 
++    def _require_retired_services(self) -> None:
++        if self._service_tokens:
++            raise RuntimeError("chip service tensors must be unregistered before worker close")
++
+     def close(self) -> None:
+         """Release runtime resources, retrying incomplete Worker cleanup."""
+         # Serialize the admission transition with submit() and prevent two
+@@ -3260,6 +3297,7 @@ class DistributedWorker(Worker):
+         with self._dispatch_submit_mu:
+             if self._close_complete or self._closing:
+                 return
++            self._require_retired_services()
+             self._closing = True
+             first_attempt = not self._closed
+             if first_attempt:
+diff --git a/runtime b/runtime
+index 6b6b88f2353cca12cfafe809750b50b59931b0d1..508becb93e182a3035a14e3f9226929dbe994346 160000
+--- a/runtime
++++ b/runtime
+@@ -1 +1 @@
+-Subproject commit 6b6b88f2353cca12cfafe809750b50b59931b0d1
++Subproject commit 508becb93e182a3035a14e3f9226929dbe994346
+diff --git a/tests/ut/runtime/test_distributed_worker.py b/tests/ut/runtime/test_distributed_worker.py
+index 0e3806cb3cdc1f45754364f0931f00efcbbece72..fad6a4645bc9d152cc8678a1d7ef05e6ea693893 100644
+--- a/tests/ut/runtime/test_distributed_worker.py
++++ b/tests/ut/runtime/test_distributed_worker.py
+@@ -26,6 +26,7 @@ import warnings
+ import weakref
+ from collections.abc import Callable
+ from concurrent.futures import ThreadPoolExecutor
++from dataclasses import replace
+ from pathlib import Path
+ from types import ModuleType, SimpleNamespace
+ from typing import Any
+@@ -4458,5 +4459,46 @@ class TestDeviceMemoryInfo:
+         rt.close()
+ 
+ 
++def test_chip_service_factory_is_optional_and_forwarded(patched_setup):
++    compiled = _fake_compiled([], [])
++    with DistributedWorker(compiled):
++        assert "chip_service_factories" not in patched_setup["construct"].call_args.kwargs
++    factories = {0: lambda context: context}
++    with DistributedWorker(compiled, chip_service_factories=factories):
++        assert patched_setup["construct"].call_args.kwargs["chip_service_factories"] is factories
++
++
++def test_service_retain_guards_auto_free_before_any_teardown(patched_setup):
++    rt = DistributedWorker(_fake_compiled([], []))
++    tensor = _resident(rt, (16,))
++    descriptor = object()
++    native = patched_setup["worker"]
++    native.retain_service_buffer.return_value = ("registration", descriptor)
++    assert rt.retain_service_tensor(tensor) == ("registration", descriptor)
++    native.retain_service_buffer.assert_called_once_with(tensor.buffer)
++    with pytest.raises(RuntimeError, match="service"):
++        rt.close()
++    native.free.assert_not_called()
++    native.close.assert_not_called()
++    assert rt._owned_tensors[(0, tensor.data_ptr)] is tensor
++    assert not rt._closed and not rt._closing
++    rt.release_service_tensor("registration")
++    native.release_service_buffer.assert_called_once_with("registration")
++    rt.close()
++    native.free.assert_called_once_with(tensor.buffer)
++    native.close.assert_called_once()
++
++
++def test_service_retain_rejects_foreign_worker_and_tensor_view(patched_setup):
++    with DistributedWorker(_fake_compiled([], [])) as rt:
++        tensor = _resident(rt, (16,))
++        with pytest.raises(ValueError, match="owned"):
++            rt.retain_service_tensor(tensor, 1)
++        view = replace(tensor)
++        with pytest.raises(ValueError, match="owned"):
++            rt.retain_service_tensor(view)
++        patched_setup["worker"].retain_service_buffer.assert_not_called()
++
++
+ if __name__ == "__main__":
+     pytest.main([__file__, "-v"])

@@ -1,0 +1,2041 @@
+{
+  "schema": 1,
+  "kind": "fixed-closed-c039-prestart-assessment-not-release-proof",
+  "executed_source_commit": "c733aa40d1e2d15a7d09f7f8a54c8ed38cdb297a",
+  "repair_source_commit": "9f1b1bc46f2a85091567d5fffb040ac5e1c51151",
+  "failure_stage": "new-FM-regular-only gate before GuestNode/start delivery",
+  "predecessor_state_sha256": "95957eddd6e76cb5b2624076c4714564731b6f09515b6b963a4fd5925355578e",
+  "completed_succession_proof_sha256": "1415007de8abd30b1fd5db52694a8e3cd209aa0e68421bd0b0b26d466547fb76",
+  "files_requiring_fresh_exact_byte_validation": {
+    "implementation/responsibility-c013/intent.json": {
+      "bytes": 42011,
+      "sha256": "e4201e265ee8f04332a228995dc65346ca04897509016d55da35e62d67eefc68"
+    },
+    "implementation/responsibility-c013/result.json": {
+      "bytes": 41956,
+      "sha256": "9c71b16c1fa91bcd38a667e8955c34a6bee5ff074d538c85763eb53066c466d2"
+    },
+    "implementation/responsibility-c013/successor-c027-v1/intent.json": {
+      "bytes": 100750,
+      "sha256": "bfe1c5ec7011db78695a488fb7168c18f4bf93d3680c97b1e6780c11a08ca507"
+    },
+    "implementation/responsibility-c013/successor-c027-v1/result.json": {
+      "bytes": 100743,
+      "sha256": "d7b5277a83b47d24a4e15c11e901582878c546e28a61acf8205a70d0f34594f9"
+    },
+    "runs/c013/control-endpoints-active.json": {
+      "bytes": 612,
+      "sha256": "14f9e1ed1844d5f39c3791b561d2551784101c522aeec5637dfbd28970fdbaf9"
+    },
+    "runs/c013/fm-carrier-active.json": {
+      "bytes": 4252,
+      "sha256": "82045b4d78c0584f3913cf0ede23053e1020e44fd78627f87b307d0d06c9c551"
+    },
+    "runs/c013/post-close-audit.json": {
+      "bytes": 5519,
+      "sha256": "711af4991e2ecaff2cad5f132d03b0885a7692d67a6beb4f1b115b81c4272cbb"
+    },
+    "runs/c027/control-endpoints-active.json": {
+      "bytes": 612,
+      "sha256": "388c06ad54dddcf09f6c1a8a4a05ff5af506616824d97ccf24b8b401931467a2"
+    },
+    "runs/c027/fm-carrier-active.json": {
+      "bytes": 4252,
+      "sha256": "e9578d9de019f1804bed3533f35d4ecb76b823fef53a5afb535142841c7fa66d"
+    },
+    "runs/c027/fm-links-ready.json": {
+      "bytes": 266,
+      "sha256": "b44782f1a740eb4953fb77ecb9c1d13e56a6feb7ad34388f6185e53126705fcf"
+    },
+    "runs/c027/guest-identities.json": {
+      "bytes": 508,
+      "sha256": "7756cefc1acfbc7c71874d3d6c2bcaccae05fcdef2ab426ae0f5c44c34cfbd08"
+    },
+    "runs/c027/guest-starts.json": {
+      "bytes": 2496,
+      "sha256": "0598c0ec6ddf3b9edad8655c1d86d8642b106b72a7d62d2d1f8db365ef353b08"
+    },
+    "runs/c027/monitor/result.json": {
+      "bytes": 4798,
+      "sha256": "a605dbdde51c86f4532bb21e71289fd2e7a390c7ef4a3dd5312bc6366a090af1"
+    },
+    "runs/c027/nodeA.serial.log": {
+      "bytes": 197337,
+      "sha256": "806afcdbcf726f2a94ec077bb62dcab5b9beee4a65a50887f13065497da4db7f"
+    },
+    "runs/c027/nodeB.serial.log": {
+      "bytes": 197559,
+      "sha256": "9a167df5127a0d3840a5933f314eac0ce551dcb8fb378f116713bf9465abb1cd"
+    },
+    "runs/c027/pool-events.jsonl": {
+      "bytes": 11166,
+      "sha256": "434553f59ca72ef6850cb363f28e256bbe2113cf551a541eda9293aaa45c63a3"
+    },
+    "runs/c027/post-close-audit.json": {
+      "bytes": 5518,
+      "sha256": "b91132662ddf56dbb3480fdf1a8b3b94ab1161377fc3a88ee80d10f349ec0436"
+    },
+    "runs/c027/provider.json": {
+      "bytes": 953,
+      "sha256": "8ee756740c0d98029d68aac632ab4b35e48443cc2b27ec9edf590301d0dc1a5c"
+    },
+    "runs/c027/state/state.json": {
+      "bytes": 7260,
+      "sha256": "194eaa6ac1cff7cf6f8ed7dac35a41df56db2203580337aadfe5fc47e385c2e6"
+    },
+    "runs/c033/control-endpoints-active.json": {
+      "bytes": 612,
+      "sha256": "06c7fc9c1147cc416c956c16c4c8c081342026c293dd9b777f6c4ee6ca717efb"
+    },
+    "runs/c033/fm-carrier-active.json": {
+      "bytes": 4252,
+      "sha256": "d0db8fcdbd3d9d27916c2e6d763b0bb947ec8f80a4bf267cbbf5dd0bd9966259"
+    },
+    "runs/c033/fm-links-ready.json": {
+      "bytes": 266,
+      "sha256": "a4275ea4099849b2f16b92cc4e2646b7321500d103360106a5dee7b12f34a237"
+    },
+    "runs/c033/guest-identities.json": {
+      "bytes": 508,
+      "sha256": "cb072500bcbed9244fec4b8939f65d827ec045c31383aed25ce2d0cd647e5c33"
+    },
+    "runs/c033/guest-starts.json": {
+      "bytes": 2496,
+      "sha256": "57e606343107a9271a32e0ee1dafba3f97eb8a43014efa60ac671da94421d369"
+    },
+    "runs/c033/lower.store": {
+      "bytes": 6744,
+      "sha256": "596d0212b3887486213eb8f6a84f0036895488e06362b13760581c8e0282b88c"
+    },
+    "runs/c033/monitor/result.json": {
+      "bytes": 5122,
+      "sha256": "2f1d3d5e644b14a03f19a9d335b51025abfa86057bef4db539003924412c3a46"
+    },
+    "runs/c033/nodeA.serial.log": {
+      "bytes": 212663,
+      "sha256": "29271968bc4136f5aba8df207190de3067a7da548f48c74810ba13c5c2d6489e"
+    },
+    "runs/c033/nodeB.serial.log": {
+      "bytes": 210411,
+      "sha256": "e1f8cb24a5bf547a68bdb3e44b0b8aac352c33a3dc659dc03c5023407a57ace2"
+    },
+    "runs/c033/pool-events.jsonl": {
+      "bytes": 125390,
+      "sha256": "24e3a9ece8d27a9701c0055e3a8267d9bed569ee624edf06f5472a57c07a3c61"
+    },
+    "runs/c033/post-close-audit.json": {
+      "bytes": 5518,
+      "sha256": "ec33830e5a97f5e7a620154b6b72e6ac3e0b622cc23b9607eb8d7250e5238a90"
+    },
+    "runs/c033/prepared-provider.json": {
+      "bytes": 5801,
+      "sha256": "dd34187174ae4450d24b09fae7e1d858849101bab0dbe2b706cc32de0956a6c8"
+    },
+    "runs/c033/provider.json": {
+      "bytes": 1136,
+      "sha256": "278c604d58f9ef64b5c31aaf636e91235e04fd12554a7881f2f044ab4b11a545"
+    },
+    "runs/c033/state/state.json": {
+      "bytes": 20712,
+      "sha256": "edf53c685c7377842fb358dc62bc88f7f5c8dc36a51e151d360c4542f05b239e"
+    },
+    "runs/c039/catalog.log": {
+      "bytes": 73,
+      "sha256": "a5b26490a32f91880cd98ca6ff478a8f8b5ff0fdac69141a82a59086ed4e51fa"
+    },
+    "runs/c039/command-00-start.json": {
+      "bytes": 581,
+      "sha256": "3f36085940e8f82bd2f82e434da5171a545e2d8018d1042c4d90f8a337972e3a"
+    },
+    "runs/c039/command-00.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runs/c039/control-endpoints-active.json": {
+      "bytes": 612,
+      "sha256": "ef8dff95490ed5f141e9fd8ae5ed5fd9d7ddd261bd93ec2593c62dd841e2f4fa"
+    },
+    "runs/c039/fm-carrier-active.json": {
+      "bytes": 4252,
+      "sha256": "c67c5cf5eefb0468515c6c817d61212b60213e3fd556e77adb43a9d027d28ae6"
+    },
+    "runs/c039/fm-links-ready.json": {
+      "bytes": 266,
+      "sha256": "8d29477f550cb798a8c996d168b712d04763c53deb95f3f46e798135490d377b"
+    },
+    "runs/c039/guest-first-failure.json": {
+      "bytes": 136,
+      "sha256": "b3a18bc0fb81dfdab13b6db54037cb6b2e7f084c763835f3edc3716c6ce66989"
+    },
+    "runs/c039/guest-identities.json": {
+      "bytes": 505,
+      "sha256": "0b9fb8eaea627acfffba91f5ebd29031b4cc39105d4902affeb9cf2dd97b1c94"
+    },
+    "runs/c039/guest-starts.json": {
+      "bytes": 2522,
+      "sha256": "54a4249f49e34846ecc73cf7ee30618abfb04e301599a8374a22f20a042cdc40"
+    },
+    "runs/c039/lower.conf": {
+      "bytes": 270,
+      "sha256": "b720674be14229714a68b510649db30e7f4ebb4802af1f908c94e03260deaed2"
+    },
+    "runs/c039/lower.log": {
+      "bytes": 302,
+      "sha256": "0a85b619cd804c5c1fd0c3b7105a8544bd660cf7ac3c5d99b1a7d0674bb036b8"
+    },
+    "runs/c039/monitor/config.json": {
+      "bytes": 885,
+      "sha256": "475bfcd963f89cab3008be3dcc972e7b79932858253c9214be2ec684a2b2c774"
+    },
+    "runs/c039/monitor/events.jsonl": {
+      "bytes": 2768,
+      "sha256": "7f7edec58d03abad4cc683b22d840c5d67110704b04c6f0800aa8469a21ebd74"
+    },
+    "runs/c039/monitor/launch-once.json": {
+      "bytes": 397,
+      "sha256": "8105df0cad8b195ae63caebc39b2e716295c4dc3e2a4f7e129821ed18ebdad82"
+    },
+    "runs/c039/monitor/result.json": {
+      "bytes": 4799,
+      "sha256": "99b916b780b8cc6ee3d33581c1786d72f027528a5802226a8c2814b87c6d41c0"
+    },
+    "runs/c039/monitor/supervisor-start.json": {
+      "bytes": 37,
+      "sha256": "0b68a0b0c6c06ca72e42c894fff4836c8ac9b201c99cbe00792f4ab0a0d2b04a"
+    },
+    "runs/c039/monitor/supervisor.log": {
+      "bytes": 82,
+      "sha256": "dcfc91f52fbbb0c330dfcac9679d8ff460e9130d520ae1c503c0ce0f96d763f1"
+    },
+    "runs/c039/monitor/task.log": {
+      "bytes": 1228,
+      "sha256": "5d100fd4fc2c72804a80b95b50fb3c0446a3acf5d58f7e04c34d8c08c603ca1c"
+    },
+    "runs/c039/nodeA-qmp.json": {
+      "bytes": 67,
+      "sha256": "a251c279160ddc4e8525bca148b0bbaf6cceaa8260bcf7d0175aa4a1af0a64ea"
+    },
+    "runs/c039/nodeA.qemu.log": {
+      "bytes": 91615,
+      "sha256": "cba4ad8b4eecedfaaa3eea6b01007c40710a9f225b65d6810569c95257597cb9"
+    },
+    "runs/c039/nodeA.serial.log": {
+      "bytes": 192470,
+      "sha256": "3f84a519bd7a1983e4c5918c352e9fd20e92d27bcff8070b04415e0fb1f87241"
+    },
+    "runs/c039/nodeB-qmp.json": {
+      "bytes": 67,
+      "sha256": "a251c279160ddc4e8525bca148b0bbaf6cceaa8260bcf7d0175aa4a1af0a64ea"
+    },
+    "runs/c039/nodeB.qemu.log": {
+      "bytes": 91952,
+      "sha256": "058cf14efc143c1757d5450d10e6df82fc5bc973230365734206ce97b363d66a"
+    },
+    "runs/c039/nodeB.serial.log": {
+      "bytes": 192786,
+      "sha256": "bc489dbe14347f85a384cdb2ca31beca07eecb8f9707a813b110907480db53c4"
+    },
+    "runs/c039/pool-events.jsonl": {
+      "bytes": 1917,
+      "sha256": "ca579a71cc54a422cc7ce751ef4f14d08f25ba30552cb500e3e84bcba687dce6"
+    },
+    "runs/c039/post-close-audit.json": {
+      "bytes": 5518,
+      "sha256": "2c9f9486e0ce576ca225d50d5ce41485c0bb458dd9ffb0f62d33963387c9a5ef"
+    },
+    "runs/c039/provider.json": {
+      "bytes": 820,
+      "sha256": "fef88d8bd0e89b2c962b0f848368648951c43c8dae08e71a47289001cdaca70d"
+    },
+    "runs/c039/ready.json": {
+      "bytes": 66,
+      "sha256": "b9b86d685e5b0894a52f4701dfe4405fa18a030cab5056e7b87add9ba5c3f893"
+    },
+    "runs/c039/result.json": {
+      "bytes": 5408,
+      "sha256": "450ddbf648d2076dfdb78ce9125e2976418be4c1a0dc37aaf4f05ec984fd7f24"
+    },
+    "runs/c039/state/state.json": {
+      "bytes": 27126,
+      "sha256": "95957eddd6e76cb5b2624076c4714564731b6f09515b6b963a4fd5925355578e"
+    },
+    "runs/ca039/actor-complete.json": {
+      "bytes": 254,
+      "sha256": "a8d39c0c2b5af07c11fe8b76596467ada3eb97fa88d152717cc171ab5e9d365a"
+    },
+    "runs/ca039/command-00-exit.json": {
+      "bytes": 122,
+      "sha256": "856ebffc7974b95f466da0f0da6de856c1d3b88f5d8ea614ec1c45999e5530c5"
+    },
+    "runs/ca039/command-00-start.json": {
+      "bytes": 398,
+      "sha256": "72335eca67a80bf09b4eea283bbb21faa9e14fb5680e5e46b45427914fb8c110"
+    },
+    "runs/ca039/command-00.log": {
+      "bytes": 131,
+      "sha256": "eb280c0af1ade253afab93f91b325044e1dafff030cf3b10aa79924cae65f7fd"
+    },
+    "runs/ca039/monitor/config.json": {
+      "bytes": 886,
+      "sha256": "e3db4579910670ed768c4b07557cf4a936e8ed0bdfdee82a2e905e47269c0876"
+    },
+    "runs/ca039/monitor/events.jsonl": {
+      "bytes": 1015,
+      "sha256": "f278ed0a49ff3c89df2b28de15b8c1541908bd6409869aa70242110f89198c0f"
+    },
+    "runs/ca039/monitor/launch-once.json": {
+      "bytes": 397,
+      "sha256": "a3e4fa0c2b6b49e68db5ee745fade57450ac7c1e42c78dbb12e37a24a69f6666"
+    },
+    "runs/ca039/monitor/result.json": {
+      "bytes": 2193,
+      "sha256": "c266ad742dbd235661aab0eec42d6bbadeae5ac564d8c6fc198143be61afc8a6"
+    },
+    "runs/ca039/monitor/supervisor-start.json": {
+      "bytes": 37,
+      "sha256": "e3b66440dbfe0f105efb3e43fc9479c4eb75abb5dd5d26b70eabb5549decbde4"
+    },
+    "runs/ca039/monitor/supervisor.log": {
+      "bytes": 82,
+      "sha256": "dcfc91f52fbbb0c330dfcac9679d8ff460e9130d520ae1c503c0ce0f96d763f1"
+    },
+    "runs/ca039/monitor/task.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "runs/ca039/ready.json": {
+      "bytes": 66,
+      "sha256": "407d27ccc60663916003afc811e5ddec2caebcc809704137b3df4418bc8a58f8"
+    },
+    "runs/ca039/result.json": {
+      "bytes": 2562,
+      "sha256": "8487b52e4f783d0667dcfe6b039a4434e391330e075cc51d089e04b56e264da5"
+    },
+    "implementation/responsibility-c013/successor-c033-v1/intent.json": {
+      "bytes": 316073,
+      "sha256": "ac7ae68ea90f825a608b6cb38d70e6b743c1e790124aaaad9f7df78cc24dbd86"
+    },
+    "implementation/responsibility-c013/successor-c033-v1/result.json": {
+      "bytes": 316066,
+      "sha256": "7af3a1dc40f9dc8d30bd07e9dba8b21abe66c254947c95e0a8c12f4bb2f9cff0"
+    },
+    "implementation/config-c039-profile-v1/group.json": {
+      "bytes": 2114,
+      "sha256": "62ffe790f941ad6038fa0b08a471dad5f4de62c03ce434c2f4a78822933d01d9"
+    },
+    "implementation/config-c039-profile-v1/guest.json": {
+      "bytes": 1400,
+      "sha256": "8d1828763bf2cb3ea22dde8c77a0660f1eed9a338a74acc9d7d2bf978841ae44"
+    },
+    "implementation/config-c039-profile-v1/audit.json": {
+      "bytes": 1216,
+      "sha256": "95887793e1af6aad9100c4f957a4bc01dc578d95352961c4f221633f83453d2f"
+    },
+    "implementation/build-host030/build-receipt.json": {
+      "bytes": 89085,
+      "sha256": "730f5b2e524187a02aa853d83d03ab8080a3d3cbbd389885032ea79f60cb5d9f"
+    },
+    "implementation/source-host030/Cargo.lock": {
+      "bytes": 3083,
+      "sha256": "7a6634c2e767426cb44f8e256e79039c3509878bd01a1c9b1117e69068241fb1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/Cargo.toml": {
+      "bytes": 134,
+      "sha256": "97da630503d4f0254ee40f414fd3bbafa551af1e16873781b444b54a0c91e409",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-acl-sys/Cargo.toml": {
+      "bytes": 112,
+      "sha256": "1291ec3e16686e9218181d2b5ee8ddf34dee93df017b79b51f3d26eb94926140",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-acl-sys/build.rs": {
+      "bytes": 423,
+      "sha256": "3859b8366cc6f1070527845c48deac298ca2941c34198710542bf3afadaeff97",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-acl-sys/src/lib.rs": {
+      "bytes": 6244,
+      "sha256": "32fd7255cba282b6b32ab3d64f8d21d7712be85ae833f9cf80e1763fbf28defa",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/Cargo.toml": {
+      "bytes": 90,
+      "sha256": "8be198dc4d88e1f10295a6713fa3cb5c3e3fc7c2d2d561ab459fee52c528352d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/examples/t2_discovery.rs": {
+      "bytes": 7473,
+      "sha256": "a345824aae573eb850ba435fe9a2852df349bd5466361f5d852f8f84fa3414b4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/bridge.rs": {
+      "bytes": 13812,
+      "sha256": "b0898116d0611cf85c7b906ea31f54ca551d4ab518e1b861efa6e929496c4bda",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/idl.rs": {
+      "bytes": 7214,
+      "sha256": "59bd991399af9def20024d6bc2354949ef43f2bb7469cc2ba5c4fb934da31b63",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/lib.rs": {
+      "bytes": 1379,
+      "sha256": "57ea293461505cdbfa80a83892e08d1cc6ba4c51e481d5ae8907a87f380b4ef1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/provider.rs": {
+      "bytes": 13939,
+      "sha256": "2f360ee8b759382bc72d0028629c7de8b0d9edb9bd5e2aca4c64869e0870cd0a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/topology.rs": {
+      "bytes": 2572,
+      "sha256": "0de9490f70b9b03a65c1997bcd8e15c2e9457a3d9ffc49eb6974e96653fde958",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/topology/README.md": {
+      "bytes": 3607,
+      "sha256": "46961aeccbe6215a6248d89f8b3217b7350c4510e9e23f9774fb77deb62d141a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/topology/ddr.rs": {
+      "bytes": 38628,
+      "sha256": "9c6c049ec27769f908cf8caaa719a04423264c4dda279b9f1d25e24e71d5129d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/topology/ddr_diagnostic.rs": {
+      "bytes": 4478,
+      "sha256": "ca05276c49647f7adeb88408234cdd58a096ac504490c5a52246e34ed5a6bbaf",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-core/src/topology/json.rs": {
+      "bytes": 6581,
+      "sha256": "9b0a2f6e5ebb826c921fd4dedde0daa3bdb8b223d7b51d46ce20b251fcb94d1f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/Cargo.toml": {
+      "bytes": 309,
+      "sha256": "4ac27c7889fe6941793504a509a9383b2579869099ccfee2e2253e6e2cb06c33",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/acl_backend/device_copy.rs": {
+      "bytes": 4138,
+      "sha256": "dc5e626f5c907e4e7f997778bec3340d292a8bcf3397abc0da778593256b2b94",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/acl_backend/hbm_memory.rs": {
+      "bytes": 4970,
+      "sha256": "0b196c7e1369e3e399e241d14d3c6e39d74d43a50b088122331e3bff51c47435",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/acl_backend/host_memory.rs": {
+      "bytes": 2743,
+      "sha256": "73fbdef1569a5389bd5c2edeb59d1621b4f56cc2a70cb9f0a29c1decd7e62f86",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/acl_backend/mod.rs": {
+      "bytes": 749,
+      "sha256": "c339fd5c17d66deabfcf4a9fbfd76fcddc3fdbba51e1afaf561e88d4b0dd5b4a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/acl_backend/runtime.rs": {
+      "bytes": 1901,
+      "sha256": "9bda08b2ee91c8d48c49e3de78f2d562014bc15bbb2d3ee44ccd72ae7bcb76e5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/capabilities.rs": {
+      "bytes": 4930,
+      "sha256": "1782aec73795fe2aeee6738d3a03ced6b12a1e7987b87502f8a368f376381509",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/catalog.rs": {
+      "bytes": 19632,
+      "sha256": "ed560810ffa6564f2f3daeafd621b129dee469c28521dfde31032fe89817f3db",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/common.rs": {
+      "bytes": 19044,
+      "sha256": "1b7b21a7f50a07436d05669a4b8672d6953b75cb2416ae8982e654eeaf6867f5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_authority.rs": {
+      "bytes": 7779,
+      "sha256": "1b7fe5c9328ad2fe3de673a3f33e424fd76d9820029e62d1565cbed7241200e9",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_backend.rs": {
+      "bytes": 10676,
+      "sha256": "fe8e24fe4dc3eae24186eb5ddb1b7a4fe4eba563ee26bb66b6138fce53954339",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_copy.rs": {
+      "bytes": 22749,
+      "sha256": "0c265aa66646ed0ee9bbbfd5ab5392486566d46c4c77a9fc88c5d9ab3e63f8a8",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_cost.rs": {
+      "bytes": 10322,
+      "sha256": "5bb4d3b9f8ec2ce4669a75135d6df879a572f4af2477a4eaf98390e598bff3af",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_coverage_fixture_matrix.rs": {
+      "bytes": 14066,
+      "sha256": "2853d680caee9ded993996eb2d022ba8a11911d4ef143423d171f797fb7152ab",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_deployment_policy.rs": {
+      "bytes": 25955,
+      "sha256": "a39ff5c2d5cc77998bc653ee4f610b7a829013210ee0f65817d157975251008d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_managed_authority.rs": {
+      "bytes": 190679,
+      "sha256": "39bd1796960cf6badf8add2fd79bc3d5bd40aa839c7c399657b4e84e2defae14",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_process_identity.rs": {
+      "bytes": 4894,
+      "sha256": "3aede98182a2b7edc81b210cc1717ac236e3fa223f828c6f6e5234398b7063f1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_ready_gate.rs": {
+      "bytes": 8505,
+      "sha256": "d6ace35565d886ff988497693799f3d0cd6ec47a5765a4a653301b8dfbe416bb",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_audit.rs": {
+      "bytes": 65668,
+      "sha256": "53109efe8ee9face9c9110d806665b5ad06d530edc421abd08bafedd10cab925",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_codec.rs": {
+      "bytes": 32015,
+      "sha256": "868c435f2c1b49cf3275dcb4a377c43c845844eab8d817ce16be2a622e6cf9c4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_coverage.rs": {
+      "bytes": 29035,
+      "sha256": "a82d8b483f52c8d214e0af0f61f80836878345ab97d859a68b18bc628baf56ff",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_durable.rs": {
+      "bytes": 52606,
+      "sha256": "6e8a61eb7871593291d144a5519dd19b0b649fe87bae6c40430999b20d343fe1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_fixture.rs": {
+      "bytes": 9854,
+      "sha256": "efbf3fdd54f56a498a3928ef561bf5ca1d72a73fb5d83b88fa4f1db4fd670b95",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_recovery_journal.rs": {
+      "bytes": 44860,
+      "sha256": "3d300107ffc930ad1201c0885723cd89fce72872dcdbfac79cc2d04ac5531c58",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_resources.rs": {
+      "bytes": 10762,
+      "sha256": "8a75a5c274ed4a5d97603fc10b3d7f44da6e717143f9b96024ac405d2c758395",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_trust_history.rs": {
+      "bytes": 25132,
+      "sha256": "dca981fdb57f72daec4ed1de78cf4a2bc2f87f30a4d7ab43948ed6f949cdf318",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_trust_transaction.rs": {
+      "bytes": 53372,
+      "sha256": "f7f7721f50c53c5305c2e8e0ac116f110c2babf2a9479492d0be5ce65f7220ee",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_witness_active.rs": {
+      "bytes": 17930,
+      "sha256": "262a08557112c8ba672df09bddd132f33b477461aa59f4a8ddc735906125d408",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ddr_witness_evidence.rs": {
+      "bytes": 51970,
+      "sha256": "9c9f388e7c035ad3ea6d74e3642bc33a45403aa8a90eb2d87199c6f9d4311cbe",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/direct_transfer.rs": {
+      "bytes": 16891,
+      "sha256": "67a6e25c2a19490ef5d8c2f2b8c2c3cc209ba0274dedb78ad3d966b7e3887e6c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr.rs": {
+      "bytes": 93839,
+      "sha256": "d00151837b17cbe87f9e20b80102595a0d4a0e93aabf3aeefb2b8635975b4282",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_capability.rs": {
+      "bytes": 19600,
+      "sha256": "5ebf95471e84ecd07ebc17b23d531ec655e148c248b0ad7a675dc827079f16c6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_capability_tests.rs": {
+      "bytes": 26500,
+      "sha256": "6999b174eca8c4e9b1bcc7ecb1d8b44b80d8f2f6b68c2a266b6e540f02006082",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_copy_admission.rs": {
+      "bytes": 33589,
+      "sha256": "a82cd08f38fd5a0cc7f7edcf84fdfd174dd5bc4c18328a2fa3ec9186b609e8d0",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_public_tests.rs": {
+      "bytes": 8554,
+      "sha256": "4e0ba058cf4fa150f57e76ce5dd59d0fa70dc8e75428b9632f9a436c721779bb",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_tests.rs": {
+      "bytes": 111211,
+      "sha256": "516295ee5f91d84f7be9c9cc30c3944780d880d86d87a9fd9c01d82df33278b5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_transfer.rs": {
+      "bytes": 26316,
+      "sha256": "0e6397f94089d70dc26a198809c98c92fc5802841948938f1315e725085a1815",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/external_ddr_witness_tests.rs": {
+      "bytes": 63780,
+      "sha256": "b1cf6b387be3aa67c77cad2dfece5f2dcd5ce8aaf78e04007fbcc93b249dde5b",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/main.rs": {
+      "bytes": 28667,
+      "sha256": "e46d6b3a1451d70d3ce262694ed3c0204769033d05ea3b3cbe9e8b6e6d010e6c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/managed_pool.rs": {
+      "bytes": 35885,
+      "sha256": "98990f8d26c5d78b6d8ea0115ef07045a3c0dc1078c19767a245fabe0942635b",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/mem_service_pool.rs": {
+      "bytes": 45649,
+      "sha256": "7afcb10b4abab64073d15b2854d44051f991a7ac9b4ea3182db4a0f7156bf5da",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/object_service.rs": {
+      "bytes": 50006,
+      "sha256": "9d6481d9911ef9a77cbe5ef14f32984c8cb55ec03982e255d3e0f04130b05ba4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_provider.rs": {
+      "bytes": 13689,
+      "sha256": "aa496831fcf3937adbb9e2dc9778c1f8e444e3c53ea8e6287d4914312ec0374a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_quarantine76.rs": {
+      "bytes": 13634,
+      "sha256": "0cc1bf38051264c2277d2d8f14c5a8947d7943b9e373bcad260f27f6bf2ef4d3",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_ranges.rs": {
+      "bytes": 13104,
+      "sha256": "2e259147e29379c4b79c357db0d571d392ab91b82a6a631f6f2e4c7782687aa8",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_reconciliation.rs": {
+      "bytes": 12725,
+      "sha256": "0bceeb3fdf9a572d92f44f1fc8ed23ebc554127d806d30ff3407270a5b8ba9b5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_retained8.rs": {
+      "bytes": 19508,
+      "sha256": "2f8001f8d3ddaeca7b995f1cecd4f46066001936a9d86a68a4ae864004af5497",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_service.rs": {
+      "bytes": 34661,
+      "sha256": "758299ef8714fdf8d16ac073eeb98a4266bbcb46047dea1ee2c0dbdad20b1131",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/pool_wire.rs": {
+      "bytes": 8645,
+      "sha256": "27f61724e30b587aeef47e3766399c64d2c4a30d260caf2ad8c4683c1ae3d9ea",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/protocol.rs": {
+      "bytes": 39,
+      "sha256": "ebdaa8b855ead5fd6f57908a4cd17807c4f4cb322d694391d4050fbb2d04eb1d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/providers/local.rs": {
+      "bytes": 3549,
+      "sha256": "fb6077f45a0367d874ab5ddd7c9840512deafc89eefaa278220cbd0c98e57210",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/providers/mock.rs": {
+      "bytes": 27690,
+      "sha256": "cd0e202eb2467ae1be7c927887b9f9909f63a75d54d97107fcef16490588520c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/providers/mod.rs": {
+      "bytes": 234,
+      "sha256": "a552f91a97d64581f1cd7dcf857abab2257a633ca9b59b49b1f25c4a9870e7e2",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/providers/registry.rs": {
+      "bytes": 2612,
+      "sha256": "ce317c30a8143321784302718d313af8afccfa7d80658e6abf6b431b24cce704",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/providers/ub_sim.rs": {
+      "bytes": 38169,
+      "sha256": "2678251f18b07b940b48e5bc34e763537d20013a1eefe526f410b321f11a7372",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/router.rs": {
+      "bytes": 4220,
+      "sha256": "9468e287326c28fe8909ed08abdb010bdbaf55a947e4e668f09ced05d4a80fb0",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/sim_object_service.rs": {
+      "bytes": 50514,
+      "sha256": "779dc7b7726851d07aeced3343498e51825cd6b33d337a8f55842154f0e5f3ad",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ssd_backend.rs": {
+      "bytes": 9484,
+      "sha256": "98d67c244dffa0f9736a842eae35ebe916ff31610074478b7a30094bf1a3ed40",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/ssd_direct.rs": {
+      "bytes": 21016,
+      "sha256": "a2b7d415c526b46bcd3d2dd5eacbda25d39dc5e54d2a102ad6895420828fee4e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/stats_service.rs": {
+      "bytes": 15739,
+      "sha256": "e2c89a38bee12915dadfa8f2b161fb6f71acce81e12d19ec4f96c0f2b193a765",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/trace.rs": {
+      "bytes": 65305,
+      "sha256": "f0977556ab049dfd0ecf7895019ed2f51f67b4dc51d525ae8ac9924ae20ec53a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/trace_api.rs": {
+      "bytes": 3558,
+      "sha256": "44bacea6eaf80def1d7971d65067ed1963d635a8573374a44e05c0626d93b583",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/transfer_channel.rs": {
+      "bytes": 18060,
+      "sha256": "43a121d8be2c62999a58b96cb411dbb901236d437eaf573323ceb98ffd04f034",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/transfer_executor.rs": {
+      "bytes": 82411,
+      "sha256": "0d4cad91cd9c250d6066e60b624e2c98b67c068b245135695f2bd1ac086d9957",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-daemon/src/transfer_planner.rs": {
+      "bytes": 22251,
+      "sha256": "16263e77f463fcf1cd18622932c9e18693fa105f732c90dc3c0b9a3863745f2e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/Cargo.toml": {
+      "bytes": 202,
+      "sha256": "1e5c6623ffd74812e93221f411f6023b9d2f04fb482e61d912725eb87db49d92",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/Makefile": {
+      "bytes": 388,
+      "sha256": "e40a76ddbe4381d565b82d52018ffdaba3a486d3554c40133df0b4709ccb5f9e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_agent.c": {
+      "bytes": 24152,
+      "sha256": "dad88f19816ddd49af60a6ba689f2f41c7baa5e6dc5b71c6e63280d1514e69a1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_agent_io.c": {
+      "bytes": 2217,
+      "sha256": "fd4be5eb8cf570f138ec08d99ac1fe5e80a63dbe4ea2284d0618ef1591535369",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_agent_io.h": {
+      "bytes": 318,
+      "sha256": "df6c4e9b2f8fe4122620e1a21988b52526ff920dd5005d0debe22ca00396eb1b",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_client.c": {
+      "bytes": 19252,
+      "sha256": "1e56609018a718513ec2b81de9cd2b7c8357fd49b04b46e4af6140b3e09556a3",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_control.h": {
+      "bytes": 3187,
+      "sha256": "e37719321643adede7e4a4fc28d3e518866fe43163382cfa0a8a1946c1f0f266",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_guest_init.c": {
+      "bytes": 3844,
+      "sha256": "e92208094d609eb00edcaef5a8c0bad5d15534915dd381f797573745033ec515",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_journal.h": {
+      "bytes": 3260,
+      "sha256": "8c9a622d966ed5a5641b48140b55c5af5cb19b9b8b76b862381ff450b5a34fc5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_lower_wire.h": {
+      "bytes": 2669,
+      "sha256": "63ca3a413eaa8dd94c09b5cb49ab38c788e29dedc6765fb392ddebb2fc238d10",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_platform.h": {
+      "bytes": 1397,
+      "sha256": "1abdafe72a1cb0571ab44b67918cbeabd175a76ff61c7d724ca264d556459035",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_platform_obmm.c": {
+      "bytes": 5577,
+      "sha256": "16767b8b7f60930d4fafb7e3abe1b0957bf5b62e7f71636ee0d780a5af69e37e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_worker.c": {
+      "bytes": 3325,
+      "sha256": "cc3d16b68616971073d8348e4a6bf2c4dbd71261fb71f00fef09570f67dcdb74",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/pool_worker.h": {
+      "bytes": 734,
+      "sha256": "61c4e5ccd47a0ca8b978dbe9c539af20d7eb449fd2429add88a3ee5d04c78bee",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/c/uf_ub_sim_agent_obmm.c": {
+      "bytes": 29946,
+      "sha256": "68552a591ae38529f3c36f045db5d52757df1f03103938962a8d23aff9ded5d5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/src/lib.rs": {
+      "bytes": 3703,
+      "sha256": "43658bdeeac8a301f0466945e7c54a975f838482251f556349da7bdf07d382bb",
+      "mode": "100644"
+    },
+    "implementation/source-host030/crates/uf-ub-sim-agent/src/main.rs": {
+      "bytes": 1192,
+      "sha256": "f929a9b6d6db645e907998935704d0761eb4263974ff81d747803ceef808aa98",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/README.md": {
+      "bytes": 8555,
+      "sha256": "5554f10105c98bf5400ba471890fad9916fd68f6d2ba9628c6293e53f72a2711",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/resources.py": {
+      "bytes": 2157,
+      "sha256": "c72eee666995383e44dc40afe61f74c2c156b80d2487d793b6d8644bf922f57b",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/session_adopt.py": {
+      "bytes": 45798,
+      "sha256": "56cd70ab22164d713344712237585cf7ce364ec47467a462bed322fc78a406f5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/session_owner.py": {
+      "bytes": 23103,
+      "sha256": "e6b7c1ccbf61cc8da8fc491509d59dbb1d3edc06f635a84cc68a58af2e3e28fa",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/session_parent_pins.py": {
+      "bytes": 633,
+      "sha256": "b960d3b292e67992bbd77bda7fd1c78331bffd048025295c9eab85b8dc63fdc8",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/session_protocol.py": {
+      "bytes": 4436,
+      "sha256": "eaabc3dedec544bc49662dd6c238769be0b52a6854da9414d3388177427e32ff",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/sessionctl.py": {
+      "bytes": 1879,
+      "sha256": "d429d2912f55fdd5eb3d3eb004fa78fd74d1170f6e8e77a34ca9bb23dba683bd",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/test_finalization.py": {
+      "bytes": 27191,
+      "sha256": "cc59ddbdf1ac9c0740dc40ffbc0f323e55e345ec91edf5eeb7d888d17236dae0",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/test_recovery.py": {
+      "bytes": 34802,
+      "sha256": "c4fb1a935bb24f56ccb987d1e7726b40a4f80afdcc901db5e98fab66d4580357",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/common_session/test_session.py": {
+      "bytes": 5846,
+      "sha256": "fdf419d217997a77f781f98d0a72d09d1379f894ef74c6827de55e44f982a3b3",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/README.md": {
+      "bytes": 9898,
+      "sha256": "5a6e73d2ec8b2c82de2f236cab576a4b1cfbf2f3aa5f6e91c9c0aed84e097f76",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/d2_g_acceptance.py": {
+      "bytes": 17574,
+      "sha256": "342f78e8194f9f091d5a22206e31d674e1a8eb3c2ea9f11cfb0524af859e944c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/d2_owner_peer.py": {
+      "bytes": 9972,
+      "sha256": "7dad2efd664731e74b64f1aac53dae0b1edc2347cc36ca02137a72106d00c0bb",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t1_external_ddr_review_regression.py": {
+      "bytes": 23473,
+      "sha256": "55daa1b45fcb74960f3e471a5add177d1bf98d7b5b4143203f5e565808de3dda",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t1_external_ddr_smoke.py": {
+      "bytes": 24937,
+      "sha256": "b925100b3e91a6bb4efad78b663d47ba10402a30f9cf30392cddac683f78de35",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t2_topology_scenario.py": {
+      "bytes": 11668,
+      "sha256": "a39c7c6656d345e60f96f3a790ef2777e828bf0dc70e1fb85e7a4844fa299329",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t34_public_probe.py": {
+      "bytes": 22777,
+      "sha256": "6bdbb3a35b57ece4c547f6202cc7f9d5ca23c0c056009da3ea2c5e5b8c7dc10e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t35_calibrate.py": {
+      "bytes": 32781,
+      "sha256": "268c83768060b948d1cedfaef5129d4d3fbd872f327077b4d2bb355d45c90d5e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t35_cooperative_run.py": {
+      "bytes": 4258,
+      "sha256": "ecc0e63fa451eb033cd30406ebc1837db091d7eca71940690c85be6fe91b287d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t35_cost_model.py": {
+      "bytes": 6126,
+      "sha256": "bc4a4e59511f7e50cd9c49567943d2c6a669019a9ba32bbc23d1d571981e827c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_deployment_witness.py": {
+      "bytes": 38617,
+      "sha256": "f98fbe060a527ff95347147f411c7618812944538b6668bd1033ff746548c54f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_deployment_witness_tests.py": {
+      "bytes": 10530,
+      "sha256": "a5a25c7a97cdf6b058e9a214af7423ed6b2b5dba41d7adf31b88d19186b8ed59",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_isolated_bound_probe.py": {
+      "bytes": 20159,
+      "sha256": "c9840f8ebd3ba2738a4a96ce060f80fc036c4e42f2ac433b6e2d029e2ec12dbe",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_isolated_mount_probe.py": {
+      "bytes": 29849,
+      "sha256": "3fb98b4d6ce45f7033b402184fc9419ee4c4bd1eb4d017dd8dcec576bc34130d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_normal_authority_probe.py": {
+      "bytes": 30775,
+      "sha256": "5b6910291b3fc4a390137cdd71e03121e8137f0fdc654a73ac53960e432a31f2",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_production_fail_closed_fixture.py": {
+      "bytes": 5543,
+      "sha256": "c511d7513d885e25987ee7b8354220039d649542bd3f1bfd86828cfc727ffb9f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_supervisor_wip.py": {
+      "bytes": 33815,
+      "sha256": "8022edc0f16e5ff31b4e83df9feb6c3a93ce43885bd266dc7b0ab254361c6549",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/t3_witness_pin_wip.py": {
+      "bytes": 36960,
+      "sha256": "e796bcfc5a22099be0852d9f913ca57a226e9b84d0a4df3905c5489f0986ecf6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t34_isolation.py": {
+      "bytes": 888,
+      "sha256": "1b59afbffdfa08d6922de2d63716262be109866d1da64ed96a7c90ab795ad832",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t34_sdk.py": {
+      "bytes": 1579,
+      "sha256": "1d1bc0836ca72261a4e5cbd6fa42c3fd25f2df66018bc3ddd97b300257961e92",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t35_calibrate.py": {
+      "bytes": 15752,
+      "sha256": "0afac51f8f6ae90991e139dd97ffcdd4b4f6b11db3630d900dd428dea7861d26",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t35_cost_model.py": {
+      "bytes": 2281,
+      "sha256": "61f92b79ee51c1de06e13cf6127e151fa66d828c378ad47cd985e6368c93dddf",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t35_observation_delay.c": {
+      "bytes": 2264,
+      "sha256": "fe18902315d746c261afe8c50d35ec9c6a722369f1b58b7683c50bbd2f6c5c96",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t35_private_regression.py": {
+      "bytes": 22191,
+      "sha256": "f8a5aefabb6bf5c883904b01fe911d03c2438318bd570c7809ab3988a10a987e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t3_normal_authority_isolation.py": {
+      "bytes": 4681,
+      "sha256": "2f37fb416b2054ef267b20e6ccebd288d638c26df70b55c616f132e5b8e61859",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t4_eagain_delay.c": {
+      "bytes": 2633,
+      "sha256": "9b38834fd41886b43c66529478591001d446609c26174780ca43d095c24ba62e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/ddr_v0/test_t4_eagain_private.py": {
+      "bytes": 22767,
+      "sha256": "081970bca22f906cfe2cca609962edb019e8bd7bbf4514d006d212bbc5c3d5be",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/README.md": {
+      "bytes": 6267,
+      "sha256": "dde82e1ec7acd44b64c4c8f71c69523e97551cf463cb5d10e25108ce5205a782",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/api_fence.c": {
+      "bytes": 15439,
+      "sha256": "67ce289f883fbeb6fc4253a9cd33603d74afeffc79db00f43a65c59bc1256948",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/blocked-symbols.json": {
+      "bytes": 2064,
+      "sha256": "8e55e7a9ddb5a8b3da334765ea4043a085ce52933d01bf28c95ebe852c7e00d8",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/client_peer.py": {
+      "bytes": 7769,
+      "sha256": "f3037b4e32e2627efa0bb6e14e99a086a962426d98690c5605ad16b3622e7da1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/fence_probe.py": {
+      "bytes": 1109,
+      "sha256": "4d523d47253648415af1f4e89f0088a84d3778a34c8e01b6d93cb7a23b26b78f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/fixtures/a-kernel-and-fds.json": {
+      "bytes": 7356,
+      "sha256": "8f623ef2f5b768f80fde0971dd71f1b034dae3f1895ab902b3bbdde4b1d4c051",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/host_guard.py": {
+      "bytes": 12396,
+      "sha256": "af50a873a0a6553f85e999fabd973dad95cb6f2b4a5fa5094318e226deff1687",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/host_probe.py": {
+      "bytes": 20074,
+      "sha256": "f7d8f1dc6ffc6210394a1eeb076e64f4ca8374af13edd8c4ecb88fb216c0a7b6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/test_guard.py": {
+      "bytes": 7614,
+      "sha256": "cfb97708eaedece118ec0376d3cc5c5f9169e677946ad71e70ed961884667472",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/managed_pool/test_sdk.py": {
+      "bytes": 13802,
+      "sha256": "5571f28f5ad2dad8aad2ea3c024c5ae97a97eac7af1dc00a623b4263a4644f06",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/README.md": {
+      "bytes": 17786,
+      "sha256": "3f5b7454c4089f9617e6ffab0549b510a5b430bc73acecf1984360040f1ccd5f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/client_peer.py": {
+      "bytes": 1745,
+      "sha256": "1fb79235fab7e391cfe181e1660db424a3bc44cd3a65315e5031f41d26a270b1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/fixture_memory.h": {
+      "bytes": 1522,
+      "sha256": "c821ff8ec2a8ca10ed5a0dae34f9562df245e0046a6e3c45bf029672072c59b2",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/fixture_platform.c": {
+      "bytes": 5665,
+      "sha256": "ca7c44a3174f2aeece46054829c4e0c575758fb0ed504742b4ceff4eb82d43e6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/fixture_worker.c": {
+      "bytes": 3709,
+      "sha256": "d324bbbcba8b4b8be86300f7afb3ca82262e1298e106b0522aec363fd96d334c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/journal_cpu.py": {
+      "bytes": 2677,
+      "sha256": "30bb6ae019391cdda2c0b2fcdda44a4fe0df0ec748372ed2c7bce33e82632dc1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/kernel-profile-interface-v1.json": {
+      "bytes": 2171,
+      "sha256": "44e812ef6c3d5ac0092a6671fd4470fb19e4d082424ccaf4df49617b6bd6b6c2",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/launcher_cpu.py": {
+      "bytes": 2075,
+      "sha256": "20ff1dfb2977cf253ecd1f4dcfa10f658db98e26c413488a42d4056908a33a3d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/matrix_entry_cpu.py": {
+      "bytes": 8492,
+      "sha256": "1982cd2828dcad98bb999b555f889d9e530ec62dd82941751c42cf36b39d1fbc",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/original_reconciliation_cpu.py": {
+      "bytes": 2713,
+      "sha256": "dde5d93006b76619842a0fcf04e8568d6e8ebcda62497d9ced2c3033fbf50525",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/profile_consumer_cpu.py": {
+      "bytes": 7513,
+      "sha256": "bffbeda509204b4fe6bd93eaab8551cba7b6107aed04baceeada234b6d9d67db",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/assessment.json": {
+      "bytes": 6023,
+      "sha256": "f4e89d644df46d78cf4b611ed51f10efc5bc0b99591281b95f5a26a65e57aba4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/bindings.json": {
+      "bytes": 55911,
+      "sha256": "4be0e3bf51e7fd2d3d09068c1b8f3aae6a3f0dae0deb934e5bf10761da066366",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/quarantine76-assessment.json": {
+      "bytes": 13304,
+      "sha256": "0c147898be722733e5d48b4c27fa60a3fb5a97f1a836394eccf3307ff4e57e13",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/quarantine76-cpu-documents.json": {
+      "bytes": 1777561,
+      "sha256": "0883cc2887abbf7c5d781e50b08826c2d2b97e9ebc9b44bda79871bcef556fb5",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/quarantine76-cpu-proof.json": {
+      "bytes": 297824,
+      "sha256": "117701874e2b427fd8770f45607cf7d7186b88969b9bb3bb06906deb19d1b981",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/retained8-assessment.json": {
+      "bytes": 7409,
+      "sha256": "b283ec290bb2487d3e81380cc5dc8cd0b5fd9db34b76eb0488171f8066600151",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/reconciliation/retained8-cpu-documents.json": {
+      "bytes": 687172,
+      "sha256": "d2de41a6aa595e40e0e0eab8f89d6b608ab392ffbca1f92691427178fecfb5c1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/retained8_lock_cpu.py": {
+      "bytes": 1900,
+      "sha256": "3e7db1cca04bb411be12a6e222afb38592ffea74f792a6e633d6efadfdd96f10",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/staged_catalog_cpu.py": {
+      "bytes": 6492,
+      "sha256": "c31b0495752fb058a2dce562b697695c9f9aff8148067b00e1e650fcb987fcf3",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/startup_cpu_probe.py": {
+      "bytes": 16664,
+      "sha256": "6abbbd75e99cd2e5c64cd0628b4c31c2708cf4bc2abc80b4a58b694b6ff90d42",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_contract.py": {
+      "bytes": 7637,
+      "sha256": "b503db4f2db69e5a8c784252a7c956dc145668b7c0bb83f19c4e7f0dddcbf7dd",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_host_revision.py": {
+      "bytes": 9431,
+      "sha256": "8c0c5f1205211b3862a512090f769011e15dbd986f1e24f1f393f85908bd8d49",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_journal_capture.py": {
+      "bytes": 1054,
+      "sha256": "578c9d4b2d2a8ee05f25a95caabf83f3f96e32ac38f202971a4716d90cb5edba",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_kernel_profile.py": {
+      "bytes": 4470,
+      "sha256": "a27aab615be8e161a8ae586f276aaed93ececf26ec666adc1848b367d0c72412",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_platform.c": {
+      "bytes": 8345,
+      "sha256": "d8afce586eca404201d52287050749b1029097c90601fe32aa45c80598c5db99",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_quarantine76.py": {
+      "bytes": 4997,
+      "sha256": "a024a0bfccd9cf01bc1237620d74e47684e0974357065c217653349353a7431e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_quarantine76_fm.py": {
+      "bytes": 3607,
+      "sha256": "079d6ddd3dd939ba83de2c743b28d1201e50e2647d539299ef950b5068f8576f",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_retained8.py": {
+      "bytes": 8467,
+      "sha256": "bd014cde31e1574ae29bf299b0954cc5da5681901fcad74ae99778991822ddb6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/examples/mem_service_pool/test_startup.py": {
+      "bytes": 5886,
+      "sha256": "14b221e675bf3c26a3e9fa6b3f894c408e6aa0b656544ccffe558fe2219b6a8a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/__init__.py": {
+      "bytes": 1712,
+      "sha256": "bb529fe27ed36eb0a4e5ced2e739411e270bcf13383001b601ca517064f6f328",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/_managed_pool_wire.py": {
+      "bytes": 4147,
+      "sha256": "c61fdf8f9c19261b9386ae5c64e1ac8e2b81cf41238ee9c8f3c24c7cab59015e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/_pool_bridge_v2.py": {
+      "bytes": 4703,
+      "sha256": "804e0c88db1ee5a94f02b2fb1386028b1f5fde17833acd85788e6f18738e51cd",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/acl.py": {
+      "bytes": 18582,
+      "sha256": "afdb41d368332394adca2b0e76286273f10a5442d66ef7c2571f4d20de9b9bd6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/client.py": {
+      "bytes": 44269,
+      "sha256": "9d57414c6e3a6481a958b477e5c86665bc9f62db1f056629ab824f3a0762821d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/event_pipeline.py": {
+      "bytes": 6812,
+      "sha256": "71d51464bb4b6706b6869fc76634f13c4abaa77ecf65e4d51468e3cc15733629",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/external_ddr.py": {
+      "bytes": 16263,
+      "sha256": "c8a918de0e5c152f79eb143f69daefe44a84baed48e7d25983ef8d1760f5e4e4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/idl.py": {
+      "bytes": 14241,
+      "sha256": "6dbe99268b7d59c81c56770157d01f07c65b50701a6c4024e45bc9f7c1bffaf4",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/managed_pool.py": {
+      "bytes": 28144,
+      "sha256": "366f3ea883cec08efd62f23f9ebf2afa8546c02a777ff25fdf753fee1debff0e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/mem_service_pool_v2.py": {
+      "bytes": 7727,
+      "sha256": "99e8e599cbc5eba1814ea842f093eb52ae2e8812b0ffb1883e3eff8d3f2115c1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/objects.py": {
+      "bytes": 5759,
+      "sha256": "3e960ba149769caf6d3a001ca3f3eb9a5368f885085bc53e13eb7ba12f9d498a",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/pool_provider.py": {
+      "bytes": 8662,
+      "sha256": "192162fa2423f78485b6f9d2b0783ba0599e94bd4f955bdf0aa9e204003a7688",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/protocol.py": {
+      "bytes": 1488,
+      "sha256": "1a71ef905465f0a4975b99a28df3c34310f90ce633a9f301f8b4effd57f773c6",
+      "mode": "100644"
+    },
+    "implementation/source-host030/sdk/python/uflow/transfer.py": {
+      "bytes": 405,
+      "sha256": "5f07efb3f4e4b8f8ea4004ef550654542080780dab1481d019b68f83c82f2e1c",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/build_mem_service_pool.py": {
+      "bytes": 17198,
+      "sha256": "e3910802e67cf720169751b909a3c90aecd23bdbdf984ee44169b42a269e80b7",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/build_pool_worker.py": {
+      "bytes": 5619,
+      "sha256": "7a878d241e4bcc9b51a1060258a0927013f8a7ffa864f434315c63e9e85bf11e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/kernel_profile_gate.py": {
+      "bytes": 4961,
+      "sha256": "84cb9c2c2e34b82b9bfbd6b4b67a3ad0214a96c7a15a6ea79e9ec704e2accf0e",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/mem_service_pool_bridge.py": {
+      "bytes": 18393,
+      "sha256": "960ecb69bcdbe8f5ec81cadb125b4f14ac5b8460c99dfbd1e2c81797f1095ca1",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/phasec02_payload_scan.py": {
+      "bytes": 5260,
+      "sha256": "77bde1a869c4fcd79b53c5b91a16a2c523812b4591d47d18fdcfa1a815048803",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/pool_journal_capture.py": {
+      "bytes": 2091,
+      "sha256": "4c7ab39ed5d3f641eddba776820d999750bfd9be731f3f035daed5d2ef5e5512",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/pool_matrix_contract.py": {
+      "bytes": 5108,
+      "sha256": "0522501f5ef62feef900ab4ad1aa2f3918219180889929c51ea6673b6fd43852",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/pool_peer_io.py": {
+      "bytes": 3819,
+      "sha256": "3998565e23cff03f4161ccd4ce0253bf4f0f1dd98b0df59f52ec86afa211a4f8",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/pool_startup.py": {
+      "bytes": 9724,
+      "sha256": "76753f531deca79664fe1817bfd77a3db750c4432972943c22215f5c72c8116d",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/run_mem_service_pool_matrix.py": {
+      "bytes": 22452,
+      "sha256": "9fb04070d6e4552c97cf2a61e8561926682202576e39681041b1bd291ef4bcef",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/run_uflow_ub_sim.sh": {
+      "bytes": 24916,
+      "sha256": "768158db865b0f6743a40b2642d02b69afa13edb7120874bfb863e1678db9ef2",
+      "mode": "100755"
+    },
+    "implementation/source-host030/tools/phasec/ub_sim_baseline_guard.py": {
+      "bytes": 18661,
+      "sha256": "041ca47b8bae65820fb040471ba7aa0f833293ab5a01fde83ffcd9a1a393ac91",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/verify_original_pool.py": {
+      "bytes": 8777,
+      "sha256": "1045a42e15e6eb77ed3b31ecca4afe094b2609670743d9b2b25215d1a6fa6bfc",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/verify_quarantine76_pool.py": {
+      "bytes": 13067,
+      "sha256": "8869d83edc5e873f69deab8c0aaf87e05b4735b1dc71dd7ce4d4a11a7c055d62",
+      "mode": "100644"
+    },
+    "implementation/source-host030/tools/phasec/verify_retained8_pool.py": {
+      "bytes": 17566,
+      "sha256": "ec012b93650d8bbeec0650851c515eaf8982eea1db3845ad260cc2309d7924ea",
+      "mode": "100644"
+    }
+  },
+  "FM40": [
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207817538,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207817536,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207817534,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207817530,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207817529,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+      "dev": 63,
+      "inode": 207817535,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207817532,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207817533,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207817531,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c013",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+      "dev": 63,
+      "inode": 207817527,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207830898,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207830900,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207830895,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207830892,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207830891,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+      "dev": 63,
+      "inode": 207830889,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207830893,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207830896,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207830894,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c027",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c027/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+      "dev": 63,
+      "inode": 207830897,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207840808,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 207840810,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207840806,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207840801,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 207840802,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+      "dev": 63,
+      "inode": 207840799,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207840804,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 207840805,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 207840803,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c033",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c033/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+      "dev": 63,
+      "inode": 207840800,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 206981600,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1.ini",
+      "dev": 63,
+      "inode": 206981598,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 206981595,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 206981592,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1.status",
+      "dev": 63,
+      "inode": 206981591,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/device-cc08-0541-0-2-000000-0000000010041c4d.ini",
+      "dev": 63,
+      "inode": 206981597,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 206981593,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeA_ubcdev0__1_to_nodeB_ubcdev0__1.notify",
+      "dev": 63,
+      "inode": 206981596,
+      "uid": 0,
+      "file_type": 4096,
+      "actual_blocks_bytes": 0
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/nodeB_ubcdev0__1_to_nodeA_ubcdev0__1.ring",
+      "dev": 63,
+      "inode": 206981594,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4198400
+    },
+    {
+      "job": "c039",
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c039/fm/device-cc08-0541-0-2-000000-0000000010041c4c.ini",
+      "dev": 63,
+      "inode": 206981589,
+      "uid": 0,
+      "file_type": 32768,
+      "actual_blocks_bytes": 4096
+    }
+  ],
+  "executed_runtime_closure": {
+    "source_manifest_sha256": "43b8677bb7104fcd02c13517247749647d7df01b9bbd3b4dde3a9fc435a91eac",
+    "build_receipt_sha256": "730f5b2e524187a02aa853d83d03ab8080a3d3cbbd389885032ea79f60cb5d9f",
+    "kernel_profile": {
+      "manifest": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/kernel-profile-sep-v1/release-v2/profile-manifest.json",
+      "manifest_sha256": "8cdb2550448363a127d6eb30b5cde5fa5c21a2f0427ce30a5b40532779d2b939",
+      "validator": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/kernel-profile-sep-v1/release-v2/uflow_kernel_profile.py",
+      "validator_sha256": "a7ee8ce56544fd4391b6a35864e1a3a0a249005f271898b08940c5ee4a47c864"
+    },
+    "selected_kernel": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/kernel-profile-sep-v1/release-v2/Image",
+      "bytes": 44360192,
+      "sha256": "95165fea380ed231b609d4a2a71cfe9b877cac52b7bc44e39a870c839a676ada",
+      "embedded_config_sha256": "789fb96c370aa7ad04bcf7aad2df9b97c7145132844459e88a10829fc46f3c78"
+    },
+    "initramfs": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/build-host030/pool-agent.cpio.gz",
+      "sha256": "83bac57de3dad16d8d8dc41ea4e090f16a61788a555ea17881ecc7e94fabd2d1"
+    },
+    "daemon": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/cargo-host030/debug/uf-daemon",
+      "sha256": "8a3f47a96de8fa46f1b31be459b2daa14cdb53661d74fe1f2313984bc2f33dbf"
+    },
+    "frozen_runner_sha256": "c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727",
+    "frozen_supervisor_sha256": {
+      "task_supervisor.py": "7b23344b2cd9c51504e2389682f31b6dfa2e9567ed5a8bfda49dfb73ddf70827",
+      "task_lifecycle.py": "9370260295844d433ac9273a255304b6b5e66d52c26b58cde758460dd594ad8c",
+      "task_resources.py": "bdc057af7a5790c7ab181289072326b7a81fc397d6d08c6a6b5e08066e01f607"
+    },
+    "frozen_group_sha256": "05c2dcc01e6b24aed7e14bd6a77fcf8078f5c4f5e0fccd412833e58280ebdcd1",
+    "require_fresh_SDK53_worker233_and_actual_cpio_three_ELFs": true
+  },
+  "old_retained_canaries": [
+    {
+      "SDK_checked_close_confirmed": false,
+      "backing": {
+        "generation": 4880593255571531467,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:3b313ff6-8659-42a9-9355-65b5062796a7",
+        "resource": "canary:nodeA:4f391613-d1b7-449f-9693-eca34acfd8d1"
+      },
+      "boot_id": "4f391613-d1b7-449f-9693-eca34acfd8d1",
+      "nbytes": 2097152,
+      "node": "nodeA",
+      "object_id": 100,
+      "provider_session": "d0fce298-a1bc-4a4f-b6fe-af025b1fc0fd",
+      "state": "UnknownCanaryClose"
+    },
+    {
+      "SDK_checked_close_confirmed": false,
+      "backing": {
+        "generation": 17781258242669297840,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:3b313ff6-8659-42a9-9355-65b5062796a7",
+        "resource": "canary:nodeB:a3ad7c28-6f73-4cf3-acde-7c87ef01a11c"
+      },
+      "boot_id": "a3ad7c28-6f73-4cf3-acde-7c87ef01a11c",
+      "nbytes": 2097152,
+      "node": "nodeB",
+      "object_id": 101,
+      "provider_session": "d0fce298-a1bc-4a4f-b6fe-af025b1fc0fd",
+      "state": "UnknownCanaryClose"
+    },
+    {
+      "SDK_checked_close_confirmed": false,
+      "agent_session": "a3c0fe8d-0c0d-4e63-a335-e8f9cde31dd2",
+      "backing": {
+        "generation": 17112542082077309124,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:979fee02-0af6-4591-a67c-ef1690eb09fb",
+        "resource": "canary:nodeA:a3c0fe8d-0c0d-4e63-a335-e8f9cde31dd2"
+      },
+      "boot_id": "a3c0fe8d-0c0d-4e63-a335-e8f9cde31dd2",
+      "canary_prepare": {
+        "canary_bytes": 2097152,
+        "canary_descriptor": "4d535250000000010000000400000030000000010000000000000000002000006f626d6d4d534f4200000001000000300000000000000000000000010000ffffffe000000000000000200000000000420000c4c2",
+        "canary_prepared": true,
+        "checksum": 2077284691325670275,
+        "guest_pid": 87,
+        "phase": "completed",
+        "schema": 2,
+        "seed": 17,
+        "visible_bytes": 4096
+      },
+      "incarnation": 17112542082077309124,
+      "nbytes": 2097152,
+      "node": "nodeA",
+      "object_id": 103,
+      "peer_verify": {
+        "canary_ready": true,
+        "guest_pid": 87,
+        "phase": "completed",
+        "schema": 2,
+        "verified_checksum": 10037920915153761155
+      },
+      "provider_session": "c99fa7b1-e1c2-4b17-8f7c-394cab089a90",
+      "state": "UnknownCanaryClose"
+    },
+    {
+      "SDK_checked_close_confirmed": false,
+      "agent_session": "7ad6c80a-9f51-484a-87df-e448af048979",
+      "backing": {
+        "generation": 12730027966857228167,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:979fee02-0af6-4591-a67c-ef1690eb09fb",
+        "resource": "canary:nodeB:7ad6c80a-9f51-484a-87df-e448af048979"
+      },
+      "boot_id": "7ad6c80a-9f51-484a-87df-e448af048979",
+      "canary_prepare": {
+        "canary_bytes": 2097152,
+        "canary_descriptor": "4d535250000000010000000400000030000000010000000000000000002000006f626d6d4d534f4200000001000000300000000000000000000000010000ffffffe000000000000000200000000000420000c4d2",
+        "canary_prepared": true,
+        "checksum": 10037920915153761155,
+        "guest_pid": 86,
+        "phase": "completed",
+        "schema": 2,
+        "seed": 29,
+        "visible_bytes": 4096
+      },
+      "incarnation": 12730027966857228167,
+      "nbytes": 2097152,
+      "node": "nodeB",
+      "object_id": 104,
+      "peer_verify": {
+        "canary_ready": true,
+        "guest_pid": 86,
+        "phase": "completed",
+        "schema": 2,
+        "verified_checksum": 2077284691325670275
+      },
+      "provider_session": "c99fa7b1-e1c2-4b17-8f7c-394cab089a90",
+      "state": "UnknownCanaryClose"
+    },
+    {
+      "SDK_checked_close_confirmed": false,
+      "agent_session": "81b8394a-1dde-4f5f-b662-ca1c2b4e2c18",
+      "backing": {
+        "generation": 11472797262081211085,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:2e6569ff-ee60-475c-90f2-e99690b5b8e1",
+        "resource": "canary:nodeA:81b8394a-1dde-4f5f-b662-ca1c2b4e2c18"
+      },
+      "boot_id": "81b8394a-1dde-4f5f-b662-ca1c2b4e2c18",
+      "canary_prepare": {
+        "canary_bytes": 2097152,
+        "canary_descriptor": "4d535250000000010000000400000030000000010000000000000000002000006f626d6d4d534f4200000001000000300000000000000000000000010000ffffffe000000000000000200000000000420000c4c2",
+        "canary_prepared": true,
+        "checksum": 2077284691325670275,
+        "guest_pid": 88,
+        "phase": "completed",
+        "schema": 2,
+        "seed": 17,
+        "visible_bytes": 4096
+      },
+      "incarnation": 11472797262081211085,
+      "nbytes": 2097152,
+      "node": "nodeA",
+      "object_id": 105,
+      "peer_verify": {
+        "canary_ready": true,
+        "guest_pid": 88,
+        "phase": "completed",
+        "schema": 2,
+        "verified_checksum": 10037920915153761155
+      },
+      "provider_session": "dd017451-a360-4fff-a968-377dbd140a37",
+      "state": "UnknownCanaryClose"
+    },
+    {
+      "SDK_checked_close_confirmed": false,
+      "agent_session": "3ad36ea6-9bb7-4661-8e80-dacb3694ceee",
+      "backing": {
+        "generation": 11682101789345560668,
+        "provider": "mem_service_obmm",
+        "realm": "simulated:mem-service:2e6569ff-ee60-475c-90f2-e99690b5b8e1",
+        "resource": "canary:nodeB:3ad36ea6-9bb7-4661-8e80-dacb3694ceee"
+      },
+      "boot_id": "3ad36ea6-9bb7-4661-8e80-dacb3694ceee",
+      "canary_prepare": {
+        "canary_bytes": 2097152,
+        "canary_descriptor": "4d535250000000010000000400000030000000010000000000000000002000006f626d6d4d534f4200000001000000300000000000000000000000010000ffffffe000000000000000200000000000420000c4d2",
+        "canary_prepared": true,
+        "checksum": 10037920915153761155,
+        "guest_pid": 87,
+        "phase": "completed",
+        "schema": 2,
+        "seed": 29,
+        "visible_bytes": 4096
+      },
+      "incarnation": 11682101789345560668,
+      "nbytes": 2097152,
+      "node": "nodeB",
+      "object_id": 106,
+      "peer_verify": {
+        "canary_ready": true,
+        "guest_pid": 87,
+        "phase": "completed",
+        "schema": 2,
+        "verified_checksum": 2077284691325670275
+      },
+      "provider_session": "dd017451-a360-4fff-a968-377dbd140a37",
+      "state": "UnknownCanaryClose"
+    }
+  ],
+  "old_uncertain_business_reservation": {
+    "GSVA_observed": {
+      "bytes": 67108864,
+      "epoch": 1,
+      "fixed_UBA_export_token": 67,
+      "home_va": "0x700000000000",
+      "segment_id": 14177894576915742721
+    },
+    "backing_created_or_absent_not_inferred": true,
+    "deny_cancel_uncreated_and_commit_or_release_without_new_valid_proof": true,
+    "do_not_synthesize_a_canonical_backing": true,
+    "key": "1185859:1322193574:4026531836:45282a1e-2287-4be6-97fa-0e7313c75818",
+    "nbytes": 67108864,
+    "operation": {
+      "key": "1185859:1322193574:4026531836:45282a1e-2287-4be6-97fa-0e7313c75818",
+      "request": "{\"nbytes\":67108864,\"op\":\"CreateManagedPool\",\"operation_id\":\"45282a1e-2287-4be6-97fa-0e7313c75818\",\"schema\":2}",
+      "response": {
+        "code": "Unknown",
+        "detail": "allocation outcome retained: Err(\"provider completion unknown: Truncated\")",
+        "operation_id": "45282a1e-2287-4be6-97fa-0e7313c75818",
+        "schema": 2,
+        "status": "error"
+      },
+      "state": "Unknown"
+    },
+    "pool": {
+      "binding_id": 40001,
+      "canonical": null,
+      "clients": [],
+      "frozen": false,
+      "last_error": "allocation outcome retained: Err(\"provider completion unknown: Truncated\")",
+      "nbytes": 67108864,
+      "placement_id": 10001,
+      "pool_epoch": "0a4af5af-bcf2-432b-87c6-c260913057ee",
+      "pool_id": "9ee3e9f7-1ae1-4220-aa2c-ff4152a89031",
+      "provider_kind": "mem_service_obmm",
+      "provider_session": "dd017451-a360-4fff-a968-377dbd140a37",
+      "ranges": {
+        "allocations": [],
+        "leases": []
+      },
+      "release_result": null,
+      "resource_generation": 1,
+      "resource_id": 107,
+      "schema": 2,
+      "state": "CreationUnknown"
+    },
+    "state": "CreationUnknown",
+    "worker_journal_available": false
+  },
+  "current_unstarted_canary_reservations": {
+    "canary:nodeA": {
+      "nbytes": 2097152,
+      "reserved_object_id": 108
+    },
+    "canary:nodeB": {
+      "nbytes": 2097152,
+      "reserved_object_id": 109
+    }
+  },
+  "current_real_total_bytes": 83886080,
+  "current_real_charged_retained_bytes": 12582912,
+  "current_real_reserved_bytes": 71303168,
+  "intended_only_after_strict_prestart_proof_cancel_bytes": 4194304,
+  "intended_retained_reserved_bytes": 67108864,
+  "intended_total_after_once_only_transition_bytes": 79691776,
+  "never_cancel_or_convert_old_reservation_key": "1185859:1322193574:4026531836:45282a1e-2287-4be6-97fa-0e7313c75818",
+  "minimum_next_object_id": 110,
+  "minimum_next_placement_id": 10002,
+  "minimum_next_binding_id": 40002,
+  "c039_guest_identities": [
+    {
+      "node": "nodeA",
+      "boot_id": "defb1e1e-8047-43c4-afb2-542a1b946c23",
+      "engine": "initramfs",
+      "machine": "aarch64",
+      "uid": 0,
+      "agent_session": "defb1e1e-8047-43c4-afb2-542a1b946c23",
+      "incarnation": 5564708840280271776
+    },
+    {
+      "node": "nodeB",
+      "boot_id": "0c31030d-14d5-473d-a9ce-07d6941c83e9",
+      "engine": "initramfs",
+      "machine": "aarch64",
+      "uid": 0,
+      "agent_session": "0c31030d-14d5-473d-a9ce-07d6941c83e9",
+      "incarnation": 816037536404539838
+    }
+  ],
+  "old_jobs": [
+    "c013",
+    "c027",
+    "c033",
+    "c039"
+  ],
+  "source_control_flow": {
+    "matrix_verify_line": 141,
+    "matrix_GuestNode_line": 145,
+    "matrix_start_send_line": 147,
+    "GuestNode_send_forwards_to_channel": true,
+    "agent_client_created_only_after_start": true
+  },
+  "production_effects_applied_by_assessment": false,
+  "SDK_ACK_Unmapped_or_canary_close_claimed": false,
+  "does_not_infer_absence_from_death_empty_store_or_missing_log_alone": true,
+  "required_future_runtime_fences": [
+    "same original authority lock, full completed predecessor",
+    "fresh exact bytes/source/profile/binary closure",
+    "real frozen E0 Guest+two-heavy kernel FLOCK admission",
+    "complete fail-closed two-event/control-flow proof",
+    "fresh all-old birth/control/FD/VMA/FM holder fence",
+    "persist inherited80 before exact once-only cancellation; fsync76 before new4; no partial/reentry/restart",
+    "new realm/session/boot/FM namespace independent of all40 old files"
+  ],
+  "new_runtime_authorized": false
+}

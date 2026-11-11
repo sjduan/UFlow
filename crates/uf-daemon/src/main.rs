@@ -17,12 +17,32 @@ mod ddr_recovery_durable;
 #[cfg(test)]
 mod ddr_recovery_fixture;
 mod ddr_recovery_journal;
+mod ddr_resources;
 mod ddr_trust_history;
 mod ddr_witness_active;
 mod ddr_witness_evidence;
 mod direct_transfer;
 mod external_ddr;
+mod managed_pool;
+mod managed_read_cache;
+mod managed_write;
+mod mem_service_pool;
+mod pool_experiments;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
+mod pool_reconciliation;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
+mod pool_retained8;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
+mod pool_quarantine76;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
+mod pool_c039_prestart;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
+mod pool_terminal_domain;
 mod object_service;
+mod pool_provider;
+mod pool_ranges;
+mod pool_service;
+mod pool_wire;
 mod protocol;
 mod providers;
 mod router;
@@ -54,6 +74,11 @@ use std::time::Duration;
 
 #[derive(Clone)]
 struct Args {
+    host_pool: bool,
+    pool_state_root: String,
+    pool_provider_python: String,
+    pool_mem_service_config: String,
+    pool_budget_bytes: u64,
     device: i32,
     socket: String,
     execution_mode: String,
@@ -71,6 +96,11 @@ struct Args {
 
 fn parse_args() -> Args {
     let mut args = Args {
+        host_pool: false,
+        pool_state_root: String::new(),
+        pool_provider_python: String::new(),
+        pool_mem_service_config: String::new(),
+        pool_budget_bytes: 256 * 1024 * 1024,
         device: env::var("UF_TARGET_DEVICE")
             .ok()
             .and_then(|value| value.parse().ok())
@@ -102,6 +132,13 @@ fn parse_args() -> Args {
                 .unwrap_or_else(|| panic!("missing value for {}", key))
         };
         match key.as_str() {
+            "--host-pool" => args.host_pool = true,
+            "--pool-state-root" => args.pool_state_root = value(),
+            "--pool-provider-python" => args.pool_provider_python = value(),
+            "--pool-mem-service-config" => args.pool_mem_service_config = value(),
+            "--pool-budget-bytes" => {
+                args.pool_budget_bytes = value().parse().expect("invalid pool budget")
+            }
             "--device" => args.device = value().parse().expect("invalid --device"),
             "--socket" => args.socket = value(),
             "--execution-mode" => args.execution_mode = value(),
@@ -463,8 +500,41 @@ fn seal_bound_generation(endpoint: &str) -> std::io::Result<()> {
 }
 
 fn main() {
+    // Private explicit administrative modes run before every backend/trace/
+    // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
+    let private_args=std::env::args().skip(1).collect::<Vec<_>>();
+    if let Some(report) = pool_experiments::private_command(&private_args) {
+        match report {Ok(value)=>println!("{}",value),Err(error)=>{eprintln!("{error}");std::process::exit(1);}}
+        return;
+    }
     trace::collector().init_from_env();
     let args = parse_args();
+    if args.host_pool {
+        if args.pool_state_root.is_empty()
+            || (args.pool_provider_python.is_empty() == args.pool_mem_service_config.is_empty())
+            || args.block_count != 0
+            || args.initialize_external_ddr_authority
+            || args.inspect_external_ddr_evidence
+            || args.bound_external_ddr_gate
+            || args.begin_external_ddr_generation
+            || args.seal_external_ddr_generation
+        {
+            eprintln!("host-pool is a separate explicit mode; fresh task state/provider required");
+            std::process::exit(1);
+        }
+        if let Err(error) = pool_service::run(
+            &args.socket,
+            std::path::Path::new(&args.pool_state_root),
+            &args.pool_provider_python,
+            args.pool_budget_bytes,
+            if args.pool_mem_service_config.is_empty() { None }
+            else { Some(std::path::Path::new(&args.pool_mem_service_config)) },
+        ) {
+            eprintln!("managed host pool stopped with unresolved state: {error}");
+            std::process::exit(1);
+        }
+        return; // No startup_catalog, backend init/finalize, or E10 authority access.
+    }
     // Multi-generation deployment/recovery remains an internal experiment.
     // Ordinary brokers never need a witness; no command-line path may mutate
     // the trust chain or turn a dirty root into available capacity.

@@ -1,0 +1,111 @@
+"""Portable semantic fixtures only; never invoke production retained8 verify."""
+import base64,copy,json,stat
+from pathlib import Path
+import sys,unittest
+from unittest.mock import MagicMock,patch
+from types import SimpleNamespace
+sys.path.insert(0,str(Path(__file__).parents[2]/'tools/phasec'))
+from verify_retained8_pool import documents,store_family,nonlive,endpoints_quiet,fm_namespace,admission_record,flock_info,ROOT,ASSESSMENT_SHA,sha
+import verify_retained8_pool as verifier
+
+class Retained8Semantics(unittest.TestCase):
+    def setUp(self):
+        p=Path(__file__).parent/'reconciliation'
+        a=(p/'retained8-assessment.json').read_bytes();self.assertEqual(sha(a),ASSESSMENT_SHA);self.a=json.loads(a)
+        f=json.loads((p/'retained8-cpu-documents.json').read_bytes());self.assertEqual(f['marker'],'CPU-semantic-fixture-not-original-byte-proof')
+        self.raw={n:base64.b64decode(v) for n,v in f['files_base64'].items()}
+        self.old=json.loads(self.raw['implementation/responsibility-c013/result.json'])['verified_proof']
+    def derive(self):return documents(self.a,self.raw,self.old)
+    def change(self,n,mutate):
+        v=json.loads(self.raw[n]);mutate(v);self.raw[n]=json.dumps(v,separators=(',',':')).encode()
+    def test_exact_semantics_retains_all_four_without_cancel_or_ack(self):
+        p=self.derive();self.assertEqual([r['object_id'] for r in p['retained_canaries']],[100,101,103,104])
+        self.assertEqual(p['charged_bytes'],8<<20);self.assertEqual(p['reserved_bytes'],0)
+        self.assertIs(p['cancel64_repeated'],False);self.assertIs(p['SDK_ACK_Unmapped_or_canary_close_claimed'],False)
+    def test_missing_or_extra_evidence(self):
+        self.raw.pop('runs/c027/provider.json')
+        with self.assertRaises(ValueError):self.derive()
+        self.setUp();self.raw['extra']=b'{}'
+        with self.assertRaises(ValueError):self.derive()
+    def test_wrong_predecessor_phase_or_proof(self):
+        for n,key,value in [('implementation/responsibility-c013/intent.json','phase','partial'),
+                ('implementation/responsibility-c013/result.json','proof_sha256','drift'),
+                ('implementation/responsibility-c013/result.json','cancelled_uncreated_bytes',0)]:
+            self.setUp();self.change(n,lambda v:v.update({key:value}))
+            with self.assertRaises(ValueError):self.derive()
+    def test_business_or_reserved_or_native_work_not_hidden(self):
+        for key,value in [('pools',[{}]),('operations',[{}]),('active_bytes',1),('creation_reserved_bytes',0),('native_jobs_executed',1)]:
+            self.setUp();self.change('runs/c027/state/state.json',lambda v:v.update({key:value}))
+            with self.assertRaises(ValueError):self.derive()
+    def test_wrong_boot_and_session(self):
+        self.change('runs/c027/guest-identities.json',lambda v:v[0].update(boot_id='wrong-boot'))
+        with self.assertRaises(ValueError):self.derive()
+        self.setUp();self.change('runs/c027/provider.json',lambda v:v.update(session='wrong-session'))
+        with self.assertRaises(ValueError):self.derive()
+    def test_wrong_actual_checksum_or_descriptor(self):
+        name='runs/c027/pool-events.jsonl'
+        for key,value in [('checksum',1),('canary_descriptor','00')]:
+            self.setUp();events=[json.loads(s) for s in self.raw[name].splitlines()]
+            e=next(e for e in events if e['event']=='bootstrap-prepared');e['receipt'][key]=value
+            self.raw[name]=('\n'.join(json.dumps(e) for e in events)+'\n').encode()
+            with self.assertRaises(ValueError):self.derive()
+    def test_missing_serial_receipt_and_serial_boot_drift(self):
+        n='runs/c027/nodeA.serial.log';self.raw[n]=b'no actual serial\n'
+        with self.assertRaises(ValueError):self.derive()
+    def test_new_business_wire_or_extra_event(self):
+        n='runs/c027/pool-events.jsonl';self.raw[n]+=b'{"event":"E1-one-allocation"}\n'
+        with self.assertRaises(ValueError):self.derive()
+    def test_no_store_family_even_not_found_or_incomplete(self):
+        store_family([])
+        for names in [['lower.store'],['lower.store.journal'],['lower.store.managed'],['lower.store.next']]:
+            with self.assertRaises(ValueError):store_family(names)
+    def test_live_birth_rejected_reused_pid_not_ack(self):
+        with self.assertRaises(ValueError):nonlive({'71':123},lambda pid:123)
+        nonlive({'71':123},lambda pid:124)
+        self.assertIs(self.derive()['SDK_ACK_Unmapped_or_canary_close_claimed'],False)
+    def test_both_generations_catalog_lower_bridge_and_qmp_endpoints(self):
+        endpoints_quiet([{'path':'/original/qmp'}],set())
+        for name in ['/original/qmp',*[str(ROOT/'runs'/j/n) for j in ['c013','c027'] for n in ['u.sock','l.sock','a.sock','b.sock']]]:
+            with self.assertRaises(ValueError):endpoints_quiet([{'path':'/original/qmp'}],{name})
+    def test_extra_fm_directory_symlink_cannot_hide_from_inventory(self):
+        file=MagicMock();file.__str__.return_value='/exact/FM';file.lstat.return_value.st_mode=stat.S_IFREG
+        directory=MagicMock();directory.__str__.return_value='/exact/subdir';directory.lstat.return_value.st_mode=stat.S_IFDIR
+        link=MagicMock();link.__str__.return_value='/exact/unregistered-link';link.lstat.return_value.st_mode=stat.S_IFLNK
+        link.is_dir.return_value=True
+        fm_namespace([file,directory],{'/exact/FM'})
+        with self.assertRaises(ValueError):fm_namespace([file,directory,link],{'/exact/FM'})
+    def test_admitted_guest_and_two_heavy_locks_bound_to_ancestor_and_authority(self):
+        row={'pid':71,'birth':721,'kind':'guest','state':'held','job':'c900'};authority=ROOT/'runs/c900/state'
+        self.assertEqual(admission_record([dict(row) for _ in range(3)],{71:721},authority),row)
+        for key,value in [('kind','build'),('state','released'),('birth',722),('job','c901'),('pid',72)]:
+            bad={**row,key:value}
+            with self.assertRaises(ValueError):admission_record([dict(bad) for _ in range(3)],{71:721},authority)
+        with self.assertRaises(ValueError):admission_record([row,row],{71:721},authority)
+        with self.assertRaises(ValueError):admission_record([row,row,{**row,'state':'released'}],{71:721},authority)
+    def test_kernel_fdinfo_requires_actual_exclusive_flock_owner_not_waiter(self):
+        self.assertTrue(flock_info('lock: 1: FLOCK ADVISORY WRITE 71 00:3f:99 0 EOF\n',71))
+        for text in ['lock: 1: FLOCK ADVISORY WRITE 72 00:3f:99 0 EOF',
+                'lock: 1: FLOCK ADVISORY READ 71 00:3f:99 0 EOF',
+                'lock: 1: POSIX ADVISORY WRITE 71 00:3f:99 0 EOF',
+                'lock: 1: -> FLOCK ADVISORY WRITE 71 00:3f:99 0 EOF']:
+            self.assertFalse(flock_info(text,71))
+    def test_unclosed_physical_tree_or_inconclusive_old_audit(self):
+        self.change('runs/c027/monitor/result.json',lambda v:v.update(remaining={'71':123}))
+        with self.assertRaises(ValueError):self.derive()
+    def test_fresh_holder_audit_fd_vma_denied_and_deadline_fail_closed(self):
+        process=MagicMock();process.name='71';root=MagicMock();root.iterdir.return_value=[process]
+        scan=MagicMock();scan.__enter__.return_value=[]
+        with patch.object(verifier,'Path',return_value=root),patch.object(verifier.os,'scandir',return_value=scan),patch.object(verifier,'proc_read',return_value=b''):
+            self.assertEqual(verifier.holder_audit({(2,3)})['holders'],[])
+            scan.__enter__.return_value=[SimpleNamespace(stat=lambda:SimpleNamespace(st_dev=2,st_ino=3))]
+            with self.assertRaises(ValueError):verifier.holder_audit({(2,3)})
+            scan.__enter__.return_value=[]
+            with patch.object(verifier.os,'makedev',return_value=2,create=True),patch.object(verifier,'proc_read',return_value=b'1000-2000 r--p 0 00:02 3 /old-fm\n'):
+                with self.assertRaises(ValueError):verifier.holder_audit({(2,3)})
+            with patch.object(verifier,'proc_read',side_effect=PermissionError()):
+                with self.assertRaises(PermissionError):verifier.holder_audit({(2,3)})
+            with patch.object(verifier.time,'monotonic',side_effect=[0,16]):
+                with self.assertRaises(ValueError):verifier.holder_audit({(2,3)})
+        self.setUp();self.change('runs/c027/post-close-audit.json',lambda v:v['holder_audit'].update(denied=[{'pid':71}]))
+        with self.assertRaises(ValueError):self.derive()
+if __name__=='__main__':unittest.main()

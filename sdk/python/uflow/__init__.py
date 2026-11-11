@@ -12,6 +12,7 @@ _EXPORTS = {
     "idl": ("DataHandle", "DataObject", "DataPlacement", "ResourceBinding", "AccessBinding",
             "TransferCost", "TransferEvent", "TransferPlan", "TransferRequest"),
     "external_ddr": ("ExternalBackingHandle", "ExternalDdrClient", "ExternalDdrError", "ExternalReadView"),
+    "managed_pool": ("ManagedPoolClient", "ManagedPoolView", "PoolBlock", "PoolLease", "ManagedPoolError", "ManagedPoolUnknown"),
     "objects": ("DdrBuffer", "DdrObject", "HandleNotLocallyAddressable", "HbmObject", "ManagedBuffer",
                 "SimulatedAccessView", "SimulatedObject", "SsdBuffer", "SsdObject"),
     "transfer": ("AclEventHandle", "AclStreamHandle", "TransferCompletionEventHandle"),

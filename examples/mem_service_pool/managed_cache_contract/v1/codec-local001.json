@@ -1,0 +1,8 @@
+{
+  "wire_bytes": 220,
+  "wire_ascii_bytes": 445,
+  "roundtrip": true,
+  "malformed_negative_count": 3,
+  "codec_sha256": "84e32ea2325a36b870351a9a000690c0bf32cbf754330da94b316efeaf805284",
+  "production_control_implemented": false
+}

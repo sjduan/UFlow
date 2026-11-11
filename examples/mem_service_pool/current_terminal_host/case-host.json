@@ -1,0 +1,54 @@
+{
+  "schema": 2,
+  "kind": "C064TerminalCaseDescriptorHOSTOnly",
+  "CPU_fixture_only_not_E_accepted_proof": true,
+  "current_state": {
+    "bytes": 60761,
+    "sha256": "163f7500836dc4fd199d34f83a0e08453ab05255f8b15a57338052df4601d5b0"
+  },
+  "source_revision": 256,
+  "resource_ids": [
+    113,
+    114,
+    115
+  ],
+  "eligible_bytes": 54525952,
+  "before_B_bytes": 134217728,
+  "after_B_bytes": 79691776,
+  "protected_retained_bytes": 12582912,
+  "protected_reserved_bytes": 67108864,
+  "previous_directory": "successor-c044-terminal-domain-loss-v1",
+  "previous_files": {
+    "intent.json": {
+      "bytes": 9327,
+      "sha256": "5d68cee6b40eb8ca66c833ae5defb3d7d229181c3bcc8ce6a2c3ca7a4c6a1c18"
+    },
+    "historical-state.json": {
+      "bytes": 73279,
+      "sha256": "b6592a7442e7cb8540f340168a215fe6cc8cf669c7e87fedb7403ced2fc6c307"
+    },
+    "before128.json": {
+      "bytes": 9231,
+      "sha256": "fe5c200016cfc06677426838d9feea8ddb95c738edee929418c453c6ed6a6e0d"
+    },
+    "permanent-fences.json": {
+      "bytes": 3600,
+      "sha256": "80bb4f9352d20104206e7f74a24ed9dbfa1d13f1643272507c78e2840ea2b533"
+    },
+    "resulting76.json": {
+      "bytes": 33070,
+      "sha256": "464bf56d35ee2eaf03600f05ab1580e0e6b80073ba9650ff76bd173924ac6c78"
+    },
+    "commit.json": {
+      "bytes": 592,
+      "sha256": "31c4ab9126df335b4d25492fc6574c0c997237cab603ba8003fe8abf959c0ab4"
+    },
+    "service-admission-claim.json": {
+      "bytes": 10317,
+      "sha256": "e571f2e683ad08fb9720928d5c1dd795318c66a434190dc6e7956148de5a6fcd"
+    }
+  },
+  "new_successor": "successor-c064-terminal-domain-loss-v2",
+  "authority": "original responsibility-c013/authority.lock, never a second authority",
+  "real_E_v2_trust_anchor": "NOT_ACCEPTED_PRODUCTION_FAIL_CLOSED"
+}

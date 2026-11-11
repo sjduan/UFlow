@@ -1,0 +1,18 @@
+{
+  "actual-synthetic-examples.json": {
+    "bytes": 7695,
+    "sha256": "bb800bf0563902b08ccb95c81972a19a6ffabb5969430d7baad3b3afce917227"
+  },
+  "interface.json": {
+    "bytes": 3201,
+    "sha256": "1c486f2c746f25341f8e8ff96200c041baaf75e25bfe3699e228b1c68662b5ef"
+  },
+  "uflow_managed_guest_group_v2.py": {
+    "bytes": 21436,
+    "sha256": "9bd5df060abfa26b2527557e14b755c701b9b3323cb57d6c5466ffa6691765b2"
+  },
+  "uflow_managed_write_codec_v1.py": {
+    "bytes": 10928,
+    "sha256": "e5627711dc76a5441a7c957733983bff10dfd7d38fe1cf787b3b535e0de05c08"
+  }
+}

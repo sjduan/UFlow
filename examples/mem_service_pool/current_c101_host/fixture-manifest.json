@@ -1,0 +1,54 @@
+{
+  "HOST_fixture_only": true,
+  "case_sha256": "19f85b8bcac23396d655a17453b710e9f9d0d6f83a29d14257ebe108ee16b234",
+  "origins": {
+    "consumed-v3/before128.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\before128.json",
+      "bytes": 11583,
+      "sha256": "f8a727bba2bf0522faf318d2b42009791aa8a93ab5f3e9baae2744c4cd162e16"
+    },
+    "consumed-v3/commit.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\commit.json",
+      "bytes": 1057,
+      "sha256": "90a2fe2ba165dbafda522dfd4efdd3ab83eb1ee8006c3422ed0901b04c1a22b1"
+    },
+    "consumed-v3/historical-state.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\historical-state.json",
+      "bytes": 89240,
+      "sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26"
+    },
+    "consumed-v3/inherited-backing-identities.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\inherited-backing-identities.json",
+      "bytes": 1689,
+      "sha256": "bb63489a912bd711618a212a2560b848f7f4e2085999b89e932d958e4efea5a4"
+    },
+    "consumed-v3/intent.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\intent.json",
+      "bytes": 56773,
+      "sha256": "0b50e8df24f2bf99c572f8b3af23ae054feb80357e8939a6dea6c982301904aa"
+    },
+    "consumed-v3/permanent-fences.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\permanent-fences.json",
+      "bytes": 11260,
+      "sha256": "c57a875b38a02e61ddd45bd5614ef82d64c8f27b300879eb526fdf9d58e72822"
+    },
+    "consumed-v3/resulting76.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\resulting76.json",
+      "bytes": 43615,
+      "sha256": "fbfe5a75056e27f90f0bb9e82372ca31229b90cea30433476ca94fc21e16b1ba"
+    },
+    "consumed-v3/service-admission-claim.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101-v3-consumed\\service-admission-claim.json",
+      "bytes": 12635,
+      "sha256": "404628be4f3c1607944e06f4355ffbfe344970d2c05917856812af523e27cc27"
+    },
+    "current-state.json": {
+      "source": "artifacts\\mem-service-shared-pool-20261108\\C\\remote-original-host003\\c101\\state\\state.json",
+      "bytes": 101808,
+      "sha256": "934b30b07df72ab28e96ef173a639f55e64584db46dbdc13518828246ab48796"
+    }
+  },
+  "original_state_or_ledger_written": false,
+  "historical_E_eligibility_replayed": false,
+  "current_E_context_supplied": false
+}

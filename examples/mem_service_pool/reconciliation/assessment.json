@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "kind": "verified-original-pre-dispatch-rejection-assessment",
+  "goal": "uflow-mem-service-shared-pool-sim",
+  "source_commit_original": "5e138f5e878773ea0ad274e1bb84beee7c625425",
+  "frozen_mem_service_commit": "546985e26bce60798fa3f88329c3fbed8350c798",
+  "scope": "only this original creation reservation, never existing backing/holder/map/pin or canary close",
+  "original_identity": {
+    "pool_id": "c509e452-79e6-4b02-9ad6-918cb901cfa4",
+    "pool_epoch": "125b8f2a-0c42-4605-8a5c-9fff0184fdfe",
+    "provider_session": "d0fce298-a1bc-4a4f-b6fe-af025b1fc0fd",
+    "nbytes": 67108864,
+    "resource_id": 102,
+    "placement_id": 10000,
+    "binding_id": 40000,
+    "operation_id": "de21099a-5b02-4e8d-b1d7-3a6129ab9f22",
+    "operation_record_key": "3196565:1314359845:4026531836:de21099a-5b02-4e8d-b1d7-3a6129ab9f22"
+  },
+  "original_files": {
+    "runs/c013/state/state.json": "20f4114009545b95039704db30f311b0589f0bc3dd1bff7f4291ff807b40c42d",
+    "runs/c013/lower.store": "400d5d3cdb29e683ee63fd546812ff9b0e278ced8b8201e4c3e8f8b3e5f8ac5d",
+    "runs/c013/pool-events.jsonl": "b02b9c3043db833088b2f92b331fd6868a59feeb049c45c2d8bdda340a2b23b7"
+  },
+  "original_lower_store_family": {
+    "lower.store": {
+      "bytes": 485,
+      "sha256": "400d5d3cdb29e683ee63fd546812ff9b0e278ced8b8201e4c3e8f8b3e5f8ac5d"
+    },
+    "lower.store.journal": {
+      "bytes": 407,
+      "sha256": "ec80d9c7a80652065e2a902d555c814824596c0a9efc37f794add2b79a78ebf5"
+    }
+  },
+  "frozen_source_hashes": {
+    "components/mem_service/mem_service_daemon.c": "81ee4aa3f7245da064bdc37d573c6b53d1b59d3e5aebbe100aa1fd358fd37c22",
+    "components/mem_service/mem_service_provider_directory.c": "7e8a28c9d9a04cde126fec8d0730f65fb46fb43fecab509c85e49977b4d5bf1c",
+    "components/mem_service/providers/mem_service_provider_obmm_worker.c": "b30d10489e0415102798cdae2f95bb5c8bd782d500e344178638161da6041beb"
+  },
+  "installed_lower_binary_sha256": "c175f0245c772ad6e6a45b36040c9696d3b711a2c7aa945633b8a56c6cee6812",
+  "gate": {
+    "operation": 112,
+    "request_body_hex": "6b65793d63353039653435322d373965362d346230322d396164362d3931386362393031636661340a6964656d706f74656e63795f6b65793d6f776e65722d63353039653435322d373965362d346230322d396164362d3931386362393031636661342d616c6c6f636174652d310a73657373696f6e5f69643d6f776e65722d63353039653435322d373965362d346230322d396164362d3931386362393031636661340a686f6d655f6e6f64653d6e6f6465410a73697a655f62797465733d36373130383836340a616c69676e6d656e745f62797465733d36353533360a6361706162696c69746965733d310a",
+    "response_body_hex": "7374617475733d696e7465726e616c0a726561736f6e3d646174615f706c616e655f6e6f745f72656164790a",
+    "request_bytes": 238,
+    "request_FNV32": 281788076,
+    "response_bytes": 44,
+    "response_FNV32": 3845867773,
+    "reason": "data_plane_not_ready",
+    "before_dispatch_idempotency_and_managed_allocate": true
+  },
+  "original_nonlive_births": {
+    "3196304": {
+      "expected_birth": 1314359833,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3196565": {
+      "expected_birth": 1314359845,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3196831": {
+      "expected_birth": 1314359857,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3196943": {
+      "expected_birth": 1314359862,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3196946": {
+      "expected_birth": 1314359862,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3216300": {
+      "expected_birth": 1314360736,
+      "observed_birth": null,
+      "original_alive": false
+    },
+    "3196167": {
+      "expected_birth": 1314359827,
+      "observed_birth": null,
+      "original_alive": false
+    }
+  },
+  "canonical_allocation": null,
+  "clients": [],
+  "ranges": {
+    "allocations": [],
+    "leases": []
+  },
+  "eligible_uncreated_reservation_bytes": 67108864,
+  "retained_canary_objects": [
+    {
+      "object_id": 100,
+      "nbytes": 2097152,
+      "state": "UnknownCanaryClose",
+      "SDK_checked_close_confirmed": false,
+      "backing": {
+        "realm": "simulated:mem-service:3b313ff6-8659-42a9-9355-65b5062796a7",
+        "provider": "mem_service_obmm",
+        "resource": "canary:nodeA:4f391613-d1b7-449f-9693-eca34acfd8d1",
+        "generation": 4880593255571531467
+      },
+      "node": "nodeA",
+      "boot_id": "4f391613-d1b7-449f-9693-eca34acfd8d1",
+      "provider_session": "d0fce298-a1bc-4a4f-b6fe-af025b1fc0fd"
+    },
+    {
+      "object_id": 101,
+      "nbytes": 2097152,
+      "state": "UnknownCanaryClose",
+      "SDK_checked_close_confirmed": false,
+      "backing": {
+        "realm": "simulated:mem-service:3b313ff6-8659-42a9-9355-65b5062796a7",
+        "provider": "mem_service_obmm",
+        "resource": "canary:nodeB:a3ad7c28-6f73-4cf3-acde-7c87ef01a11c",
+        "generation": 17781258242669297840
+      },
+      "node": "nodeB",
+      "boot_id": "a3ad7c28-6f73-4cf3-acde-7c87ef01a11c",
+      "provider_session": "d0fce298-a1bc-4a4f-b6fe-af025b1fc0fd"
+    }
+  ],
+  "retained_canary_bytes": 4194304,
+  "SDK_ACK_Unmapped_or_normal_canary_close_claimed": false,
+  "ledger_transition_applied": false,
+  "current_B_responsibility_bytes_unchanged": 71303168,
+  "required_implementation": "verify exact original evidence, restore original reservation and canary responsibility into the one DdrResources, then use cancel_uncreated only for verified pre-dispatch rejection; retain two original canary charges and historical IDs in the same authoritative ledger",
+  "B_readonly_receipt_sha256": "4be0e3bf51e7fd2d3d09068c1b8f3aae6a3f0dae0deb934e5bf10761da066366",
+  "fresh_B_file_count": 247,
+  "journal_exactly_one_original_failed_audit": {
+    "bytes": 407,
+    "sha256": "ec80d9c7a80652065e2a902d555c814824596c0a9efc37f794add2b79a78ebf5",
+    "no_idempotency_or_allocation_record": true
+  }
+}

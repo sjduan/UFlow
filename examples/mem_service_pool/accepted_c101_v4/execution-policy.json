@@ -1,0 +1,24 @@
+{
+  "schema": 4,
+  "kind": "C101CompiledExecutionPolicyV4",
+  "config_directory": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c103-v2",
+  "nonce": "f1eb2408-f2ad-4a9c-a39a-c6c57788dd3d",
+  "phases": {
+    "terminal-only": "c103",
+    "successor": "c104",
+    "postclose-audit": "c105"
+  },
+  "state_sha256": "934b30b07df72ab28e96ef173a639f55e64584db46dbdc13518828246ab48796",
+  "authority": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013",
+  "successor": "successor-c101-terminal-domain-loss-v4",
+  "future_canary_ids": [
+    122,
+    123
+  ],
+  "future_business_id": 124,
+  "Guest_seconds_cap": 1800,
+  "operation_seconds": 120,
+  "verification_passes": 6,
+  "each_direction_bytes": 20971520,
+  "guard_bytes": 8257536
+}

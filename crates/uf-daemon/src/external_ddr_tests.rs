@@ -2187,6 +2187,72 @@ fn t1_registration_and_clean_drain_use_the_fixture_authority() {
 }
 
 #[test]
+fn managed_creation_and_external_memfd_share_catalog_capacity_and_close_witness() {
+    let (_root, socket, shared, broker) = fixture();
+    // This is the common-Catalog budget fixture, not a substitute provider proof.
+    // The separate host probe uses actual Simpler Buffer ownership and close.
+    let pool_file = memfd();
+    let pool_stat = pool_file.metadata().unwrap();
+    let pool_object = {
+        let mut st = shared.0.lock().unwrap();
+        st.ddr_resources.limit = 8192;
+        st.ddr_resources
+            .reserve("managed-create-fixture", 4096)
+            .unwrap();
+        st.take_next_object_id()
+    };
+    let external_file = memfd();
+    let descriptor = register(&socket, &external_file);
+    {
+        let mut st = shared.0.lock().unwrap();
+        assert_eq!(st.ddr_resources.charged_bytes(), 4096);
+        assert_eq!(st.ddr_resources.reserved_bytes(), 4096);
+        assert!(st
+            .ddr_resources
+            .reserve("legacy-creation-fixture", 1)
+            .is_err());
+        st.ddr_resources
+            .commit(
+                "managed-create-fixture",
+                pool_object,
+                pool_stat.dev(),
+                pool_stat.ino(),
+                4096,
+            )
+            .unwrap();
+        assert_eq!(st.ddr_resources.charged_bytes(), 8192);
+    }
+    let overflow = memfd();
+    let request = uf_core::kv(&[
+        ("op", "RegisterExternalBacking".into()),
+        ("name", "overflow".into()),
+        ("owner_name", "fixture-owner".into()),
+        ("size_bytes", "4096".into()),
+    ]);
+    let (rejected, files) = exchange(&socket, &request, Some(&overflow), false);
+    assert_eq!(get(&rejected, "status"), "error");
+    assert!(files.is_empty());
+    let mut revoke = descriptor;
+    revoke.insert("op".into(), "RevokeExternalBacking".into());
+    let (reply, _) = exchange(&socket, &revoke, None, false);
+    assert_eq!(get(&reply, "status"), "ok");
+    {
+        let st = shared.0.lock().unwrap();
+        assert_eq!(st.external_ddr.committed_bytes(), 0);
+        assert_eq!(st.ddr_resources.charged_bytes(), 4096);
+    }
+    drop(pool_file); // Confirm real fixture owner FD close before subtracting.
+    shared
+        .0
+        .lock()
+        .unwrap()
+        .ddr_resources
+        .release_confirmed(pool_object);
+    assert_eq!(shared.0.lock().unwrap().ddr_resources.charged_bytes(), 0);
+    stop(&shared, broker);
+}
+
+#[test]
 fn reused_pid_with_different_birth_cannot_inherit_a_session() {
     let (_root, socket, shared, broker) = fixture();
     let backing = memfd();

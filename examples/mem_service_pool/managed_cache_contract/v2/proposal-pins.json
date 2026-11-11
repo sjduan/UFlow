@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "kind": "EProposedHOSTInterfaceOnly",
+  "E_commit": "f7e4c0d6b0d2398baf148c33b70857dc21f29303",
+  "manager_accepted": false,
+  "interface": {
+    "schema": 3,
+    "kind": "proposed-externally-pinned-HOST-interface",
+    "runtime_sources": {
+      "uflow_profile_metadata_v3.py": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_profile_metadata_v3.py",
+        "bytes": 31355,
+        "sha256": "5dfba50c223008701ce985eda66ad382182b98619cbe7ed4d893d168ac24c86a"
+      },
+      "uflow_recovery_context_v3.py": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_recovery_context_v3.py",
+        "bytes": 31211,
+        "sha256": "3925e8eea9491eece5c2a2bcb246a1a770ce11ac3006f84ee62853d00232b91d"
+      },
+      "uflow_monitor_ownership_v3.py": {
+        "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/uflow_monitor_ownership_v3.py",
+        "bytes": 9096,
+        "sha256": "826e4a4373c46a4c90ce9012d94bd1107114551f83c15d50c159f722a8f8065a"
+      }
+    },
+    "accepted_context": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5/accepted-context.json",
+      "bytes": 1764,
+      "sha256": "ec8984aa82f6ac17ef8f1ed1a2b48025eb169267acd9619c8c933a4c79684960"
+    },
+    "normal_registry_prefix": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/registry/cNNN",
+    "metadata_APIs": {
+      "validate_registration": [
+        "request_path",
+        "request_sha",
+        "helper_path",
+        "accepted_context_path",
+        "accepted_context_sha"
+      ],
+      "append_registration": [
+        "registry_directory",
+        "expected_head",
+        "validated_entry"
+      ],
+      "registry_history": [
+        "registry_directory",
+        "expected_head"
+      ],
+      "validate_closed_union": [
+        "plan_path",
+        "plan_sha",
+        "accepted_context_path",
+        "accepted_context_sha"
+      ],
+      "companion_audit": "validate_closed_union"
+    },
+    "terminal_APIs": {
+      "evaluate": [
+        "context_path",
+        "external_accepted_context_sha"
+      ],
+      "validate_candidate": [
+        "candidate_path",
+        "external_accepted_candidate_sha"
+      ]
+    },
+    "ownership_API": {
+      "validate_descriptor": [
+        "descriptor",
+        "run",
+        "helper_path",
+        "starts=None",
+        "capture=None"
+      ]
+    },
+    "managed_control": {
+      "feature": "uflow-managed-lease-cache-v1",
+      "version": 1,
+      "wire_bytes": 220,
+      "property": "uflow-managed-cache-control-v1",
+      "object_path": "/machine",
+      "argv_extension": [
+        "-global",
+        "ubc.uflow-managed-cache-v1=on"
+      ],
+      "scope": "UFlow-Catalog-managed-only",
+      "data_quota_bytes": 8388608,
+      "one_active_grant_per_QEMU": true,
+      "authority": "actual authenticated Catalog executing range R lease"
+    },
+    "wire_codec": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_cache_codec_v2.py",
+      "bytes": 9594,
+      "sha256": "7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db"
+    },
+    "runtime_wrapper": {
+      "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/uflow_managed_guest_group_v1.py",
+      "bytes": 20649,
+      "sha256": "8aebe66479b8eec36841fb8b3295ccd56362ab02bf7b6b4d6a63edbd83b86f3c"
+    },
+    "external_review_required": true,
+    "HOST_fixture_is_production_admission": false,
+    "ledger_authority": false,
+    "boot_authority": false
+  },
+  "recovery_sources": {
+    "uflow_managed_cache_codec_v2.py": {
+      "bytes": 9594,
+      "sha256": "7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db",
+      "mode": "0644"
+    },
+    "uflow_managed_guest_group_v1.py": {
+      "bytes": 20649,
+      "sha256": "8aebe66479b8eec36841fb8b3295ccd56362ab02bf7b6b4d6a63edbd83b86f3c",
+      "mode": "0644"
+    },
+    "uflow_managed_qemu_profile_v1.py": {
+      "bytes": 12739,
+      "sha256": "a225f345d48046d228e33a98161c02a1b17a556453a13d2d2869ab33e2ea931b",
+      "mode": "0644"
+    },
+    "uflow_monitor_ownership_v3.py": {
+      "bytes": 9096,
+      "sha256": "826e4a4373c46a4c90ce9012d94bd1107114551f83c15d50c159f722a8f8065a",
+      "mode": "0644"
+    },
+    "uflow_profile_metadata_v2.py": {
+      "bytes": 35200,
+      "sha256": "d512f1d5b9dbfe7e2c89d8dc4f11fe807fc480a222b1a0f69600b23afa021ecf",
+      "mode": "0644"
+    },
+    "uflow_profile_metadata_v3.py": {
+      "bytes": 31355,
+      "sha256": "5dfba50c223008701ce985eda66ad382182b98619cbe7ed4d893d168ac24c86a",
+      "mode": "0644"
+    },
+    "uflow_qemu_evidence.py": {
+      "bytes": 6591,
+      "sha256": "0dc9cbe9909bca7d53dcc6aa58b72f72942e699999ecf420055528cbd98c0995",
+      "mode": "0644"
+    },
+    "uflow_qemu_fixed_launch.py": {
+      "bytes": 21012,
+      "sha256": "949cd0866da8f1ad7b555dc6cf0f0a77574b82ea0499f34a6951fa5c3bb2b12b",
+      "mode": "0644"
+    },
+    "uflow_qemu_metadata.py": {
+      "bytes": 25585,
+      "sha256": "3edf6eb9e99cfe1a194d273bd11ae0e21f2ddcd3fff7fed2fd835ec9f5c227e5",
+      "mode": "0644"
+    },
+    "uflow_qemu_profile.py": {
+      "bytes": 10439,
+      "sha256": "e295a26c99216ac027dd64f54ed323b211bc529ee7fb6753dac4e422bc7fb43e",
+      "mode": "0644"
+    },
+    "uflow_recovery_context_v3.py": {
+      "bytes": 31211,
+      "sha256": "3925e8eea9491eece5c2a2bcb246a1a770ce11ac3006f84ee62853d00232b91d",
+      "mode": "0644"
+    }
+  },
+  "recovery_source_root": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/recovery-release-v5",
+  "selected_profile": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/c081-recovery-v1/release-v2/profile-manifest.json",
+    "bytes": 8554,
+    "sha256": "d0900df0212660ff6fb3cc60e11a8cb06545aeac190e0edb6729bf8eedd54dc9"
+  },
+  "context_profile_ref_matches_selected": false,
+  "production_IO_permitted": false
+}

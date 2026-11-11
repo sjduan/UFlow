@@ -1,0 +1,614 @@
+{
+  "schema": 1,
+  "purpose": "Exact source overlays for the accepted framework candidate; no new device/Guest result",
+  "sources": {
+    "pypto": {
+      "base": "be23606f791fa2251d7fccabdb91c75582268fad",
+      "accepted_source_commit": "8007f1146a800d679301c5ea14bb644b863da6bf",
+      "accepted_tree": "af630816c0d799933f20aceb2df26302371beaad",
+      "files": {
+        "python/pypto/ir/distributed_compiled_program.py": {
+          "mode": "100644",
+          "object": "8e2ab3f13d9a96363ed1bb8159642a7e270bd556",
+          "bytes": 32571,
+          "sha256": "ce3327f3eaeb8a0e0bc0fade382b87466586f49cdaa91e3565b0d7e99a3fe81d"
+        },
+        "python/pypto/runtime/distributed_runner.py": {
+          "mode": "100644",
+          "object": "b575c67c072b70036ba3eb9284a9b48055822144",
+          "bytes": 163966,
+          "sha256": "112339b34c1d6ab61233b8ec6a781b19ea68ff94f593b2db8cc5403192cc60e5"
+        },
+        "runtime": {
+          "mode": "160000",
+          "object": "508becb93e182a3035a14e3f9226929dbe994346"
+        },
+        "tests/ut/runtime/test_distributed_worker.py": {
+          "mode": "100644",
+          "object": "fad6a4645bc9d152cc8678a1d7ef05e6ea693893",
+          "bytes": 198795,
+          "sha256": "e9aa0de63538341f1f2736c1a34688620a24cc4442c1d9b9c164c7fd8875b72c"
+        }
+      },
+      "patch_sha256": "3874c652f543dfcc4786c5bd5791e0e6b9abf24d4363fa4ce519340831bd6cc3",
+      "url": "https://github.com/hw-native-sys/pypto.git",
+      "patch": "patches/pypto.patch"
+    },
+    "simpler": {
+      "base": "6b6b88f2353cca12cfafe809750b50b59931b0d1",
+      "accepted_source_commit": "508becb93e182a3035a14e3f9226929dbe994346",
+      "accepted_tree": "7c7d9bb620c9aa4ae504d1f1d38581b5bc52a748",
+      "files": {
+        "python/simpler/worker.py": {
+          "mode": "100644",
+          "object": "7fcff06e3d7c5a18aac40a85e965a37659b847f5",
+          "bytes": 750780,
+          "sha256": "f28dbd43ff747080eec171d774e0934a3b19bbf7b153c7a0f5880117d4144a1f"
+        },
+        "tests/ut/py/test_worker/test_chip_services.py": {
+          "mode": "100644",
+          "object": "0db1df881111b0299f99ddddad042a31e047440a",
+          "bytes": 7941,
+          "sha256": "db5219618bac634148d08333243758da58049efe0dcdb962623a5f847bba7fb0"
+        }
+      },
+      "patch_sha256": "2d60e58b6f95656c662b82e8699b250e4915ec54e7c9d38faee0cde47c7d3d4f",
+      "url": "https://github.com/hw-native-sys/simpler.git",
+      "patch": "patches/simpler.patch"
+    },
+    "ub_sim": {
+      "url": "https://github.com/LL-mixed/ub_sim.git",
+      "base": "abeec108a1607feb37218d0d89987e37c579d567",
+      "accepted_source_commit": "c1e73ed2115e7a32400098a99c3b5bbf84405968",
+      "accepted_tree": "2c3dc12f44d971c31264d34bbdde0a432af9d07f",
+      "files": {
+        "docs/uflow-environment.md": {
+          "mode": "100644",
+          "object": "5d1afe0e4d2cec3759e8d91fe915da8e0e2e6416",
+          "bytes": 6973,
+          "sha256": "281f7ac657fae60994278a806df16dca8c5ffc86c86f1ab2b1c16f434d8d1e8e"
+        },
+        "docs/uflow-kernel-profile.md": {
+          "mode": "100644",
+          "object": "f2091c05d675263f909aa26e47c41d1ae34ea9c3",
+          "bytes": 4775,
+          "sha256": "b1db6b536eaa50729d53156eef98ec8c6095446925fcea47962f8aa2b45a65f6"
+        },
+        "guest-linux/aarch64/docs/uflow-c064-platform.md": {
+          "mode": "100644",
+          "object": "83bf97df165b4dff32e33a85a54224c1b1f4f7d7",
+          "bytes": 5397,
+          "sha256": "0f954a87b6f38e3bb97a33f59f23a784dac201a2b90866553ad7201f76cfc86d"
+        },
+        "guest-linux/aarch64/docs/uflow-managed-cache-v1.md": {
+          "mode": "100644",
+          "object": "3ee4f4dc12f6bc498aed34db8ccbd5c384a723ae",
+          "bytes": 7630,
+          "sha256": "bc9e5fdbc2a909f6a7ed57d44ba32d83d4dae4d6caf3e83e60b872d5b2f6dc87"
+        },
+        "guest-linux/aarch64/docs/uflow-managed-write-v1.md": {
+          "mode": "100644",
+          "object": "1bc6ff91126b3455f8830f2c51edc968dcb8c1e9",
+          "bytes": 6119,
+          "sha256": "17977a97521a62bb8c82676dab7e751001dd56e477cab78c0eda521d47922ec7"
+        },
+        "guest-linux/aarch64/docs/uflow-profile-metadata-v2.md": {
+          "mode": "100644",
+          "object": "dfd2aab5a454fbfdd1e8ed27dcd5c896eb78c4a0",
+          "bytes": 9075,
+          "sha256": "a920479bcbfe730a7fc7f9e415f3634e8c78a275104f1f1db9fe071a025bc2da"
+        },
+        "guest-linux/aarch64/docs/uflow-qemu-domain.md": {
+          "mode": "100644",
+          "object": "2641af3fef3a5ded766af55e78b66e8aec70fb95",
+          "bytes": 13728,
+          "sha256": "8e1f25d98b7f3be1fe4d355967334b17069807b2757c6c21b68069540b878690"
+        },
+        "guest-linux/aarch64/docs/uflow-qemu-private-release.md": {
+          "mode": "100644",
+          "object": "08df7c9da73375a53aced32bb194e29b643922e3",
+          "bytes": 6515,
+          "sha256": "d9f2b3b51dff642545ea867a3b39be54b31b76a39226fbc3aadc9506171ccba2"
+        },
+        "guest-linux/aarch64/docs/uflow-recovery-v3.md": {
+          "mode": "100644",
+          "object": "166537c6c98025ef67228fc531f17436a7dd93c4",
+          "bytes": 8167,
+          "sha256": "d957816f034c2e61234ff147aa803af697b4e4de9691bd28e36d759bff5e5e2f"
+        },
+        "guest-linux/aarch64/patches/gsva-scatter-home-v1/qemu.patch": {
+          "mode": "100644",
+          "object": "24a86f3fed34f6576378613d3ae941a58da91910",
+          "bytes": 6683,
+          "sha256": "4d7bdab4b56eff18358a1580952e95ba5988e75fac37a3c458f033f0a3e3cf47"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/files/hw/ub/uflow_managed_cache.inc": {
+          "mode": "100644",
+          "object": "55bfc0cefb42bd856744b766fa0152538b07487d",
+          "bytes": 17845,
+          "sha256": "9a6069bcf0eba98925b44d00988bf6df58e2c2b24f1baa4a0b6c0ccdd48dcc76"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/files/include/hw/ub/uflow_bounded_log.h": {
+          "mode": "100644",
+          "object": "50397b78d5be841ddb5e7c45321bdcb4c0e11102",
+          "bytes": 2218,
+          "sha256": "6ae3bdf0c9d86ebeccdd3f28f81fbc1b9d000f7025afddbf7df15083dcda843a"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/files/include/hw/ub/uflow_managed_cache_control.h": {
+          "mode": "100644",
+          "object": "a7000a11a4406ea45e6cd11b9c8d1ffb7792fe70",
+          "bytes": 425,
+          "sha256": "dda68a46cc6017487d774a179ddab71933bc6d6a66365edf8e56f75422d07922"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/files/include/hw/ub/uflow_managed_cache_core.h": {
+          "mode": "100644",
+          "object": "591f9f38ca442978cf648935c86458ea9cc08af8",
+          "bytes": 7409,
+          "sha256": "5790a04c701054fefa93377885c9043d6a4ebbb63f0758a51a8dcbc922cc29b5"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/qemu.patch": {
+          "mode": "100644",
+          "object": "8efadb9c9650f7020174aebf6e0760566f7164d1",
+          "bytes": 38129,
+          "sha256": "98d1bcb84980597bec8977a461cc2909e5a095287704556c77ff6900662052de"
+        },
+        "guest-linux/aarch64/patches/managed-lease-cache-v1/source-closure.json": {
+          "mode": "100644",
+          "object": "fe5e7836342eee893a87e41eacf96257ac2f52e5",
+          "bytes": 2760,
+          "sha256": "76304c2f1a272d5ca6226de7a7d54442e9f5e31c2fc2af5e9946e65c58ae33ea"
+        },
+        "guest-linux/aarch64/patches/managed-write-v1/files/hw/ub/uflow_managed_write.inc": {
+          "mode": "100644",
+          "object": "11e1c27b9e99cb10fb4fd6dac396f77f5639c196",
+          "bytes": 14203,
+          "sha256": "72a3fd8d4214a9c08620fc1d59d7b3000e7a71f69bd6e85fee10c9d7de94b6e2"
+        },
+        "guest-linux/aarch64/patches/managed-write-v1/files/include/hw/ub/uflow_managed_write_core.h": {
+          "mode": "100644",
+          "object": "54a4633f6c96066f059d228f61a9633346acea35",
+          "bytes": 6748,
+          "sha256": "d009de5edbb6da7de9613f1961ac858fb0ea290e6d73dc9289c7d07836d0b09e"
+        },
+        "guest-linux/aarch64/patches/managed-write-v1/qemu-managed-write-v1.patch": {
+          "mode": "100644",
+          "object": "00fc6c141580ce3b149aa87189337ed13632f7da",
+          "bytes": 3427,
+          "sha256": "e7c173df00b10bb95397463d410b9677c3827253bcbb3753585d83c2bf406ef5"
+        },
+        "guest-linux/aarch64/patches/managed-write-v1/source-pins.json": {
+          "mode": "100644",
+          "object": "21f70c7c56fa8840da38c6e0420e7c31a2d80fdf",
+          "bytes": 2213,
+          "sha256": "5b5f49f47b6ed3dadaacf029bbd009a93abe26b18c65d681f1f013e22887a6cc"
+        },
+        "guest-linux/aarch64/profiles/mem-service-gsva-scatter-home-v1.json": {
+          "mode": "100644",
+          "object": "cc176269920b01985cc8b36748721a2fe94b553c",
+          "bytes": 1325,
+          "sha256": "dbcfd25d3213156f8345c3a8879ca7e52cc9d8e1526580a40fe94c0b0de437bc"
+        },
+        "guest-linux/aarch64/profiles/mem-service-gsva-separated-v1.json": {
+          "mode": "100644",
+          "object": "d871836e408086c541d594c04a963c5c386d835c",
+          "bytes": 2171,
+          "sha256": "44e812ef6c3d5ac0092a6671fd4470fb19e4d082424ccaf4df49617b6bd6b6c2"
+        },
+        "guest-linux/aarch64/profiles/mem-service-private-qemu-domain-v1.json": {
+          "mode": "100644",
+          "object": "bb2c5a0fe3c3c6525e9cd856f9c477462fee6eec",
+          "bytes": 4240,
+          "sha256": "02975e42457aea8f881fbbe72d0ae8b70d62c879273a0084de8ac610e913fc02"
+        },
+        "guest-linux/aarch64/profiles/mem-service-profile-metadata-v2.json": {
+          "mode": "100644",
+          "object": "0965ca28184a617b19d05be76d361608aafc6c56",
+          "bytes": 2194,
+          "sha256": "3ac1bfdabe6f3524e6e24646a7373129077a326f6ca4d8ba2b1bbe542073116b"
+        },
+        "guest-linux/aarch64/profiles/mem-service-terminal-c064-v2.json": {
+          "mode": "100644",
+          "object": "b739b0d027229f1a6b2e9eac5432e9f17ef95055",
+          "bytes": 26029,
+          "sha256": "12c6ce496db6a6e184698c2a1b755c5c06c163ce5ad15ab48a32107d5044ad73"
+        },
+        "guest-linux/aarch64/scripts/test_uflow_profile_metadata_v2.py": {
+          "mode": "100755",
+          "object": "9f131b83ab69ccd0b2c070d6d52e457209fa8717",
+          "bytes": 17592,
+          "sha256": "7f7768e27efa4be391d7724b9d4ca9d2bb36a7b38eeda29f102ed1d4e59c96f5"
+        },
+        "guest-linux/aarch64/scripts/uflow_build_supervisor.py": {
+          "mode": "100755",
+          "object": "3f00211794d4a5eb116b714797406b957f0fa40d",
+          "bytes": 6070,
+          "sha256": "5edb7327507e12294a73ade244f55c0073178b91095f16efcfb1898bb111942b"
+        },
+        "guest-linux/aarch64/scripts/uflow_c064_platform.py": {
+          "mode": "100755",
+          "object": "d4a320da0c86c509f0baf363c2fbdc9bb36cdf8b",
+          "bytes": 10361,
+          "sha256": "f7e4f5ed8fb6e065780b32f20d7f748191d7eb16d9e432df278867b4014f8ef1"
+        },
+        "guest-linux/aarch64/scripts/uflow_env_guest_entry.sh": {
+          "mode": "100755",
+          "object": "4e1642af4062d0cb01eeae401118e1dcdc9d3bd3",
+          "bytes": 540,
+          "sha256": "0d8579b1acd6c41859cfbffa9f702d22fabdf840e3481101e6a901b49e99d6f8"
+        },
+        "guest-linux/aarch64/scripts/uflow_env_guest_smoke.sh": {
+          "mode": "100755",
+          "object": "185475db6c21e69f240ac38c19e0e40797e0a889",
+          "bytes": 2262,
+          "sha256": "fb517018ef1af4c1b11a426a5daa1a2743e4a1352857d26d042b272591fc8547"
+        },
+        "guest-linux/aarch64/scripts/uflow_env_kernel_probe.c": {
+          "mode": "100644",
+          "object": "52453f78f1bca4e5931a590811f10d4b3af5a292",
+          "bytes": 2569,
+          "sha256": "b65d77e410a962527c0fa597e61a1652c4ee3674493e7ec36a4d589da48dd3f2"
+        },
+        "guest-linux/aarch64/scripts/uflow_env_runner.py": {
+          "mode": "100755",
+          "object": "5350bf01dbee0ce4283fddcc46ada4176d1b07af",
+          "bytes": 15055,
+          "sha256": "c1b7115df2c0973e4ffcd689bef35af4aa457467223b15c6277a1e8479084727"
+        },
+        "guest-linux/aarch64/scripts/uflow_env_sdk_probe.c": {
+          "mode": "100644",
+          "object": "e585a809421b0e5bf3e12e39e9814b6d504a5d36",
+          "bytes": 1184,
+          "sha256": "0e43067333797375ae15403e404efad949b59784c7f7b752b04efcaafd38536c"
+        },
+        "guest-linux/aarch64/scripts/uflow_gsva_scatter_host.py": {
+          "mode": "100755",
+          "object": "cb16493d3dcfee77c37f10ea8f912766eb2ee7b5",
+          "bytes": 4466,
+          "sha256": "f059a467d5140d78391d17c5ad0ab0e274855a8e27fc089aace58f8895baa59d"
+        },
+        "guest-linux/aarch64/scripts/uflow_guest_audit.py": {
+          "mode": "100755",
+          "object": "5065a001334a1524ef60b3e4001bbfbb00976032",
+          "bytes": 9218,
+          "sha256": "647a2b7c24f086f4128879ac3ab98e3f0cf981c4211f1129a2fe0f1a4453c33e"
+        },
+        "guest-linux/aarch64/scripts/uflow_guest_boot_args.sh": {
+          "mode": "100755",
+          "object": "4485d85348eb4c5aa07aab9b83357704db3488d8",
+          "bytes": 596,
+          "sha256": "596c0830e244415f60cfc09613cc09c0fcb9993c9a21675547fdd7df34527df3"
+        },
+        "guest-linux/aarch64/scripts/uflow_guest_group.py": {
+          "mode": "100755",
+          "object": "3daf97b0c38a8cb0c286e6434583dbdbba5ad142",
+          "bytes": 13841,
+          "sha256": "05c2dcc01e6b24aed7e14bd6a77fcf8078f5c4f5e0fccd412833e58280ebdcd1"
+        },
+        "guest-linux/aarch64/scripts/uflow_kernel_profile.py": {
+          "mode": "100755",
+          "object": "460125e2867ed3c4a92d1e821d652e4150638077",
+          "bytes": 14204,
+          "sha256": "a7ee8ce56544fd4391b6a35864e1a3a0a249005f271898b08940c5ee4a47c864"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_cache_codec_v1.py": {
+          "mode": "100755",
+          "object": "2c014df32e7fabcf2946d611a907c9944d1d612a",
+          "bytes": 6670,
+          "sha256": "84e32ea2325a36b870351a9a000690c0bf32cbf754330da94b316efeaf805284"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_cache_codec_v2.py": {
+          "mode": "100755",
+          "object": "edf8e978b8b8a71599e1390540d3676bedbbda23",
+          "bytes": 9594,
+          "sha256": "7cfbdc76f1ab8d696ae3349b6bf5510d5b8e6b4f047f50ae90e579b72c4e62db"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_guest_group_v1.py": {
+          "mode": "100755",
+          "object": "a81310249639c2523df8639610c9f87272706449",
+          "bytes": 20649,
+          "sha256": "8aebe66479b8eec36841fb8b3295ccd56362ab02bf7b6b4d6a63edbd83b86f3c"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_guest_group_v2.py": {
+          "mode": "100644",
+          "object": "4fb779c60373a1fe5053a228124bd9b5dac7f56c",
+          "bytes": 21436,
+          "sha256": "9bd5df060abfa26b2527557e14b755c701b9b3323cb57d6c5466ffa6691765b2"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_qemu_profile_v1.py": {
+          "mode": "100755",
+          "object": "27bf0862a670d5cb1d68e8de6d44a97caa36ba48",
+          "bytes": 12739,
+          "sha256": "a225f345d48046d228e33a98161c02a1b17a556453a13d2d2869ab33e2ea931b"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_qemu_profile_v2.py": {
+          "mode": "100644",
+          "object": "4694fb24324bec55ef5d5b360f7278dced7fc445",
+          "bytes": 10470,
+          "sha256": "77f382eb31ba8d0ae0013da1816877876d41dae6684696688e19e1c6cdec858f"
+        },
+        "guest-linux/aarch64/scripts/uflow_managed_write_codec_v1.py": {
+          "mode": "100644",
+          "object": "a4f544d636ac93a27509447420f2c33e433b3bfb",
+          "bytes": 10928,
+          "sha256": "e5627711dc76a5441a7c957733983bff10dfd7d38fe1cf787b3b535e0de05c08"
+        },
+        "guest-linux/aarch64/scripts/uflow_monitor_ownership_v3.py": {
+          "mode": "100755",
+          "object": "766eb8d956b43d211175c2d163e1878c6de94ceb",
+          "bytes": 9096,
+          "sha256": "826e4a4373c46a4c90ce9012d94bd1107114551f83c15d50c159f722a8f8065a"
+        },
+        "guest-linux/aarch64/scripts/uflow_profile_metadata_v2.py": {
+          "mode": "100755",
+          "object": "695c5c477302be97fb9c273892d1394a82b70978",
+          "bytes": 35200,
+          "sha256": "d512f1d5b9dbfe7e2c89d8dc4f11fe807fc480a222b1a0f69600b23afa021ecf"
+        },
+        "guest-linux/aarch64/scripts/uflow_profile_metadata_v3.py": {
+          "mode": "100755",
+          "object": "8e86a679726df4be072034f47bc9bbe6e05c8165",
+          "bytes": 31355,
+          "sha256": "5dfba50c223008701ce985eda66ad382182b98619cbe7ed4d893d168ac24c86a"
+        },
+        "guest-linux/aarch64/scripts/uflow_profile_metadata_v4.py": {
+          "mode": "100644",
+          "object": "6730f5a767063486f359fec8398f924b843c6790",
+          "bytes": 31837,
+          "sha256": "a31fe7fb69fac3258a199b328aaa9b2f02e099ec80fbca3841d66bd24eca0a79"
+        },
+        "guest-linux/aarch64/scripts/uflow_qemu_domain.py": {
+          "mode": "100755",
+          "object": "838387d813a18346860a0b5e548df6d66e96563a",
+          "bytes": 20769,
+          "sha256": "90c19a3ea880c43394a7128ac6c82a087cdf5d744fcfea8d0d7a062e917bce70"
+        },
+        "guest-linux/aarch64/scripts/uflow_qemu_evidence.py": {
+          "mode": "100755",
+          "object": "31363b655d52d5b4eaf3942239056f905b0464e3",
+          "bytes": 6591,
+          "sha256": "0dc9cbe9909bca7d53dcc6aa58b72f72942e699999ecf420055528cbd98c0995"
+        },
+        "guest-linux/aarch64/scripts/uflow_qemu_fixed_launch.py": {
+          "mode": "100755",
+          "object": "de90eaf414ece398998bc61fc9b62e4152739168",
+          "bytes": 21012,
+          "sha256": "949cd0866da8f1ad7b555dc6cf0f0a77574b82ea0499f34a6951fa5c3bb2b12b"
+        },
+        "guest-linux/aarch64/scripts/uflow_qemu_metadata.py": {
+          "mode": "100755",
+          "object": "41b941dc27af27ba7c4a4493a32712ff1bca3058",
+          "bytes": 25585,
+          "sha256": "3edf6eb9e99cfe1a194d273bd11ae0e21f2ddcd3fff7fed2fd835ec9f5c227e5"
+        },
+        "guest-linux/aarch64/scripts/uflow_qemu_profile.py": {
+          "mode": "100755",
+          "object": "360768d8ecc0ef837b88d0cd90c80afecbc28ca1",
+          "bytes": 10439,
+          "sha256": "e295a26c99216ac027dd64f54ed323b211bc529ee7fb6753dac4e422bc7fb43e"
+        },
+        "guest-linux/aarch64/scripts/uflow_recovery_context_v3.py": {
+          "mode": "100755",
+          "object": "4a1ec778769c9bcdfe0e200ad02da342062e8cd5",
+          "bytes": 31211,
+          "sha256": "3925e8eea9491eece5c2a2bcb246a1a770ce11ac3006f84ee62853d00232b91d"
+        },
+        "guest-linux/aarch64/scripts/uflow_recovery_context_v4.py": {
+          "mode": "100644",
+          "object": "4b24c4d62a9aaab4112799f2e69bff17d505a1dd",
+          "bytes": 23952,
+          "sha256": "990b85066c47907338b06c42ae233100eea4cd6c33ec5731bad0b260b507b4f0"
+        },
+        "guest-linux/aarch64/scripts/uflow_terminal_domain_v2.py": {
+          "mode": "100755",
+          "object": "7c7c0831085c861e7979e0a3b7d66f93bf793312",
+          "bytes": 29606,
+          "sha256": "1ee191b73654592a637a5a227b47a51e6b05c6a01d2ec82bef1daf8c960c5088"
+        },
+        "guest-linux/aarch64/tests/fixtures/gsva_scatter_harness.c": {
+          "mode": "100644",
+          "object": "b737a90d9c2c12f3bbd2be28c6d59962d8ea0991",
+          "bytes": 10428,
+          "sha256": "f52cde730f7053cf7e25a90f006f1d273267df0301d7767ea57297b014f351d1"
+        },
+        "guest-linux/aarch64/tests/test_uflow_c064_platform.py": {
+          "mode": "100644",
+          "object": "0286100697d838b88e9922459aea354772535a19",
+          "bytes": 2396,
+          "sha256": "5922761c609f900e5d3c26926a81c14c6589812a40187954524bae141d660689"
+        },
+        "guest-linux/aarch64/tests/test_uflow_env_build_identity.py": {
+          "mode": "100644",
+          "object": "03765bb86f79de3eca32b46e101ed849c48a67b2",
+          "bytes": 1451,
+          "sha256": "98d0f3b8aa9c5329e32bc160cb7fb2671be5be0229ede75aa3ab762e0b15c908"
+        },
+        "guest-linux/aarch64/tests/test_uflow_env_guest_audit.py": {
+          "mode": "100644",
+          "object": "415260797ba3e24ad2735286e4fad960f8288fa2",
+          "bytes": 5584,
+          "sha256": "de84965cd3722044665073d2ea5829ad59adc28f36c6422dcec35db42936e8c7"
+        },
+        "guest-linux/aarch64/tests/test_uflow_env_guest_control.py": {
+          "mode": "100644",
+          "object": "7186f0391709c5edb636e2d665d9bba8edda8da5",
+          "bytes": 3298,
+          "sha256": "4e36d49c0ea6b0e92c7f7e13a9a0b77a4dd993fa02c74ff02720d67f09abc49b"
+        },
+        "guest-linux/aarch64/tests/test_uflow_env_runner.py": {
+          "mode": "100644",
+          "object": "8d7f2f63e8bc7b0f4fcbad4f29b73ebabcb0f3d6",
+          "bytes": 11267,
+          "sha256": "a895007f93b706b6baa1a52472af2b525af76c493266484b34475103b1a2dfbd"
+        },
+        "guest-linux/aarch64/tests/test_uflow_kernel_profile.py": {
+          "mode": "100644",
+          "object": "1cb4d2136108fc4519180cd1a84e791c994ec399",
+          "bytes": 10900,
+          "sha256": "47d3c097c22aa64146415ecbf5fe6271b32ea5965a86ab229a384e68f2265fd2"
+        },
+        "guest-linux/aarch64/tests/test_uflow_managed_control_v1.py": {
+          "mode": "100644",
+          "object": "28cd870c1013e87d3499701e5fbbb06ced1bb1ae",
+          "bytes": 14208,
+          "sha256": "2b7e938a246ce683b28b02d02b82ee1412cd6eeeea073fcbf0d23bffd93beb5f"
+        },
+        "guest-linux/aarch64/tests/test_uflow_managed_qemu_profile_v2.py": {
+          "mode": "100644",
+          "object": "05461e1ab501f5f6c2d67ca7f4343f562e30ce6b",
+          "bytes": 5561,
+          "sha256": "ce200e1c6048fa1eb9221e5cd9de16d7a301c8cbf519933185d3d8437885d90c"
+        },
+        "guest-linux/aarch64/tests/test_uflow_managed_write_control_v1.py": {
+          "mode": "100644",
+          "object": "aa3e261e74c77cd5925e67a7ef364c9054e68ca6",
+          "bytes": 18914,
+          "sha256": "07cedb0c4b014cf5b39aeeab08ceb458e8e9587763f019d03e7e06a2d4dd084d"
+        },
+        "guest-linux/aarch64/tests/test_uflow_profile_metadata_v3.py": {
+          "mode": "100644",
+          "object": "21ff66bc8342df68a83d7d94847c4f3a40dbb316",
+          "bytes": 20399,
+          "sha256": "2eee94c128450193979565b0c8c48a4eca112b768197dfc16905eb72740930e9"
+        },
+        "guest-linux/aarch64/tests/test_uflow_profile_metadata_v4.py": {
+          "mode": "100644",
+          "object": "6b277eca4aebf98dd064c52e2eb85274a91df659",
+          "bytes": 20494,
+          "sha256": "69ee41248d49b7eb88f6bb556b2dfaf7cc5b1d58276f4667c5c88a13e6d0f5b6"
+        },
+        "guest-linux/aarch64/tests/test_uflow_qemu_domain.py": {
+          "mode": "100644",
+          "object": "0636937b15d7fd0b3af5074414bc1ddf516d69aa",
+          "bytes": 31871,
+          "sha256": "a3616331c9f482f82b34ce862fef80e692dd61e94303486dbc0a663b7057bfb8"
+        },
+        "guest-linux/aarch64/tests/test_uflow_qemu_profile.py": {
+          "mode": "100644",
+          "object": "5cc933f4535fe1948e59a33ba5c46081e42b9916",
+          "bytes": 3546,
+          "sha256": "baf698f4c102ab2853acd4a157dd648282917762e416d5d48b5bf74f7e0211de"
+        },
+        "guest-linux/aarch64/tests/test_uflow_recovery_context_v3.py": {
+          "mode": "100644",
+          "object": "e119c53ed26f3db98790a79e289a32681a5ca6e0",
+          "bytes": 6390,
+          "sha256": "4a33585006b289e5975afd450e39635c27aeebbb0b2b2a71c19b9364d4e3f8f8"
+        },
+        "guest-linux/aarch64/tests/test_uflow_recovery_context_v4.py": {
+          "mode": "100644",
+          "object": "5161a9b8e4bfac394c97cdd732dfa641a2fad0d0",
+          "bytes": 4615,
+          "sha256": "86046d63c767405d08f3f728df06cf60d2dbad839bbe08cbea5cc1f740fffe0d"
+        },
+        "guest-linux/aarch64/tests/test_uflow_terminal_domain_v2.py": {
+          "mode": "100644",
+          "object": "5a9119273a6faff3e20c4ce3e64e72a50b52add0",
+          "bytes": 4416,
+          "sha256": "b4030d5b685eec2cf7f7a176fed1f4e31f3248cb884130d8d07f0f40b091dd33"
+        }
+      },
+      "patch_sha256": "69206901d21b3436ddc493860b82a5f7b063fd50b61cf164d4b4948a2dd541ff",
+      "patch": "patches/ub_sim.patch"
+    },
+    "qemu": {
+      "url": "https://github.com/LL-mixed/qemu.git",
+      "base": "f2ef54f454b661e551a8619f9feb7406752a1b1a",
+      "accepted_source_commit": null,
+      "accepted_tree": "1375e10a0355df9c6550f5f72712748d19a78275",
+      "files": {
+        "hw/ub/gsva_coherence.c": {
+          "mode": "100644",
+          "object": "c43edaaf03555b970867a3d2fde167fee169c482",
+          "bytes": 57704,
+          "sha256": "7a67948d8d56e60f88652f234b33c5c30e32bd044e17c988850ca44d4877ec8a"
+        },
+        "hw/ub/hisi/ubc_msgq.c": {
+          "mode": "100644",
+          "object": "23e531177cf5433d0052f20f933766c0d1babcc8",
+          "bytes": 45011,
+          "sha256": "5fe751c935473fb851d3df5cc99c8fcb0242ccd7290cc197083d35ca00bea892"
+        },
+        "hw/ub/ub_ubc.c": {
+          "mode": "100644",
+          "object": "8e4b067d3478141224b7f6cf093b63e592176b01",
+          "bytes": 614828,
+          "sha256": "cf06d5b48b5f59f33ea3fb36f965f000f89ec2c95b7bf2e0ef4eabd464359bec"
+        },
+        "hw/ub/ub_ummu.c": {
+          "mode": "100644",
+          "object": "70d1bc6af4ddfac1bc4e1ce2a349c84756d2d8c5",
+          "bytes": 100240,
+          "sha256": "1733a722372b5ba352fefa2b0afdfb0c7468fa8f81f0b48e9d66f86e07462d3f"
+        },
+        "hw/ub/uflow_managed_cache.inc": {
+          "mode": "100644",
+          "object": "1a1767ca8669591ec282bb9310bd525bda4593d6",
+          "bytes": 18060,
+          "sha256": "0b81660aab975c48e378b1c51c2ac3533433f091398f48c38eeaff0f3cc40e9b"
+        },
+        "hw/ub/uflow_managed_write.inc": {
+          "mode": "100644",
+          "object": "11e1c27b9e99cb10fb4fd6dac396f77f5639c196",
+          "bytes": 14203,
+          "sha256": "72a3fd8d4214a9c08620fc1d59d7b3000e7a71f69bd6e85fee10c9d7de94b6e2"
+        },
+        "include/hw/ub/ub_ummu.h": {
+          "mode": "100644",
+          "object": "26d9771309c7a49a8362286fb131e51c4b5139eb",
+          "bytes": 4887,
+          "sha256": "36e0a936a23beb5ed5e99068534ae0c5e20f95f69f201c386581194700dbd91d"
+        },
+        "include/hw/ub/uflow_bounded_log.h": {
+          "mode": "100644",
+          "object": "50397b78d5be841ddb5e7c45321bdcb4c0e11102",
+          "bytes": 2218,
+          "sha256": "6ae3bdf0c9d86ebeccdd3f28f81fbc1b9d000f7025afddbf7df15083dcda843a"
+        },
+        "include/hw/ub/uflow_managed_cache_control.h": {
+          "mode": "100644",
+          "object": "a7000a11a4406ea45e6cd11b9c8d1ffb7792fe70",
+          "bytes": 425,
+          "sha256": "dda68a46cc6017487d774a179ddab71933bc6d6a66365edf8e56f75422d07922"
+        },
+        "include/hw/ub/uflow_managed_cache_core.h": {
+          "mode": "100644",
+          "object": "591f9f38ca442978cf648935c86458ea9cc08af8",
+          "bytes": 7409,
+          "sha256": "5790a04c701054fefa93377885c9043d6a4ebbb63f0758a51a8dcbc922cc29b5"
+        },
+        "include/hw/ub/uflow_managed_write_core.h": {
+          "mode": "100644",
+          "object": "54a4633f6c96066f059d228f61a9633346acea35",
+          "bytes": 6748,
+          "sha256": "d009de5edbb6da7de9613f1961ac858fb0ea290e6d73dc9289c7d07836d0b09e"
+        }
+      },
+      "patch": "patches/qemu-managed-pool.patch",
+      "patch_sha256": "313b8ccdc88cb2e500282c4ca3763559397c70eec94a00de1786c010c91f5533",
+      "provenance": "Exact changed sources from the accepted c1e73ed2 managed-write profile; rest of tree is public f2ef54f4",
+      "historical_QEMU_binary_sha256": "5ac05e7288f1a940502558cc3d8a6c2dfef0067d0eaa3ec59d9fa41d22755949"
+    }
+  },
+  "fixed_upstream": {
+    "kernel": {
+      "url": "https://github.com/LL-mixed/kernel.git",
+      "commit": "c2def7c931e6451d89727dec0c6f892abe28ba00"
+    },
+    "mem_service": {
+      "url": "https://github.com/LL-mixed/mem_service.git",
+      "commit": "546985e26bce60798fa3f88329c3fbed8350c798"
+    },
+    "pto_isa": {
+      "url": "https://github.com/hw-native-sys/pto-isa.git",
+      "commit": "217bb98952a8f9004b95fe938da97d8d5f68f702"
+    },
+    "ptoas": {
+      "url": "https://github.com/hw-native-sys/ptoas.git",
+      "tag": "v0.70"
+    }
+  },
+  "overrides": {
+    "ub_sim/vendor/simpler": "Use the simpler overlay above, not gitlink 3794c4309fbdb8d20a262ced4e7cb1b3fa823261",
+    "pypto/runtime": "Use the simpler overlay above"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema": 3,
+  "kind": "CompiledC081ExecutionPolicy",
+  "config_directory": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/config-managed-c100-v1",
+  "nonce": "5352c7ca-992a-4339-83d5-09f1f7e0653b",
+  "phases": {
+    "terminal-only": "c100",
+    "successor": "c101",
+    "postclose-audit": "c102"
+  },
+  "state_sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26",
+  "context_sha256": "e6241411f9217661c6ccf5376120c67a5c096629c501c48f02bfb4238fb8175c",
+  "authority": "/workspace/uflow/runs/mem-service-shared-pool-20261108/implementation/responsibility-c013",
+  "successor": "successor-c081-terminal-domain-loss-v3"
+}

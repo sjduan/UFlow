@@ -1,0 +1,197 @@
+{
+  "schema": 3,
+  "interface": "current-terminal-chain-case-v1",
+  "kind": "C101CurrentCaseHOSTPreparationV4",
+  "HOST_fixture_only": true,
+  "source_run": "c101",
+  "current_state": {
+    "path": "/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c101/state/state.json",
+    "bytes": 101808,
+    "sha256": "934b30b07df72ab28e96ef173a639f55e64584db46dbdc13518828246ab48796"
+  },
+  "source_revision": 598,
+  "resource_ids": [
+    119,
+    120,
+    121
+  ],
+  "eligible_bytes": 54525952,
+  "before_B_bytes": 134217728,
+  "after_B_bytes": 79691776,
+  "protected_retained_bytes": 12582912,
+  "protected_reserved_bytes": 67108864,
+  "predecessor_files": {
+    "intent.json": {
+      "bytes": 42011,
+      "sha256": "e4201e265ee8f04332a228995dc65346ca04897509016d55da35e62d67eefc68"
+    },
+    "result.json": {
+      "bytes": 41956,
+      "sha256": "9c71b16c1fa91bcd38a667e8955c34a6bee5ff074d538c85763eb53066c466d2"
+    },
+    "successor-c027-v1/intent.json": {
+      "bytes": 100750,
+      "sha256": "bfe1c5ec7011db78695a488fb7168c18f4bf93d3680c97b1e6780c11a08ca507"
+    },
+    "successor-c027-v1/result.json": {
+      "bytes": 100743,
+      "sha256": "d7b5277a83b47d24a4e15c11e901582878c546e28a61acf8205a70d0f34594f9"
+    },
+    "successor-c033-v1/intent.json": {
+      "bytes": 316073,
+      "sha256": "ac7ae68ea90f825a608b6cb38d70e6b743c1e790124aaaad9f7df78cc24dbd86"
+    },
+    "successor-c033-v1/result.json": {
+      "bytes": 316066,
+      "sha256": "7af3a1dc40f9dc8d30bd07e9dba8b21abe66c254947c95e0a8c12f4bb2f9cff0"
+    },
+    "successor-c039-prestart-v1/intent.json": {
+      "bytes": 66456,
+      "sha256": "15ed992ca9e2eda5f4e1a544eaa4a8a8eb552c23d39cd03a9c5daae97179226c"
+    },
+    "successor-c039-prestart-v1/result.json": {
+      "bytes": 66650,
+      "sha256": "7867562eea16c97d3f8b13b8536eb62d72ecc9dcbc22a7613d5f5b943c8944b4"
+    }
+  },
+  "claimed_ancestors": [
+    {
+      "directory": "successor-c044-terminal-domain-loss-v1",
+      "files": {
+        "before128.json": {
+          "bytes": 9231,
+          "sha256": "fe5c200016cfc06677426838d9feea8ddb95c738edee929418c453c6ed6a6e0d"
+        },
+        "commit.json": {
+          "bytes": 592,
+          "sha256": "31c4ab9126df335b4d25492fc6574c0c997237cab603ba8003fe8abf959c0ab4"
+        },
+        "historical-state.json": {
+          "bytes": 73279,
+          "sha256": "b6592a7442e7cb8540f340168a215fe6cc8cf669c7e87fedb7403ced2fc6c307"
+        },
+        "intent.json": {
+          "bytes": 9327,
+          "sha256": "5d68cee6b40eb8ca66c833ae5defb3d7d229181c3bcc8ce6a2c3ca7a4c6a1c18"
+        },
+        "permanent-fences.json": {
+          "bytes": 3600,
+          "sha256": "80bb4f9352d20104206e7f74a24ed9dbfa1d13f1643272507c78e2840ea2b533"
+        },
+        "resulting76.json": {
+          "bytes": 33070,
+          "sha256": "464bf56d35ee2eaf03600f05ab1580e0e6b80073ba9650ff76bd173924ac6c78"
+        },
+        "service-admission-claim.json": {
+          "bytes": 10317,
+          "sha256": "e571f2e683ad08fb9720928d5c1dd795318c66a434190dc6e7956148de5a6fcd"
+        }
+      },
+      "resource_ids": [
+        110,
+        111,
+        112
+      ],
+      "version": 1
+    },
+    {
+      "directory": "successor-c064-terminal-domain-loss-v2",
+      "files": {
+        "before128.json": {
+          "bytes": 10425,
+          "sha256": "9305656ed6fa9da23e8ba6690443dc7f27966f7b4fddf6f8e57ce6bd7d429747"
+        },
+        "commit.json": {
+          "bytes": 1057,
+          "sha256": "782e5fd0b1e34fcc3ec5a70e0682d5554fe873e9106deef918a4abbdc0096625"
+        },
+        "historical-state.json": {
+          "bytes": 60761,
+          "sha256": "163f7500836dc4fd199d34f83a0e08453ab05255f8b15a57338052df4601d5b0"
+        },
+        "inherited-backing-identities.json": {
+          "bytes": 846,
+          "sha256": "485bbdca251e8345bc56c63488dc88dfa97969c099e62ba286d6e24b4cb4f9dc"
+        },
+        "intent.json": {
+          "bytes": 24102,
+          "sha256": "15c59412e40a746e885bd9c6fbb27a45a6afd1e282473fb74590168959be266f"
+        },
+        "permanent-fences.json": {
+          "bytes": 7122,
+          "sha256": "023c834bd11eeec906ad559261a7dc08eb686a10eea31a7c763466db5738d120"
+        },
+        "resulting76.json": {
+          "bytes": 38288,
+          "sha256": "892c5f9c1c43b1f0045c67ba4631966d58210a028f71b88821be6e8511038e48"
+        },
+        "service-admission-claim.json": {
+          "bytes": 11476,
+          "sha256": "45963e3038796a5af98affe0a4f048eca256a566a0958e639463afd6cd271322"
+        }
+      },
+      "resource_ids": [
+        113,
+        114,
+        115
+      ],
+      "version": 2
+    },
+    {
+      "version": 3,
+      "directory": "successor-c081-terminal-domain-loss-v3",
+      "resource_ids": [
+        116,
+        117,
+        118
+      ],
+      "files": {
+        "before128.json": {
+          "bytes": 11583,
+          "sha256": "f8a727bba2bf0522faf318d2b42009791aa8a93ab5f3e9baae2744c4cd162e16"
+        },
+        "commit.json": {
+          "bytes": 1057,
+          "sha256": "90a2fe2ba165dbafda522dfd4efdd3ab83eb1ee8006c3422ed0901b04c1a22b1"
+        },
+        "historical-state.json": {
+          "bytes": 89240,
+          "sha256": "4d33870d43d69c6eb094494fe794cf38cf73bbb609fd72514dadd6e4cbd5cc26"
+        },
+        "inherited-backing-identities.json": {
+          "bytes": 1689,
+          "sha256": "bb63489a912bd711618a212a2560b848f7f4e2085999b89e932d958e4efea5a4"
+        },
+        "intent.json": {
+          "bytes": 56773,
+          "sha256": "0b50e8df24f2bf99c572f8b3af23ae054feb80357e8939a6dea6c982301904aa"
+        },
+        "permanent-fences.json": {
+          "bytes": 11260,
+          "sha256": "c57a875b38a02e61ddd45bd5614ef82d64c8f27b300879eb526fdf9d58e72822"
+        },
+        "resulting76.json": {
+          "bytes": 43615,
+          "sha256": "fbfe5a75056e27f90f0bb9e82372ca31229b90cea30433476ca94fc21e16b1ba"
+        },
+        "service-admission-claim.json": {
+          "bytes": 12635,
+          "sha256": "404628be4f3c1607944e06f4355ffbfe344970d2c05917856812af523e27cc27"
+        }
+      }
+    }
+  ],
+  "new_successor": "successor-c101-terminal-domain-loss-v4",
+  "transaction_version": 4,
+  "future_canary_ids": [
+    122,
+    123
+  ],
+  "future_business_id": 124,
+  "fresh_native_generation": 1,
+  "production_producer_context": null,
+  "production_execution_package": null,
+  "normal_SDK_ACK": false,
+  "CPU_fixture_only_not_E_accepted_proof": true,
+  "future_E_current_case_context": null
+}

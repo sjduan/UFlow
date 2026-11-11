@@ -1,0 +1,254 @@
+{
+  "source_kind": "offline-fixture: actual manager A canonical kernel read and preserved F A-h001 FD inventories; not runtime calibration",
+  "provenance": {
+    "artifacts\\d1-a-host-baseline-review-20261105\\kernel-nodes.json": "130ba73c9cfcc6cfb68d566b6c98ba7a27f961c17f330b135f3bd546abd9ad76",
+    "artifacts\\d1-serving-20261105\\execution\\A-boundary\\h001\\inventories\\daemon-start-daemon-768382.json": "1e03bf5bdd0a057a6f6d0d436e2e82a90e6183f7d455999a988a2e4cedc06867",
+    "artifacts\\d1-serving-20261105\\execution\\A-boundary\\h001\\inventories\\provider-start-provider-768386.json": "c3409c014bce29fb5bbae227accd663ca3f8745568a4beabc4d21e71034cf8f6"
+  },
+  "kernel": {
+    "host": "serving-a-sj",
+    "container": "openeuler-2403-DS",
+    "nodes": {
+      "/dev/davinci_manager": {
+        "is_char": true,
+        "is_symlink": false,
+        "canonical_path": "/dev/davinci_manager",
+        "st_dev": 55,
+        "st_ino": 103,
+        "st_mode": 8630,
+        "rdev": [
+          234,
+          0
+        ],
+        "kernel_driver_name": "hisi_davinci_intf",
+        "sysfs_exists": true,
+        "sysfs_realpath": "/sys/devices/virtual/devdrv_manager/davinci_manager",
+        "sysfs_uevent": "MAJOR=234\nMINOR=0\nDEVNAME=davinci_manager\n"
+      },
+      "/dev/hisi_hdc": {
+        "is_char": true,
+        "is_symlink": false,
+        "canonical_path": "/dev/hisi_hdc",
+        "st_dev": 55,
+        "st_ino": 116,
+        "st_mode": 8630,
+        "rdev": [
+          509,
+          0
+        ],
+        "kernel_driver_name": "hisi_hdc",
+        "sysfs_exists": true,
+        "sysfs_realpath": "/sys/devices/virtual/hisi_hdc/hisi_hdc",
+        "sysfs_uevent": "MAJOR=509\nMINOR=0\nDEVNAME=hisi_hdc\n"
+      }
+    },
+    "Ascend_character_drivers": {
+      "234": "hisi_davinci_intf",
+      "509": "hisi_hdc",
+      "510": "devmm_svm",
+      "511": "devdrv-cdev"
+    },
+    "proc_devices_sha256": "066df744205ba7f313815e87c34ab65942008a33019101274365a864f812ec30",
+    "proc_devices": "Character devices:\n  1 mem\n  4 /dev/vc/0\n  4 tty\n  4 ttyS\n  5 /dev/tty\n  5 /dev/console\n  5 /dev/ptmx\n  7 vcs\n 10 misc\n 13 input\n 21 sg\n 29 fb\n128 ptm\n136 pts\n162 raw\n180 usb\n189 usb_device\n204 ttyAMA\n226 drm\n234 hisi_davinci_intf\n235 ipmidev\n236 vfio\n237 uburma\n238 ubcore\n239 ubcore\n240 lqdcmi_pcidev\n241 uacce\n242 hidraw\n243 usbmon\n244 aux\n245 bsg\n246 module_crl\n247 scan_pages\n248 watchdog\n249 ptp\n250 pps\n251 rtc\n252 dax\n253 tpm\n254 gpiochip\n508 dvpp_cmdlist\n509 hisi_hdc\n510 devmm_svm\n511 devdrv-cdev\n\nBlock devices:\n  7 loop\n  8 sd\n  9 md\n 65 sd\n 66 sd\n 67 sd\n 68 sd\n 69 sd\n 70 sd\n 71 sd\n128 sd\n129 sd\n130 sd\n131 sd\n132 sd\n133 sd\n134 sd\n135 sd\n254 mdp\n259 blkext\n",
+    "scope": "stat/readlink/proc/sysfs reads only; no device open, UF/ACL call, daemon/provider/pool/native/model or reservation"
+  },
+  "daemon_fds": {
+    "0": {
+      "target": "/dev/null",
+      "mode": 8630,
+      "dev": 5,
+      "inode": 5,
+      "char": true,
+      "rdev": [
+        1,
+        3
+      ],
+      "flags": 131072,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "1": {
+      "target": "/workspace/uflow/runs/d1-managed-ddr-20261105/serving/a001/h001/daemon.log",
+      "mode": 33188,
+      "dev": 52,
+      "inode": 198494,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 131073,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "2": {
+      "target": "/workspace/uflow/runs/d1-managed-ddr-20261105/serving/a001/h001/daemon.log",
+      "mode": 33188,
+      "dev": 52,
+      "inode": 198494,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 131073,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "3": {
+      "target": "/dev/davinci_manager",
+      "mode": 8630,
+      "dev": 55,
+      "inode": 103,
+      "char": true,
+      "rdev": [
+        234,
+        0
+      ],
+      "flags": 655362,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "4": {
+      "target": "/dev/davinci_manager",
+      "mode": 8630,
+      "dev": 55,
+      "inode": 103,
+      "char": true,
+      "rdev": [
+        234,
+        0
+      ],
+      "flags": 655362,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "5": {
+      "target": "/dev/davinci_manager",
+      "mode": 8630,
+      "dev": 55,
+      "inode": 103,
+      "char": true,
+      "rdev": [
+        234,
+        0
+      ],
+      "flags": 655362,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "6": {
+      "target": "/dev/hisi_hdc",
+      "mode": 8630,
+      "dev": 55,
+      "inode": 116,
+      "char": true,
+      "rdev": [
+        509,
+        0
+      ],
+      "flags": 131072,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "7": {
+      "target": "socket:[720896797]",
+      "mode": 49663,
+      "dev": 8,
+      "inode": 720896797,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 526338,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "8": {
+      "target": "/workspace/uflow/runs/d1-managed-ddr-20261105/serving/a001/h001/state/authority.lock",
+      "mode": 33152,
+      "dev": 52,
+      "inode": 198495,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 655361,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    }
+  },
+  "provider_fds": {
+    "0": {
+      "target": "/dev/null",
+      "mode": 8630,
+      "dev": 55,
+      "inode": 135,
+      "char": true,
+      "rdev": [
+        1,
+        3
+      ],
+      "flags": 131072,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "1": {
+      "target": "/workspace/uflow/runs/d1-managed-ddr-20261105/serving/a001/h001/state/provider.stderr",
+      "mode": 33188,
+      "dev": 52,
+      "inode": 198497,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 131073,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "2": {
+      "target": "/workspace/uflow/runs/d1-managed-ddr-20261105/serving/a001/h001/state/provider.stderr",
+      "mode": 33188,
+      "dev": 52,
+      "inode": 198497,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 131073,
+      "cloexec": false,
+      "inheritable": true,
+      "flags_source": "Linux proc fdinfo"
+    },
+    "3": {
+      "target": "socket:[720876812]",
+      "mode": 49663,
+      "dev": 8,
+      "inode": 720876812,
+      "char": false,
+      "rdev": [
+        0,
+        0
+      ],
+      "flags": 524290,
+      "cloexec": true,
+      "inheritable": false,
+      "flags_source": "Linux proc fdinfo"
+    }
+  }
+}

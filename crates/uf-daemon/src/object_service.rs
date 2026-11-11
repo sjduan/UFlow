@@ -16,6 +16,7 @@ use uf_core::{err, get, get_i64, get_u64, ok, Kv};
 
 use std::fs::{self, OpenOptions};
 use std::os::fd::{AsRawFd, IntoRawFd};
+use std::os::unix::fs::MetadataExt;
 
 pub(crate) fn create_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
     create_data_object_impl(req, shared)
@@ -183,53 +184,107 @@ fn create_ddr_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
 
     let object_id = st.take_next_object_id();
     let placement_id = st.take_next_placement_id();
+    let reservation = if immutable && !model_id.is_empty() && !name.is_empty() && !role.is_empty() {
+        format!(
+            "legacy-key:{}",
+            serde_json::json!([model_id, name, role, node, size_bytes])
+        )
+    } else {
+        format!("legacy:{object_id}")
+    };
+    if let Err(error) = st.ddr_resources.reserve_unique(&reservation, size_bytes) {
+        return err(error);
+    }
+    drop(st); // File creation/pre-touch never holds the shared Catalog mutex.
     let path = ddr_path(object_id, node);
-    let file = if use_memfd {
-        match create_memfd_file(&format!("uflow_ddr_object_{}", object_id), size_bytes) {
-            Ok(file) => file,
-            Err(e) => return err(e),
-        }
-    } else {
-        let file = match OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(&path)
-        {
-            Ok(file) => file,
-            Err(e) => return err(format!("create DDR object file failed: {}", e)),
-        };
-        if let Err(e) = file.set_len(size_bytes) {
-            let _ = fs::remove_file(&path);
-            return err(format!("resize DDR object file failed: {}", e));
-        }
-        file
-    };
-    let ddr_fd = if use_memfd { file.as_raw_fd() } else { -1 };
-    let ddr_path_string = if use_memfd {
-        proc_fd_path(ddr_fd)
-    } else {
-        path.to_string_lossy().to_string()
-    };
-    let prepare_info = {
-        let _prepare = span(
-            TraceCategory::Backend,
-            "backend.ddr_prepare_fast_profile",
-            vec![
-                ("object_id", object_id.to_string()),
-                ("bytes", size_bytes.to_string()),
-                ("target", format!("host:{}", node)),
-            ],
-        );
-        match prepare_ddr_file(&file, size_bytes) {
-            Ok(info) => info,
-            Err(e) => {
-                let _ = fs::remove_file(&path);
-                return err(format!("prepare DDR object failed: {}", e));
+    let prepared = (|| -> Result<_, String> {
+        let file = if use_memfd {
+            match create_memfd_file(&format!("uflow_ddr_object_{}", object_id), size_bytes) {
+                Ok(file) => file,
+                Err(e) => return Err(e),
             }
+        } else {
+            let file = match OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&path)
+            {
+                Ok(file) => file,
+                Err(e) => return Err(format!("create DDR object file failed: {}", e)),
+            };
+            if let Err(e) = file.set_len(size_bytes) {
+                let _ = fs::remove_file(&path);
+                return Err(format!("resize DDR object file failed: {}", e));
+            }
+            file
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|e| format!("stat created DDR: {e}"))?;
+        let ddr_fd = if use_memfd { file.as_raw_fd() } else { -1 };
+        let ddr_path_string = if use_memfd {
+            proc_fd_path(ddr_fd)
+        } else {
+            path.to_string_lossy().to_string()
+        };
+        let prepare_info = {
+            let _prepare = span(
+                TraceCategory::Backend,
+                "backend.ddr_prepare_fast_profile",
+                vec![
+                    ("object_id", object_id.to_string()),
+                    ("bytes", size_bytes.to_string()),
+                    ("target", format!("host:{}", node)),
+                ],
+            );
+            match prepare_ddr_file(&file, size_bytes) {
+                Ok(info) => info,
+                Err(e) => {
+                    let _ = fs::remove_file(&path);
+                    return Err(format!("prepare DDR object failed: {}", e));
+                }
+            }
+        };
+        Ok((file, metadata, prepare_info, ddr_path_string))
+    })();
+    let (file, metadata, prepare_info, ddr_path_string) = match prepared {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            lock.lock()
+                .unwrap()
+                .ddr_resources
+                .cancel_uncreated(&reservation);
+            return err(error);
         }
     };
+    let mut st = lock.lock().unwrap();
+    let accepted = if st.shutdown_requested || !st.clients.contains_key(&client_id) {
+        Err("client stopped while creating DDR resource".to_string())
+    } else {
+        st.ddr_resources.commit(
+            &reservation,
+            object_id,
+            metadata.dev(),
+            metadata.ino(),
+            size_bytes,
+        )
+    };
+    if let Err(error) = accepted {
+        drop(st);
+        let unmapped =
+            unmap_ddr_service_mapping(prepare_info.service_ptr, prepare_info.service_len).is_ok();
+        drop(file);
+        let removed = use_memfd || fs::remove_file(&path).is_ok();
+        if unmapped && removed {
+            lock.lock()
+                .unwrap()
+                .ddr_resources
+                .cancel_uncreated(&reservation);
+        }
+        return err(error);
+    }
     let ddr_fd = if use_memfd { file.into_raw_fd() } else { -1 };
     if prepare_info.madvise_hugepage {
         record_duration_us(
@@ -688,6 +743,9 @@ pub(crate) fn open_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
     if st.external_ddr.contains(object_id) {
         return err("external DDR must be acquired through the authenticated FD broker");
     }
+    if st.managed_pools.owns_object(object_id) {
+        return err("managed pool requires registered view and authenticated range lease");
+    }
     if bytes == 0 {
         bytes = object.requested_bytes.saturating_sub(offset);
     }
@@ -779,12 +837,19 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         if st.external_ddr.contains(object_id) {
             return err("external DDR must be revoked through the authenticated FD broker");
         }
+        if st.managed_pools.owns_object(object_id) {
+            return err("managed pool must use its authenticated provider lifecycle");
+        }
         let mut object = match st.objects.remove(&object_id) {
             Some(object) => object,
             None => return err("object not found"),
         };
         object.state = "Released".to_string();
-        st.mark_object_released(object_id);
+        if object.placement == DDR_PLACEMENT {
+            mark_ddr_release_phase(&mut st, object_id, "Releasing");
+        } else {
+            st.mark_object_released(object_id);
+        }
         for lease in st
             .leases
             .values_mut()
@@ -831,41 +896,139 @@ pub(crate) fn release_data_object(req: &Kv, shared: &SharedCatalog) -> Kv {
         );
         cv.notify_all();
     }
-    if let Some(allocation) = allocation_to_free {
-        let mut backend = NpuHbmAclBackend::default();
-        let _free_trace = span(
-            TraceCategory::Backend,
-            "backend.hbm_free",
-            vec![
-                ("device_id", allocation.device_id.to_string()),
-                ("bytes", allocation.actual_bytes.to_string()),
-                ("raw_handle_id", allocation.raw_handle_id.to_string()),
-            ],
-        );
-        if let Err(e) = backend.free(allocation) {
-            return err(e);
-        }
-    }
-    if let Some(path) = ddr_path_to_remove {
-        if let Some((ptr, len)) = ddr_mapping_to_unmap {
-            if let Err(e) = unmap_ddr_service_mapping(ptr, len) {
-                return err(e);
+    let released = (|| -> Result<(), String> {
+        if let Some(allocation) = allocation_to_free {
+            let mut backend = NpuHbmAclBackend::default();
+            let _free_trace = span(
+                TraceCategory::Backend,
+                "backend.hbm_free",
+                vec![
+                    ("device_id", allocation.device_id.to_string()),
+                    ("bytes", allocation.actual_bytes.to_string()),
+                    ("raw_handle_id", allocation.raw_handle_id.to_string()),
+                ],
+            );
+            if let Err(e) = backend.free(allocation) {
+                return Err(e);
             }
         }
-        if ddr_fd_to_close >= 0 {
-            if let Err(e) = close_ddr_fd(ddr_fd_to_close) {
-                return err(e);
+        if let Some(path) = ddr_path_to_remove {
+            if let Some((ptr, len)) = ddr_mapping_to_unmap {
+                if let Err(e) = unmap_ddr_service_mapping(ptr, len) {
+                    return Err(e);
+                }
             }
-        } else if let Err(e) = fs::remove_file(&path) {
-            return err(format!("remove DDR object file failed: {}", e));
+            if ddr_fd_to_close >= 0 {
+                if let Err(e) = close_ddr_fd(ddr_fd_to_close) {
+                    return Err(e);
+                }
+            } else if let Err(e) = fs::remove_file(&path) {
+                return Err(format!("remove DDR object file failed: {}", e));
+            }
         }
-    }
-    if let Some(object) = ssd_object_to_remove {
-        if let Err(e) = remove_ssd_file(&object) {
-            return err(e);
+        if let Some(object) = ssd_object_to_remove {
+            if let Err(e) = remove_ssd_file(&object) {
+                return Err(e);
+            }
         }
+        Ok(())
+    })();
+    let mut st = shared.0.lock().unwrap();
+    if let Err(error) = released {
+        mark_ddr_release_phase(&mut st, get_u64(req, "object_id"), "ReleaseUnknown");
+        return err(error);
     }
+    // DDR charge survives any unmap/close/unlink error above. Only actual
+    // successful resource release returns capacity to the common ledger.
+    st.mark_object_released(get_u64(req, "object_id"));
+    st.ddr_resources
+        .release_confirmed(get_u64(req, "object_id"));
     ok(&[])
+}
+
+fn mark_ddr_release_phase(st: &mut crate::catalog::Catalog, id: u64, phase: &str) {
+    if let Some(object) = st.data_objects.get_mut(&id) {
+        if object.state == "Released" {
+            return;
+        } // Preserve other legacy placement behavior.
+        object.state = phase.into();
+    }
+    for placement in st.placements.values_mut().filter(|p| p.object_id == id) {
+        placement.state = phase.into();
+        for binding in st
+            .resource_bindings
+            .values_mut()
+            .filter(|b| b.placement_id == placement.placement_id)
+        {
+            binding.state = phase.into();
+        }
+    }
+}
+
+#[cfg(test)]
+mod managed_ledger_regression {
+    use super::*;
+    use crate::catalog::Catalog;
+    use std::sync::{Arc, Condvar, Mutex};
+    #[test]
+    fn real_legacy_memfd_reuse_and_release_respect_managed_creation_capacity() {
+        assert!(
+            ddr_use_memfd(),
+            "this fixture requires the default real memfd adapter"
+        );
+        let mut st = Catalog::new(-1, Vec::new());
+        st.ddr_resources.limit = 8192;
+        st.ddr_resources
+            .reserve("managed-creation-pending", 4096)
+            .unwrap();
+        let client = st.take_next_client_id();
+        st.clients.insert(
+            client,
+            Client {
+                client_id: client,
+                role: "fixture".into(),
+                os_pid: std::process::id() as i64,
+                bare_tgid: 0,
+                device_id: -1,
+            },
+        );
+        let shared: SharedCatalog = Arc::new((Mutex::new(st), Condvar::new()));
+        let request = uf_core::kv(&[
+            ("client_id", client.to_string()),
+            ("nbytes", "4096".into()),
+            ("hint", "mandatory:ddr".into()),
+            ("target", "host:0".into()),
+            ("model_id", "managed-ledger-fixture".into()),
+            ("name", "immutable".into()),
+            ("role", "fixture".into()),
+            ("immutable", "true".into()),
+        ]);
+        let made = create_ddr_data_object(&request, &shared);
+        assert_eq!(get(&made, "status"), "ok", "{made:?}");
+        let object_id = get_u64(&made, "object_id");
+        let fd = shared.0.lock().unwrap().objects[&object_id].ddr_fd;
+        assert!(unsafe { libc::fcntl(fd, libc::F_GETFD) } >= 0);
+        let reused = create_ddr_data_object(&request, &shared);
+        assert_eq!(get(&reused, "status"), "ok");
+        assert_eq!(get_u64(&reused, "object_id"), object_id);
+        assert_eq!(shared.0.lock().unwrap().ddr_resources.charged_bytes(), 4096);
+        let mut overflow = request.clone();
+        overflow.insert("name".into(), "another".into());
+        let rejected = create_ddr_data_object(&overflow, &shared);
+        assert_eq!(get(&rejected, "status"), "error");
+        let released = release_data_object(
+            &uf_core::kv(&[("object_id", object_id.to_string())]),
+            &shared,
+        );
+        assert_eq!(get(&released, "status"), "ok", "{released:?}");
+        assert_eq!(unsafe { libc::fcntl(fd, libc::F_GETFD) }, -1);
+        let mut st = shared.0.lock().unwrap();
+        assert_eq!(st.ddr_resources.charged_bytes(), 0);
+        assert_eq!(st.ddr_resources.reserved_bytes(), 4096);
+        assert_eq!(st.data_objects[&object_id].state, "Released");
+        st.ddr_resources
+            .cancel_uncreated("managed-creation-pending");
+    }
 }
 
 pub(crate) fn describe_object(req: &Kv, shared: &SharedCatalog) -> Kv {
@@ -1060,6 +1223,9 @@ pub(crate) fn mark_ready(req: &Kv, shared: &SharedCatalog) -> Kv {
     if st.external_ddr.contains(object_id) {
         return err("external DDR is immutable after registration");
     }
+    if st.managed_pools.owns_object(object_id) {
+        return err("managed pool readiness requires authenticated range commit");
+    }
     if let Some(object) = st.objects.get_mut(&object_id) {
         object.state = "Ready".to_string();
         record_duration_us(
@@ -1087,6 +1253,9 @@ pub(crate) fn mark_dirty(req: &Kv, shared: &SharedCatalog) -> Kv {
     let bytes = get_u64(req, "modified_bytes");
     if st.external_ddr.contains(object_id) {
         return err("external DDR is immutable after registration");
+    }
+    if st.managed_pools.owns_object(object_id) {
+        return err("managed pool writes require authenticated range lease");
     }
     if let Some(object) = st.objects.get_mut(&object_id) {
         if offset.checked_add(bytes).unwrap_or(u64::MAX) > object.requested_bytes {
@@ -1122,6 +1291,9 @@ pub(crate) fn close_lease(req: &Kv, shared: &SharedCatalog) -> Kv {
     let lease_id = get_u64(req, "lease_id");
     if st.external_ddr.owns_lease(lease_id) {
         return err("external DDR leases must be released through the authenticated FD broker");
+    }
+    if st.managed_pools.owns_lease(lease_id) {
+        return err("managed pool leases require authenticated range release");
     }
     if let Some(lease) = st.leases.get_mut(&lease_id) {
         lease.state = "Closed".to_string();

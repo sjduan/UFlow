@@ -1,0 +1,80 @@
+{
+  "interface": "mem-service-private-qemu-domain-v1",
+  "stage": "HOST_PLATFORM_DEVELOPMENT_AND_READONLY_CANDIDATE",
+  "goal": "uflow-mem-service-shared-pool-sim",
+  "producer_owner": "phase-e-runner",
+  "consumer_owner_later": "phase-c-runner",
+  "external_reviewed_manifest_sha256_required": true,
+  "consumer_must_validate_external_validator_sha256_before_import": true,
+  "permitted_success_status": "PASS_HOST_CANDIDATE_ONLY",
+  "incomplete_result_must_list_missing_evidence": true,
+  "allowed_metadata_schemas": {
+    "bootstrap": {
+      "relative_directory": "obmm_bootstrap",
+      "section": "obmm_export",
+      "exact_integer_fields": ["export_mem_id", "remote_uba", "size", "generation", "flags", "node_id", "node_count", "export_cna", "token_id"],
+      "max_bytes": 4096,
+      "publication_event_and_descriptor_binding_required": true
+    },
+    "retired": {
+      "relative_directory": "obmm_retired",
+      "exact_integer_fields": ["export_mem_id", "generation", "remote_uba", "size", "export_cna", "token_id"],
+      "max_bytes": 4096,
+      "retirement_event_and_descriptor_binding_required": true
+    }
+  },
+  "candidate_scope": {
+    "run": "c044",
+    "state_relative_path": "runs/c044/state/state.json",
+    "state_sha256": "b6592a7442e7cb8540f340168a215fe6cc8cf669c7e87fedb7403ced2fc6c307",
+    "resource_ids": [110, 111, 112],
+    "eligible_capacity_bytes_max": 54525952,
+    "current_total_B_bytes": 134217728,
+    "protected_historical_retained_bytes": 12582912,
+    "protected_historical_reserved_bytes": 67108864,
+    "business_pool_id": "c5318ca4-ea66-4c54-99f0-63aa596860e6",
+    "business_epoch": "8c17edb8-a97f-4f1e-a851-cbc9ad5405cd",
+    "business_provider_session": "5da08f53-360f-419f-8929-0764be92d5d1",
+    "business_placement": 10002,
+    "business_binding": 40002,
+    "business_generation": 1,
+    "historical_E0_owner_pid": 1809156,
+    "historical_E0_owner_birth": 1323758632,
+    "all_three_E0_FLOCKs_historical_proof_required": true,
+    "unknown_read_operation": "0cac199b-84d9-4deb-b3d7-1693d0604983",
+    "unknown_read_lease": "3e159b49-f0bd-4539-86f1-c4de1e5091e6",
+    "unknown_read_lease_generation": 1007
+  },
+  "fixed_source_and_runtime": {
+    "host": "serving-b-sj",
+    "container": "openeuler-2403-DS",
+    "root": "/workspace/uflow/runs/mem-service-shared-pool-20261108",
+    "QEMU_commit": "f2ef54f454b661e551a8619f9feb7406752a1b1a",
+    "QEMU_binary_sha256": "56fab4e5d8c50c559f76c8ddbae9d6e1661e4764a6f927db2c3706e8199e5d4c",
+    "kernel_commit": "c2def7c931e6451d89727dec0c6f892abe28ba00",
+    "kernel_Image_sha256": "95165fea380ed231b609d4a2a71cfe9b877cac52b7bc44e39a870c839a676ada",
+    "guest_group_sha256": "05c2dcc01e6b24aed7e14bd6a77fcf8078f5c4f5e0fccd412833e58280ebdcd1",
+    "frozen_physical_audit_sha256": "647a2b7c24f086f4128879ac3ab98e3f0cf981c4211f1129a2fe0f1a4453c33e",
+    "must_prove_actual_argv_env_backing_topology_and_all_owners": true,
+    "must_exclude_external_backing_migration_snapshot_and_hardware": true,
+    "must_bind_complete_physical_holder_control_and_visibility_proof": true,
+    "must_validate_exact_union_original_carriers_and_registered_dynamic_metadata": true
+  },
+  "required_output_truths": {
+    "runtime_E1_E5_passed": false,
+    "normal_native_or_SDK_release_ACK_proven": false,
+    "ledger_fences_applied": false,
+    "authority_to_mutate_ledger": false,
+    "authority_to_launch_new_Guest": false,
+    "authority_to_destroy_FM_payload_files": false,
+    "unknown_client_and_operation_history_preserved": true
+  },
+  "future_ledger_handoff_preconditions_not_implemented_here": [
+    "Independently accepted producer/validator with immutable external pins and fresh exact evidence",
+    "Original exclusive authority held throughout an append-only crash-safe one-time transaction",
+    "Permanent fencing and tombstones for all old domain, pool, epoch, session, boot, incarnation and resource identities",
+    "Preserve all historical Unknown/client obligations; terminal-domain-loss is distinct from SDK Released/Unmapped/native ACK",
+    "Protect historical retained12 and reserved64 without cancel/refund",
+    "Only after durable terminal-domain transaction can a separate new namespace be considered, within B128/global256"
+  ]
+}
