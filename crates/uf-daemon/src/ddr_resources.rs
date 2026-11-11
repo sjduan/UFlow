@@ -214,6 +214,7 @@ impl DdrResources {
 
     /// Private opt-in CPU terminal-domain path. The permit cannot be minted
     /// from caller booleans or normal SDK release receipts.
+    #[cfg(any(test, feature = "experimental-reconciliation"))]
     pub(crate) fn inherit_terminal_source(p:&crate::pool_terminal_domain::VerifiedCandidate)->Result<Self,String>{
         let source=p.source_ledger();let mut ledger=Self::default();ledger.limit=128<<20;
         for row in source["resources"].as_array().ok_or("source resources")? {
@@ -243,6 +244,7 @@ impl DdrResources {
         }
         p.matches_ledger(&ledger.snapshot())?;Ok(ledger)
     }
+    #[cfg(any(test, feature = "experimental-reconciliation"))]
     pub(crate) fn apply_terminal_loss(&mut self,p:&crate::pool_terminal_domain::VerifiedCandidate)->Result<(),String>{
         if self.limit!=128<<20{return Err("terminal budget is fixed128, not configurable".into());}
         p.matches_ledger(&self.snapshot())?;

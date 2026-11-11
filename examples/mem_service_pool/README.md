@@ -1,5 +1,13 @@
 # mem_service pool v2
 
+Current delivery entry: [shared-pool framework](../../docs/shared-pool-framework.md).
+The core historical two-Guest bidirectional 20 MiB validation passed; an extra
+same-Guest import failed, and full normal shutdown was not proven. Retesting
+waits for ub_sim support. This directory preserves versioned experiment tools,
+fixtures and proof seals; it is not a current deployment configuration.
+Task-bound recovery requires the explicit `experimental-reconciliation` feature.
+The sections below retain the original staged implementation history.
+
 ## Current HOST candidate: closed-c033 quarantine76 and48 MiB matrix
 
 The c033 run inherited retained8, started both Guests/workers and actually

@@ -27,10 +27,16 @@ mod managed_pool;
 mod managed_read_cache;
 mod managed_write;
 mod mem_service_pool;
+mod pool_experiments;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_reconciliation;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_retained8;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_quarantine76;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_c039_prestart;
+#[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_terminal_domain;
 mod object_service;
 mod pool_provider;
@@ -497,26 +503,7 @@ fn main() {
     // Private explicit administrative modes run before every backend/trace/
     // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
     let private_args=std::env::args().skip(1).collect::<Vec<_>>();
-    if private_args.iter().any(|v|v=="--pool-terminal-domain-loss"||v=="--pool-shutdown-report"||v=="--pool-terminal-domain-verify"||v=="--pool-terminal-execution-check"||v=="--pool-terminal-current-manifest"||v=="--pool-terminal-current-verify"||v=="--pool-terminal-current-execution-check"||v=="--pool-terminal-c101-manifest"||v=="--pool-terminal-c101-verify"||v=="--pool-terminal-c101-consumption-audit"||v=="--pool-terminal-case-manifest"||v=="--pool-terminal-case-verify"||v=="--pool-terminal-case-consumption-audit") {
-        let report=match private_args.as_slice() {
-            [mode,path,sha] if mode=="--pool-terminal-c101-manifest"=>pool_terminal_domain::case_chain::current_c101::production_manifest(std::path::Path::new(path),sha),
-            [mode,path,sha] if mode=="--pool-terminal-c101-consumption-audit"=>pool_terminal_domain::case_chain::current_c101::production_audit_consumed(std::path::Path::new(path),sha),
-            [mode] if mode=="--pool-terminal-c101-verify"=>pool_terminal_domain::case_chain::current_c101::production_verify_readonly(),
-            [mode,path,sha] if mode=="--pool-terminal-case-manifest"=>pool_terminal_domain::case_chain::production_manifest(std::path::Path::new(path),sha),
-            [mode,path,sha] if mode=="--pool-terminal-case-consumption-audit"=>pool_terminal_domain::case_chain::production_audit_consumed(std::path::Path::new(path),sha),
-            [mode] if mode=="--pool-terminal-case-verify"=>pool_terminal_domain::case_chain::production_verify_readonly(),
-            [mode] if mode=="--pool-terminal-domain-loss"=>pool_terminal_domain::production_terminal_only(),
-            [mode,path,sha] if mode=="--pool-terminal-current-manifest"=>pool_terminal_domain::current::production_manifest(std::path::Path::new(path),sha),
-            [mode] if mode=="--pool-terminal-current-verify"=>pool_terminal_domain::current::production_verify_readonly(),
-            [mode,path,sha,phase] if mode=="--pool-terminal-current-execution-check"=>pool_terminal_domain::current::production_execution_check(std::path::Path::new(path),sha,phase),
-            [mode] if mode=="--pool-terminal-domain-verify"=>pool_terminal_domain::production_verify_readonly(),
-            [mode] if mode=="--pool-shutdown-report"=>pool_terminal_domain::production_shutdown_report(),
-            [mode,manifest,path,pin,sha] if mode=="--pool-terminal-domain-loss"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"=>
-                pool_terminal_domain::production_terminal_manifest(std::path::Path::new(path),sha),
-            [mode,manifest,path,pin,sha,phase_flag,phase] if mode=="--pool-terminal-execution-check"&&manifest=="--execution-manifest"&&pin=="--execution-manifest-sha256"&&phase_flag=="--phase"=>
-                pool_terminal_domain::production_execution_check(std::path::Path::new(path),sha,phase),
-            _=>Err("production-not-ready: private mode requires its exact read-only flag or resolved execution manifest; no original action".into())
-        };
+    if let Some(report) = pool_experiments::private_command(&private_args) {
         match report {Ok(value)=>println!("{}",value),Err(error)=>{eprintln!("{error}");std::process::exit(1);}}
         return;
     }

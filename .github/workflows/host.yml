@@ -1,0 +1,34 @@
+name: Framework host checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Fetch locked Rust dependencies
+        run: cargo fetch --locked
+      - name: CPU-only build and pool contracts
+        run: python -B tools/check_framework_host.py "$RUNNER_TEMP/uflow-host"
+      - name: Source-overlay safety checks
+        run: python -B tools/test_locked_source.py
+      - name: Upload host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-host
+          path: ${{ runner.temp }}/uflow-host/*.json

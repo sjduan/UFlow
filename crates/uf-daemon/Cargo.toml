@@ -7,6 +7,11 @@ edition = "2021"
 name = "uf-daemon"
 path = "src/main.rs"
 
+[features]
+default = []
+# Historical simulator recovery is never part of the ordinary daemon entry.
+experimental-reconciliation = []
+
 [dependencies]
 libc = "0.2"
 serde = "=1.0.228"

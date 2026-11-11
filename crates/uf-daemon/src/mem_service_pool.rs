@@ -84,9 +84,10 @@ impl MemServicePoolProvider {
         let data = std::fs::read(path).map_err(|e| e.to_string())?;
         let c = parse(&data)?;
         fields(&c, &["schema", "backend", "realm", "session", "home", "nodes"], &["deferred_bootstrap","readiness_file","reconciliation","managed_cache_execution","managed_write_execution"])?;
+        crate::pool_experiments::validate_configuration(&c)?;
         if c.get("managed_cache_execution").is_some()&&c.get("managed_write_execution").is_some(){return Err("distinct execution contexts cannot be mixed before IO".into());}
-        let managed_cache_execution=if c.get("managed_cache_execution").is_some(){Some(crate::pool_terminal_domain::case_chain::validate_managed_binding(&c["managed_cache_execution"])?)}else{None};
-        let managed_write_execution=if c.get("managed_write_execution").is_some(){Some(crate::pool_terminal_domain::case_chain::current_c101::validate_managed_binding(&c["managed_write_execution"])?)}else{None};
+        let managed_cache_execution=if c.get("managed_cache_execution").is_some(){Some(crate::pool_experiments::managed_binding(&c["managed_cache_execution"],false)?)}else{None};
+        let managed_write_execution=if c.get("managed_write_execution").is_some(){Some(crate::pool_experiments::managed_binding(&c["managed_write_execution"],true)?)}else{None};
         if managed_cache_execution.is_some()&&managed_write_execution.is_some(){return Err("distinct execution contexts cannot be mixed".into());}
         if c["schema"] != 2 || c["backend"] != "mem_service_obmm" { return Err("explicit mem_service config v2 required".into()); }
         let deferred=c["deferred_bootstrap"]==true;
@@ -144,7 +145,7 @@ impl MemServicePoolProvider {
         self.reject_history(&st.managed_pools.reconciliation)
     }
     fn reject_history(&self,old:&Value)->Result<(),String>{
-        crate::pool_terminal_domain::reject_fenced(old,&json!({"realm":self.realm,"session":self.session,"nodes":self.nodes}))?;
+        crate::pool_experiments::reject_fenced(old,&json!({"realm":self.realm,"session":self.session,"nodes":self.nodes}))?;
         if let Some(contexts)=old["historical_prestart_contexts"].as_array(){
             for c in contexts {
                 if c["realm"]==self.realm || c["provider_session"]==self.session {
@@ -313,7 +314,7 @@ impl MemServicePoolProvider {
         let fingerprint = fingerprint.to_string();
         let read_only = matches!(op,"DescribeManagedPool"|"GetManagedPoolSnapshot"|"QueryPoolOperation");
         let prior = service.catalog(|state,st| {
-            crate::pool_terminal_domain::reject_fenced(&state.reconciliation,req)?;
+            crate::pool_experiments::reject_fenced(&state.reconciliation,req)?;
             let original=&state.reconciliation["identity"];
             if op == "QueryPoolOperation" {
                 let target = text(req,"target_operation_id")?;

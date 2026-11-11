@@ -1,0 +1,1716 @@
+diff --git a/hw/ub/gsva_coherence.c b/hw/ub/gsva_coherence.c
+index b2f48103bd92c0efe49beaa74107747137573dea..c43edaaf03555b970867a3d2fde167fee169c482 100644
+--- a/hw/ub/gsva_coherence.c
++++ b/hw/ub/gsva_coherence.c
+@@ -12,6 +12,9 @@
+ #include "hw/ub/ub_ubc.h"
+ #include "qemu/log.h"
+ #include "qemu/timer.h"
++#include "hw/ub/uflow_bounded_log.h"
++#include "hw/ub/uflow_managed_cache_control.h"
++#define qemu_log(...) UFLOW_BOUNDED_LOG(__VA_ARGS__)
+ 
+ static GsvaCohTable *g_gsva_coh_default_table;
+ static GsvaRouteTable *g_gsva_route_default_table;
+@@ -1304,6 +1307,8 @@
+ 
+ void gsva_coh_handle_rx_inv(BusControllerDev *ubc_dev, const GsvaCohMsgV1 *msg)
+ {
++    ubc_uflow_managed_invalidate(ubc_dev, &msg->key, false);
++
+     qemu_log("GSVA_COH: rx INV from cna=%" PRIu32 " segment_id=%#" PRIx64
+              " seq=%" PRIu64 "\n", msg->source_cna,
+              msg->key.segment_id, msg->seq);
+@@ -1351,6 +1356,8 @@
+ 
+ void gsva_coh_handle_rx_downgrade(BusControllerDev *ubc_dev, const GsvaCohMsgV1 *msg)
+ {
++    ubc_uflow_managed_invalidate(ubc_dev, &msg->key, false);
++
+     GsvaCohObject *obj = NULL;
+ 
+     qemu_log("GSVA_COH: rx DOWNGRADE from cna=%" PRIu32 " segment_id=%#" PRIx64
+@@ -1414,6 +1421,8 @@
+ 
+ void gsva_coh_handle_rx_fence(BusControllerDev *ubc_dev, const GsvaCohMsgV1 *msg)
+ {
++    ubc_uflow_managed_invalidate(ubc_dev, &msg->key, false);
++
+     qemu_log("GSVA_COH: rx FENCE from cna=%" PRIu32 " segment_id=%#" PRIx64
+              " seq=%" PRIu64 "\n", msg->source_cna,
+              msg->key.segment_id, msg->seq);
+@@ -1438,6 +1447,8 @@
+ 
+ void gsva_coh_handle_rx_retire(BusControllerDev *ubc_dev, const GsvaCohMsgV1 *msg)
+ {
++    ubc_uflow_managed_invalidate(ubc_dev, &msg->key, true);
++
+     GsvaCohObject *obj = NULL;
+     int rc;
+ 
+@@ -1529,6 +1540,8 @@
+ 
+ void gsva_coh_handle_rx_token_revoke(BusControllerDev *ubc_dev, const GsvaCohMsgV1 *msg)
+ {
++    ubc_uflow_managed_invalidate(ubc_dev, &msg->key, true);
++
+     int rc = GSVA_ERR_ROUTE_MISSING;
+     uint32_t token_id = msg->access_flags;
+     uint32_t new_token_value = (uint32_t)msg->access_len;
+diff --git a/hw/ub/hisi/ubc_msgq.c b/hw/ub/hisi/ubc_msgq.c
+index 70850f093fd060691bdfec67462844c5c5ddf231..23e531177cf5433d0052f20f933766c0d1babcc8 100644
+--- a/hw/ub/hisi/ubc_msgq.c
++++ b/hw/ub/hisi/ubc_msgq.c
+@@ -17,6 +17,8 @@
+ #include "qemu/osdep.h"
+ #include "qemu/module.h"
+ #include "qemu/log.h"
++#include "hw/ub/uflow_bounded_log.h"
++#define qemu_log(...) UFLOW_BOUNDED_LOG(__VA_ARGS__)
+ #include "hw/qdev-properties.h"
+ #include "hw/ub/ub.h"
+ #include "hw/ub/ub_bus.h"
+diff --git a/hw/ub/ub_ubc.c b/hw/ub/ub_ubc.c
+index f0b9397516fd02691d49ec7469d2dca36b42fc7d..8e4b067d3478141224b7f6cf093b63e592176b01 100644
+--- a/hw/ub/ub_ubc.c
++++ b/hw/ub/ub_ubc.c
+@@ -53,6 +53,35 @@
+ #include "hw/ub/ubus_instance.h"
+ #include "hw/ub/ub_pool_msg.h"
+ #include "trace.h"
++#include "hw/ub/uflow_bounded_log.h"
++#include "hw/ub/uflow_managed_cache_control.h"
++#define qemu_log(...) UFLOW_BOUNDED_LOG(__VA_ARGS__)
++
++
++static bool uflow_mw_active(BusControllerDev *ubc);
++static bool uflow_mw_cpu_read(GsvaRouteEntry *, uint64_t, uint8_t *, uint32_t, MemTxResult *);
++static bool uflow_mw_cpu_write(GsvaRouteEntry *, uint64_t, const uint8_t *, uint32_t, MemTxResult *);
++static bool uflow_mw_blocks_close(BusControllerDev *, const GsvaKeyV1 *);
++static void uflow_mw_event(BusControllerDev *, const GsvaKeyV1 *, bool);
++static int uflow_mw_fence(BusControllerDev *, const GsvaKeyV1 *);
++static bool uflow_mw_enabled_get(Object *, Error **);
++static void uflow_mw_enabled_set(Object *, bool, Error **);
++static char *uflow_mw_control_get(Object *, Error **);
++static void uflow_mw_control_set(Object *, const char *, Error **);
++static bool uflow_mw_publish_alias(BusControllerDev *, Error **);
++static void uflow_mw_finalize(BusControllerDev *);
++
++static bool uflow_mc_cpu_read(GsvaRouteEntry *route, uint64_t offset,
++    uint8_t *bytes, uint32_t length, MemTxResult *result);
++static bool uflow_mc_cpu_write_blocked(GsvaRouteEntry *route,
++    uint64_t offset, uint32_t length);
++static bool uflow_mc_enabled_get(Object *obj, Error **errp);
++static void uflow_mc_enabled_set(Object *obj, bool value, Error **errp);
++static char *uflow_mc_control_get(Object *obj, Error **errp);
++static void uflow_mc_control_set(Object *obj, const char *wire, Error **errp);
++static bool uflow_mc_publish_alias(BusControllerDev *ubc, Error **errp);
++static void uflow_mc_finalize(BusControllerDev *ubc);
++
+ 
+ void tlb_flush_all_cpus_synced(CPUState *src_cpu);
+ 
+@@ -1483,6 +1512,14 @@
+         return MEMTX_ACCESS_ERROR;
+     }
+ 
++    if (uflow_mw_cpu_read(route, addr, buf, size, &ret)) {
++        if (ret != MEMTX_OK) { return ret; }
++        goto uflow_mc_decode_value;
++    }
++    if (uflow_mc_cpu_read(route, addr, buf, size, &ret)) {
++        if (ret != MEMTX_OK) { return ret; }
++        goto uflow_mc_decode_value;
++    }
+     remote_uba = route->remote_uba + addr;
+     ret = ubc_sim_dec_remote_io(g_sim_decoder->bcs->ubc_dev, remote_uba,
+                                 route->backing_token_id ?
+@@ -1501,6 +1538,7 @@
+         return ret;
+     }
+ 
++uflow_mc_decode_value:
+     switch (size) {
+     case 1: *value = buf[0]; break;
+     case 2: *value = lduw_le_p(buf); break;
+@@ -1540,6 +1578,9 @@
+         return MEMTX_ACCESS_ERROR;
+     }
+ 
++    if (uflow_mc_cpu_write_blocked(route, addr, size)) {
++        return MEMTX_ACCESS_ERROR;
++    }
+     switch (size) {
+     case 1: buf[0] = (uint8_t)value; break;
+     case 2: stw_le_p(buf, (uint16_t)value); break;
+@@ -1548,6 +1589,7 @@
+     default: return MEMTX_DECODE_ERROR;
+     }
+ 
++    if (uflow_mw_cpu_write(route, addr, buf, size, &ret)) { return ret; }
+     remote_uba = route->remote_uba + addr;
+     if (route->backing_token_id) {
+         ret = ubc_sim_dec_remote_io(g_sim_decoder->bcs->ubc_dev, remote_uba,
+@@ -8132,6 +8174,19 @@
+         return;
+     }
+ 
++    if (ubc_dev->gsva_strict_io_depth &&
++        (hdr->rsvd || hdr->status ||
++         hdr->data_len != ubc_dev->sim_dec_sync_read.expect_len ||
++         data_len != ubc_dev->sim_dec_sync_read.expect_len || !data)) {
++        qemu_log("GSVA_IO: strict response rejected status=%u declared=%u wire=%u expected=%u reserved=%u\n",
++            hdr->status, hdr->data_len, data_len,
++            ubc_dev->sim_dec_sync_read.expect_len, hdr->rsvd);
++        ubc_dev->sim_dec_sync_read.actual_len = 0;
++        ubc_dev->sim_dec_sync_read.status = hdr->status ? -EIO : -EPROTO;
++        ubc_dev->sim_dec_sync_read.pending = false;
++        ubc_dev->sim_dec_sync_read.peer_cna = 0;
++        return;
++    }
+     copy_len = MIN(hdr->data_len, ubc_dev->sim_dec_sync_read.expect_len);
+     copy_len = MIN(copy_len, data_len);
+     if (ubc_trace_data_path_enabled()) {
+@@ -11924,6 +11979,10 @@
+         }
+     }
+ 
++    if (!uflow_mc_publish_alias(ubc->ubc_dev, errp)) {
++        return;
++    }
++    if (!uflow_mw_publish_alias(ubc->ubc_dev, errp)) { return; }
+     /* Finally, publish the full device snapshot */
+     ub_publish_device_snapshot(dev, errp);
+ }
+@@ -11962,6 +12021,14 @@
+     UBDeviceClass *uc = UB_DEVICE_CLASS(class);
+ 
+     device_class_set_props(dc, ub_bus_controller_dev_properties);
++    object_class_property_add_bool(class, "uflow-managed-cache-v1",
++        uflow_mc_enabled_get, uflow_mc_enabled_set);
++    object_class_property_add_str(class, "uflow-managed-cache-control-v1",
++        uflow_mc_control_get, uflow_mc_control_set);
++    object_class_property_add_bool(class, "uflow-managed-write-v1",
++        uflow_mw_enabled_get, uflow_mw_enabled_set);
++    object_class_property_add_str(class, "uflow-managed-write-control-v1",
++        uflow_mw_control_get, uflow_mw_control_set);
+     uc->realize = ub_bus_controller_dev_realize;
+     dc->reset = ub_bus_controller_dev_reset;
+     dc->vmsd = &vmstate_ub_bus_controller_dev;
+@@ -11992,6 +12059,7 @@
+     }
+     linqu_ub_gm_registry_free(ubc_dev->linqu_uapi_ub_gm_registry);
+     ubc_dev->linqu_uapi_ub_gm_registry = NULL;
++    uflow_mc_finalize(ubc_dev);
+     gsva_home_destroy(&ubc_dev->gsva_home);
+     if (ubc_dev->remote_memory_model_timer) {
+         timer_free(ubc_dev->remote_memory_model_timer);
+@@ -14446,6 +14514,9 @@
+     }
+ }
+ 
++#include "uflow_managed_cache.inc"
++#include "uflow_managed_write.inc"
++
+ static int sim_dec_register_obmm_gsva_route(
+     const SimDecObmmBootstrapRecord *record)
+ {
+@@ -14804,7 +14875,9 @@
+ 
+     if (!identity_route || route->local_va == 0 || route->local_pa == 0 ||
+         page_va < route->local_va ||
+-        page_va >= route->local_va + route->key.size) {
++        route->key.size > UINT64_MAX - route->local_va ||
++        page_va - route->local_va >= route->key.size ||
++        route->key.size - (page_va - route->local_va) < SIM_DEC_PAGE_SIZE) {
+         qemu_log("GSVA_MMU: unsupported route va=%#" PRIx64
+                  " local_va=%#" PRIx64 " home_va=%#" PRIx64
+                  " remote_uba=%#" PRIx64 " source=%" PRIu32
+@@ -14815,7 +14888,7 @@
+     }
+ 
+     offset = page_va - route->local_va;
+-    *local_pa = route->local_pa + offset;
++    *local_pa = 0;
+     *page_size = SIM_DEC_PAGE_SIZE;
+     if (g_sim_decoder && g_sim_decoder->bcs && g_sim_decoder->bcs->ubc_dev) {
+         requester_cna = g_sim_decoder->bcs->ubc_dev->parent.cna;
+@@ -14875,6 +14948,29 @@
+                  " state=%s\n",
+                  va, gsva_coh_state_name(coh_obj->state));
+         return GSVA_ERR_COH_PENDING;
++    }
++
++    if (route->direct_home_backing) {
++        BusControllerDev *ubc = g_sim_decoder && g_sim_decoder->bcs ?
++            g_sim_decoder->bcs->ubc_dev : NULL;
++
++        if (!ubc || route->home_cna != ubc->parent.cna ||
++            !route->backing_token_id ||
++            ummu_dma_s1_translate_page(ubc->ummu, &ubc->parent,
++                                      route->backing_token_id, page_va,
++                                      local_pa) != 0) {
++            qemu_log("GSVA_MMU: managed home S1 translation failed"
++                     " va=%#" PRIx64 " backing_tid=%u\n",
++                     page_va, route->backing_token_id);
++            return GSVA_ERR_ROUTE_MISSING;
++        }
++    } else {
++        /* Remote cache/legacy routes retain their contiguous local window. */
++        if (offset > UINT64_MAX - route->local_pa ||
++            route->local_pa + offset > UINT64_MAX - (SIM_DEC_PAGE_SIZE - 1)) {
++            return GSVA_ERR_ROUTE_MISSING;
++        }
++        *local_pa = route->local_pa + offset;
+     }
+ 
+     /* TLB stale detection */
+@@ -15145,6 +15241,10 @@
+         if (route->map_id == req->map_id) {
+             break;
+         }
++    }
++    if (route && ubc_uflow_managed_blocks_close(ubc, &route->key)) {
++        resp->error = GSVA_ERR_COH_PENDING;
++        return -1;
+     }
+     if (req->version == 2) {
+         /* V2 releases one managed import view. Object retirement remains
+@@ -15499,7 +15599,10 @@
+             break;
+         }
+         request = (const GsvaHomeRequest *)(data + sizeof(*hdr));
+-        error = gsva_home_update(&ubc->gsva_home, ubc->parent.cna, request);
++        error = request->operation == GSVA_HOME_REVOKE &&
++            ubc_uflow_managed_blocks_close(ubc, &request->identity.key) ?
++            GSVA_ERR_COH_PENDING :
++            gsva_home_update(&ubc->gsva_home, ubc->parent.cna, request);
+         if (error == GSVA_OK && request->operation == GSVA_HOME_REVOKE) {
+             int route_error = ubc_gsva_complete_home_retire(
+                 ubc, &request->identity.key);
+@@ -15798,6 +15901,11 @@
+             break;
+         case 3: /* Retire */
+         {
++            if (g_sim_decoder && g_sim_decoder->bcs &&
++                ubc_uflow_managed_blocks_close(g_sim_decoder->bcs->ubc_dev, ev_key)) {
++                ev_rc = GSVA_ERR_COH_PENDING;
++                break;
++            }
+             GsvaRouteEntry *route =
+                 gsva_route_lookup_base(&g_gsva_routes, ev_key);
+             if (!route) {
+@@ -15855,6 +15963,10 @@
+                                     token_id /* reuse as seq */);
+             break;
+         case 6: /* TokenChange */
++            if (g_sim_decoder && g_sim_decoder->bcs) {
++                ubc_uflow_managed_invalidate(g_sim_decoder->bcs->ubc_dev,
++                                              ev_key, true);
++            }
+             ev_rc = gsva_route_rotate_token(&g_gsva_routes, ev_key,
+                                             token_id, token_value);
+             if (ev_rc == GSVA_OK) {
+@@ -15874,6 +15986,10 @@
+             }
+             break;
+         case 7: /* Fence */
++            if (uflow_mw_fence(g_sim_decoder && g_sim_decoder->bcs ?
++                g_sim_decoder->bcs->ubc_dev : NULL, ev_key) != GSVA_OK) {
++                ev_rc = GSVA_ERR_COH_PENDING; break;
++            }
+             ev_rc = gsva_coh_fence_tx(&g_gsva_coh,
+                                       g_sim_decoder &&
+                                       g_sim_decoder->bcs ?
+@@ -15891,6 +16007,10 @@
+             break;
+         }
+ 
++        if (ev_rc == GSVA_OK && (sub_op == 1 || sub_op == 7) &&
++            g_sim_decoder && g_sim_decoder->bcs) {
++            ubc_uflow_managed_invalidate(g_sim_decoder->bcs->ubc_dev, ev_key, false);
++        }
+         if (ev_rc == GSVA_ERR_COH_TIMEOUT) {
+             gsva_tlb_stable_flush_key(ev_key, "coh_timeout");
+         }
+diff --git a/hw/ub/ub_ummu.c b/hw/ub/ub_ummu.c
+index b5ec3a73076228ec901ac12ebf21470c2bcdaba3..70d1bc6af4ddfac1bc4e1ce2a349c84756d2d8c5 100644
+--- a/hw/ub/ub_ummu.c
++++ b/hw/ub/ub_ummu.c
+@@ -2324,20 +2324,14 @@
+ }
+ 
+ static int ummu_tect_parse_sparse_table(UMMUDevice *ummu_dev, UMMUTransCfg *cfg,
+-                                        uint32_t dest_eid, UMMUEventInfo *event)
++                                        uint32_t dest_eid, UMMUEventInfo *event,
++                                        uint32_t tid)
+ {
+     UMMUState *ummu = ummu_dev->ummu;
+     int ret;
+     TECTE tecte;
+     TCTE tcte;
+     uint32_t tecte_tag;
+-    uint32_t tid;
+-
+-    if (g_dma_tid_override_valid) {
+-        tid = g_dma_tid_override;
+-    } else {
+-        tid = ub_dev_get_token_id(ummu_dev->udev);
+-    }
+ 
+     tecte_tag = ummu_get_tecte_tag_by_dest_eid(ummu, dest_eid);
+     if (tecte_tag == UINT32_MAX) {
+@@ -2390,7 +2384,8 @@
+      return -EINVAL;
+ }
+ 
+-static int ummu_decode_config(UMMUDevice *ummu_dev, UMMUTransCfg *cfg, UMMUEventInfo *event)
++static int ummu_decode_config_tid(UMMUDevice *ummu_dev, UMMUTransCfg *cfg,
++                                  UMMUEventInfo *event, uint32_t tid)
+ {
+     UMMUState *ummu = ummu_dev->ummu;
+     uint32_t dest_eid = ub_dev_get_ueid(ummu_dev->udev);
+@@ -2416,7 +2411,7 @@
+             return -EAGAIN;
+         }
+ 
+-        return ummu_tect_parse_sparse_table(ummu_dev, cfg, dest_eid, event);
++        return ummu_tect_parse_sparse_table(ummu_dev, cfg, dest_eid, event, tid);
+     }
+ 
+     /* Fallback/Linear mode info */
+@@ -2425,6 +2420,15 @@
+ 
+     qemu_log("current not support process linear table.\n");
+     return -1;
++}
++
++static int ummu_decode_config(UMMUDevice *ummu_dev, UMMUTransCfg *cfg,
++                              UMMUEventInfo *event)
++{
++    uint32_t tid = g_dma_tid_override_valid ? g_dma_tid_override :
++                   ub_dev_get_token_id(ummu_dev->udev);
++
++    return ummu_decode_config_tid(ummu_dev, cfg, event, tid);
+ }
+ 
+ static UMMUTransCfg *ummu_get_config(UMMUDevice *ummu_dev, UMMUEventInfo *event)
+@@ -2551,6 +2555,57 @@
+ static void ummu_ptw(UMMUTransCfg *cfg, dma_addr_t iova, IOMMUTLBEntry *entry, UMMUPTWEventInfo *ptw_info)
+ {
+     ummu_ptw_64_s1(cfg, iova, entry, ptw_info);
++}
++
++/* Managed GSVA CPU mappings must follow the export's S1 page table.
++ * Never treat the first physical page as a contiguous allocation, or use the
++ * permissive early-boot DMA alias. Decode the explicit backing TID locally:
++ * CPU translation must not mutate the shared per-DMA override state or use an
++ * IOTLB entry whose key does not include this TID.
++ */
++int ummu_dma_s1_translate_page(UMMUState *ummu, UBDevice *udev, uint32_t tid,
++                               uint64_t iova, uint64_t *physical_page)
++{
++    UMMUDevice *dev;
++    UMMUTransCfg cfg = { 0 };
++    UMMUEventInfo event = { .type = EVT_NONE };
++    UMMUPTWEventInfo ptw = { .type = UMMU_PTW_ERR_NONE };
++    IOMMUTLBEntry entry = {
++        .target_as = &address_space_memory,
++        .perm = IOMMU_RW,
++    };
++    int ret;
++
++    if (!physical_page) {
++        return -EINVAL;
++    }
++    *physical_page = 0;
++    if (!ummu || !udev || !ummu->ummu_devs || !tid || tid == UINT32_MAX ||
++        (iova & 0xfff)) {
++        return -EINVAL;
++    }
++    dev = g_hash_table_lookup(ummu->ummu_devs, udev);
++    if (!dev || dev->ummu != ummu || dev->udev != udev) {
++        return -ENODEV;
++    }
++    ret = ummu_decode_config_tid(dev, &cfg, &event, tid);
++    if (ret) {
++        return ret;
++    }
++    if (cfg.st_mode != TECTE_ST_MODE_S1) {
++        return -EACCES;
++    }
++    ummu_ptw(&cfg, iova, &entry, &ptw);
++    if (ptw.type != UMMU_PTW_ERR_NONE ||
++        entry.target_as != &address_space_memory ||
++        entry.addr_mask < 0xfff || entry.addr_mask == UINT64_MAX ||
++        (entry.addr_mask & (entry.addr_mask + 1)) ||
++        (iova & ~entry.addr_mask) != entry.iova ||
++        (entry.translated_addr & entry.addr_mask)) {
++        return -EFAULT;
++    }
++    *physical_page = entry.translated_addr | (iova & entry.addr_mask);
++    return 0;
+ }
+ 
+ /* Forward declarations for UMMU IOTLB (defined below) */
+diff --git a/hw/ub/uflow_managed_cache.inc b/hw/ub/uflow_managed_cache.inc
+new file mode 100644
+index 0000000000000000000000000000000000000000..1a1767ca8669591ec282bb9310bd525bda4593d6
+--- /dev/null
++++ b/hw/ub/uflow_managed_cache.inc
+@@ -0,0 +1,441 @@
++/* Included after the real GSVA route/coherence tables. No payload control. */
++#include "hw/ub/uflow_managed_cache_core.h"
++#include "qapi/qmp/qdict.h"
++#include "qapi/qmp/qjson.h"
++
++#define UFLOW_MC_PROPERTY "uflow-managed-cache-control-v1"
++#define UFLOW_MC_FEATURE "uflow-managed-lease-cache-v1"
++#define UFLOW_MC_WIRE_BYTES 220
++typedef struct UFlowMcCommand {
++    uint8_t op, body[UFLOW_MC_WIRE_BYTES];
++    uint64_t generation, q[9];
++    uint32_t n[9];
++    uint8_t authority[32], correlation[32], descriptor[32], id[32], request[32];
++} UFlowMcCommand;
++enum { MC_MAP, MC_LEASE, MC_EXPORT, MC_UBA, MC_SIZE, MC_SEGMENT, MC_EPOCH,
++       MC_OFFSET, MC_LENGTH };
++enum { MC_BACKING, MC_HOME, MC_TOKEN, MC_POLICY, MC_PTAG, MC_ACCESS,
++       MC_NODE, MC_NODES, MC_FLAGS };
++typedef struct UFlowMcState {
++    bool enabled, alias_published;
++    UFlowManagedCache cache;
++    GsvaRouteAccess native;
++    UFlowMcCommand accepted;
++    char *reply;
++} UFlowMcState;
++typedef struct UFlowMcRead {
++    BusControllerDev *ubc;
++    GsvaRouteEntry *route;
++    UFlowMcState *state;
++} UFlowMcRead;
++static GHashTable *uflow_mc_states;
++
++static UFlowMcState *uflow_mc_state(BusControllerDev *ubc, bool create)
++{
++    UFlowMcState *s;
++    if (!uflow_mc_states) {
++        if (!create) { return NULL; }
++        uflow_mc_states = g_hash_table_new(g_direct_hash, g_direct_equal);
++    }
++    s = g_hash_table_lookup(uflow_mc_states, ubc);
++    if (!s && create) {
++        s = g_new0(UFlowMcState, 1);
++        g_hash_table_insert(uflow_mc_states, ubc, s);
++    }
++    return s;
++}
++
++static void uflow_mc_hash(const void *data, size_t length, uint8_t digest[32])
++{
++    GChecksum *sum = g_checksum_new(G_CHECKSUM_SHA256);
++    gsize n = 32;
++    g_checksum_update(sum, data, length);
++    g_checksum_get_digest(sum, digest, &n);
++    g_checksum_free(sum);
++    assert(n == 32);
++}
++
++static char *uflow_mc_hex(const uint8_t *data, size_t length)
++{
++    static const char digits[] = "0123456789abcdef";
++    char *text = g_malloc(length * 2 + 1);
++    for (size_t i = 0; i < length; i++) {
++        text[i * 2] = digits[data[i] >> 4];
++        text[i * 2 + 1] = digits[data[i] & 15];
++    }
++    text[length * 2] = 0;
++    return text;
++}
++
++static bool uflow_mc_decode(const char *wire, UFlowMcCommand *c)
++{
++    uint8_t neutral[UFLOW_MC_WIRE_BYTES];
++    if (!wire || strlen(wire) != 445 || strncmp(wire, "umc1:", 5)) {
++        return false;
++    }
++    memset(c, 0, sizeof(*c));
++    for (size_t i = 0; i < UFLOW_MC_WIRE_BYTES; i++) {
++        unsigned a = wire[5 + i * 2], b = wire[6 + i * 2];
++        if (!((a >= '0' && a <= '9') || (a >= 'a' && a <= 'f')) ||
++            !((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f'))) {
++            return false;
++        }
++        c->body[i] = ((a <= '9' ? a - '0' : a - 'a' + 10) << 4) |
++                       (b <= '9' ? b - '0' : b - 'a' + 10);
++    }
++    if (memcmp(c->body, "UMC1", 4) || c->body[4] < 1 || c->body[4] > 4 ||
++        c->body[5] || c->body[6] || c->body[7]) {
++        return false;
++    }
++    c->op = c->body[4];
++    c->generation = ldq_be_p(c->body + 8);
++    memcpy(c->authority, c->body + 16, 32);
++    memcpy(c->correlation, c->body + 48, 32);
++    memcpy(c->descriptor, c->body + 80, 32);
++    for (size_t i = 0; i < 9; i++) {
++        c->q[i] = ldq_be_p(c->body + 112 + 8 * i);
++        c->n[i] = ldl_be_p(c->body + 184 + 4 * i);
++    }
++    if (!c->q[MC_SIZE] || !c->q[MC_LENGTH] ||
++        c->q[MC_UBA] > UINT64_MAX - c->q[MC_SIZE] ||
++        c->q[MC_OFFSET] > c->q[MC_SIZE] ||
++        c->q[MC_LENGTH] > c->q[MC_SIZE] - c->q[MC_OFFSET] ||
++        !c->q[MC_EXPORT] || !c->q[MC_SEGMENT] || !c->q[MC_EPOCH] ||
++        !c->n[MC_BACKING] || !c->n[MC_HOME] || !c->n[MC_TOKEN] ||
++        c->n[MC_POLICY] != 1 || c->n[MC_FLAGS] != 7 ||
++        !(c->n[MC_ACCESS] & 1) || c->n[MC_NODES] < 2 ||
++        c->n[MC_NODES] > 8 || c->n[MC_NODE] >= c->n[MC_NODES]) {
++        return false;
++    }
++    if ((c->op == 2 || c->op == 3) &&
++        (!c->generation || !c->q[MC_MAP] || !c->q[MC_LEASE] ||
++         !memcmp(c->authority, (uint8_t[32]){0}, 32) ||
++         !memcmp(c->correlation, (uint8_t[32]){0}, 32) ||
++         !memcmp(c->descriptor, (uint8_t[32]){0}, 32))) {
++        return false;
++    }
++    uflow_mc_hash(c->body, sizeof(c->body), c->request);
++    memcpy(neutral, c->body, sizeof(neutral));
++    neutral[4] = 0;
++    uflow_mc_hash(neutral, sizeof(neutral), c->id);
++    return true;
++}
++
++static bool uflow_mc_descriptor_equal(const UFlowMcCommand *c,
++                                       const GsvaRouteAccess *native)
++{
++    uint8_t bytes[96] = {0}, actual[32];
++    g_autofree char *hex = NULL;
++    stl_be_p(bytes, 0x4d534f42); stl_be_p(bytes + 4, 2);
++    stl_be_p(bytes + 8, 96);
++    stq_be_p(bytes + 16, c->q[MC_EXPORT]);
++    stq_be_p(bytes + 24, native->key.home_va);
++    stq_be_p(bytes + 32, native->key.size);
++    stl_be_p(bytes + 40, native->backing_token_id);
++    stl_be_p(bytes + 44, native->home_cna);
++    stq_be_p(bytes + 48, native->key.segment_id);
++    stq_be_p(bytes + 56, native->key.epoch);
++    /* MSOB segment flags (7) are distinct from GSVA key flags (0). */
++    stl_be_p(bytes + 64, c->n[MC_FLAGS]);
++    stl_be_p(bytes + 68, c->n[MC_NODE]);
++    stl_be_p(bytes + 72, c->n[MC_NODES]);
++    stl_be_p(bytes + 76, native->key.cache_policy);
++    stl_be_p(bytes + 80, native->key.p_tag);
++    stl_be_p(bytes + 84, native->access_flags);
++    stl_be_p(bytes + 88, native->token_id);
++    /* The secret never leaves this native reconstruction/hash. */
++    stl_be_p(bytes + 92, native->token_value);
++    hex = uflow_mc_hex(bytes, sizeof(bytes));
++    uflow_mc_hash(hex, 192, actual);
++    return !memcmp(actual, c->descriptor, sizeof(actual));
++}
++
++static bool uflow_mc_resolve(BusControllerDev *ubc, const UFlowMcCommand *c,
++                              GsvaRouteAccess *native)
++{
++    GsvaRouteEntry *route, *selected = NULL;
++    gsva_tables_init();
++    QTAILQ_FOREACH(route, &g_gsva_routes.routes, next) {
++        const GsvaKeyV1 *k = &route->key;
++        if (k->version == 1 && k->flags == 0 &&
++            !k->vmid && !k->asid && !k->pte_offset &&
++            k->segment_id == c->q[MC_SEGMENT] && k->home_va == c->q[MC_UBA] &&
++            k->size == c->q[MC_SIZE] && k->epoch == c->q[MC_EPOCH] &&
++            k->p_tag == c->n[MC_PTAG] && k->cache_policy == c->n[MC_POLICY] &&
++            route->home_cna == c->n[MC_HOME] &&
++            route->backing_token_id == c->n[MC_BACKING] &&
++            route->token.token_id == c->n[MC_TOKEN] &&
++            route->token.access_flags == c->n[MC_ACCESS]) {
++            if (selected) { return false; }
++            selected = route;
++        }
++    }
++    if (!selected || selected->source != SIM_DEC_MAP_SOURCE_GVA_MANAGER ||
++        gsva_route_resolve_pto(&g_gsva_routes,
++          selected->local_pa, 1, ubc->parent.cna, native) != GSVA_OK ||
++        (c->q[MC_MAP] && native->map_id != c->q[MC_MAP]) ||
++        (c->q[MC_LEASE] && native->lease_epoch != c->q[MC_LEASE]) ||
++        !uflow_mc_descriptor_equal(c, native)) {
++        return false;
++    }
++    if (native->direct_home_backing) {
++        GsvaHomeRequest registration;
++        if (native->home_cna != ubc->parent.cna ||
++            gsva_home_resolve_export(&ubc->gsva_home, ubc->parent.cna,
++              c->q[MC_EXPORT], native->backing_token_id, c->q[MC_UBA],
++              c->q[MC_SIZE], &registration) != GSVA_OK ||
++            memcmp(&registration.identity.key, &native->key, sizeof(native->key)) ||
++            registration.identity.token_id != native->token_id ||
++            registration.identity.token_value != native->token_value ||
++            registration.identity.backing_token_id != native->backing_token_id) {
++            return false;
++        }
++    }
++    return true;
++}
++
++static bool uflow_mc_native_valid(void *opaque)
++{
++    UFlowMcRead *r = opaque;
++    GsvaRouteAccess actual;
++    return r->route->state == GSVA_ROUTE_ACTIVE &&
++        gsva_route_resolve_pto(&g_gsva_routes, r->route->local_pa, 1,
++          r->ubc->parent.cna, &actual) == GSVA_OK &&
++        gsva_route_access_equal(&actual, &r->state->native) &&
++        (actual.access_flags & 1);
++}
++
++static int uflow_mc_fetch(void *opaque, uint64_t offset,
++                           uint8_t *bytes, uint32_t length)
++{
++    UFlowMcRead *r = opaque;
++    const GsvaRouteAccess *n = &r->state->native;
++    GsvaHomeIdentity identity = {.key = n->key, .home_cna = n->home_cna,
++        .token_id = n->token_id, .token_value = n->token_value,
++        .backing_token_id = n->backing_token_id};
++    return ubc_sim_dec_remote_io(r->ubc, n->key.home_va + offset,
++        n->backing_token_id, n->home_cna, bytes, length, true, false,
++        &identity) == MEMTX_OK ? 0 : -1;
++}
++
++static bool uflow_mc_cpu_read(GsvaRouteEntry *route, uint64_t offset,
++                               uint8_t *bytes, uint32_t length,
++                               MemTxResult *result)
++{
++    BusControllerDev *ubc = g_sim_decoder && g_sim_decoder->bcs ?
++        g_sim_decoder->bcs->ubc_dev : NULL;
++    UFlowMcState *s = ubc ? uflow_mc_state(ubc, false) : NULL;
++    UFlowMcRead read = {.ubc = ubc, .route = route, .state = s};
++    int code;
++    if (!s || !s->enabled || !s->cache.active ||
++        route->key.home_va != s->native.key.home_va) {
++        return false;
++    }
++    if (!uflow_mc_native_valid(&read)) {
++        s->cache.revoking = true;
++        uflow_mc_invalidate(&s->cache);
++        *result = MEMTX_ACCESS_ERROR;
++        return true;
++    }
++    code = uflow_mc_read(&s->cache, offset, bytes, length,
++                          uflow_mc_fetch, uflow_mc_native_valid, &read);
++    if (code == UFLOW_MC_MISS) { return false; }
++    *result = code == UFLOW_MC_OK ? MEMTX_OK : MEMTX_ACCESS_ERROR;
++    return true;
++}
++
++static bool uflow_mc_cpu_write_blocked(GsvaRouteEntry *route,
++                                        uint64_t offset, uint32_t length)
++{
++    BusControllerDev *ubc = g_sim_decoder && g_sim_decoder->bcs ?
++        g_sim_decoder->bcs->ubc_dev : NULL;
++    UFlowMcState *s = ubc ? uflow_mc_state(ubc, false) : NULL;
++    return s && s->enabled && s->cache.active &&
++        route->key.home_va == s->native.key.home_va &&
++        uflow_mc_overlap(&s->cache, offset, length);
++}
++
++bool ubc_uflow_managed_blocks_close(BusControllerDev *ubc,
++                                    const GsvaKeyV1 *key)
++{
++    UFlowMcState *s = uflow_mc_state(ubc, false);
++    return uflow_mw_blocks_close(ubc, key) || (s && s->enabled && s->cache.active &&
++        gsva_key_base_equal(&s->native.key, key));
++}
++
++void ubc_uflow_managed_invalidate(BusControllerDev *ubc,
++                                  const GsvaKeyV1 *key, bool revoke)
++{
++    uflow_mw_event(ubc, key, revoke);
++    UFlowMcState *s = uflow_mc_state(ubc, false);
++    if (s && s->enabled && s->cache.active &&
++        gsva_key_base_equal(&s->native.key, key)) {
++        if (revoke) { s->cache.revoking = true; }
++        uflow_mc_invalidate(&s->cache);
++    }
++}
++
++static void uflow_mc_put_u64(QDict *dict, const char *name, uint64_t value)
++{
++    g_autofree char *text = g_strdup_printf("%" PRIu64, value);
++    qdict_put_str(dict, name, text);
++}
++
++static void uflow_mc_reply(UFlowMcState *s, const UFlowMcCommand *c,
++                            const char *code, const GsvaRouteAccess *native)
++{
++    static const char *ops[] = {"", "probe", "begin", "end", "status"};
++    static const char *names64[] = {"map_id", "lease_epoch", "export_mem_id",
++        "remote_uba", "size", "segment_id", "epoch", "offset", "length"};
++    static const char *names32[] = {"backing_token_id", "home_cna",
++        "gsva_token_id", "cache_policy", "p_tag", "access_flags", "owner_node",
++        "node_count", "segment_flags"};
++    QDict *reply = qdict_new(), *stats = qdict_new();
++    GString *text;
++    g_autofree char *request = uflow_mc_hex(c->request, 32);
++    g_autofree char *authority = uflow_mc_hex(c->authority, 32);
++    g_autofree char *correlation = uflow_mc_hex(c->correlation, 32);
++    g_autofree char *descriptor = uflow_mc_hex(c->descriptor, 32);
++    qdict_put_int(reply, "version", 1); qdict_put_str(reply, "feature", UFLOW_MC_FEATURE);
++    qdict_put_int(reply, "pid", getpid()); qdict_put_str(reply, "operation", ops[c->op]);
++    qdict_put_str(reply, "request_sha256", request);
++    qdict_put_str(reply, "authority_sha256", authority);
++    qdict_put_str(reply, "correlation_sha256", correlation);
++    qdict_put_str(reply, "descriptor_sha256", descriptor);
++    uflow_mc_put_u64(reply, "control_generation", c->generation);
++    qdict_put_str(reply, "code", code);
++    qdict_put_str(reply, "scope", "UFlow-Catalog-managed-only");
++    qdict_put_bool(reply, "active", s->cache.active);
++    qdict_put_int(reply, "in_flight", s->cache.in_flight);
++    qdict_put_int(reply, "cache_pages", s->cache.pages);
++    if (native) {
++        QDict *alias = qdict_new();
++        for (size_t i = 0; i < 9; i++) {
++            uint64_t value = i == MC_MAP ? native->map_id :
++                             i == MC_LEASE ? native->lease_epoch : c->q[i];
++            uflow_mc_put_u64(alias, names64[i], value);
++            qdict_put_int(alias, names32[i], c->n[i]);
++        }
++        qdict_put_str(alias, "descriptor_sha256", descriptor);
++        qdict_put_obj(reply, "native_alias", QOBJECT(alias));
++    } else {
++        qdict_put_null(reply, "native_alias");
++    }
++    uflow_mc_put_u64(stats, "read_callbacks", s->cache.counters.reads);
++    uflow_mc_put_u64(stats, "cache_hits", s->cache.counters.hits);
++    uflow_mc_put_u64(stats, "remote_fill_calls", s->cache.counters.fills);
++    uflow_mc_put_u64(stats, "remote_fill_requested_bytes", s->cache.counters.remote_bytes);
++    uflow_mc_put_u64(stats, "remote_fill_successful_bytes", s->cache.counters.successful_bytes);
++    uflow_mc_put_u64(stats, "evictions", s->cache.counters.evictions);
++    uflow_mc_put_u64(stats, "invalidations", s->cache.counters.invalidations);
++    uflow_mc_put_u64(stats, "late_fill_discards", s->cache.counters.late_discards);
++    uflow_mc_put_u64(stats, "remote_failures", s->cache.counters.remote_failures);
++    qdict_put_bool(stats, "saturated", s->cache.counters.saturated);
++    qdict_put_obj(reply, "counters", QOBJECT(stats));
++    text = qobject_to_json(QOBJECT(reply));
++    assert(text->len <= 4096);
++    g_free(s->reply); s->reply = g_string_free(text, false);
++    qobject_unref(reply);
++}
++
++static bool uflow_mc_enabled_get(Object *obj, Error **errp)
++{
++    UFlowMcState *s = uflow_mc_state(BUS_CONTROLLER_DEV(obj), false);
++    return s && s->enabled;
++}
++
++static void uflow_mc_enabled_set(Object *obj, bool value, Error **errp)
++{
++    if (DEVICE(obj)->realized) {
++        error_setg(errp, "managed-cache feature is construction-only");
++        return;
++    }
++    uflow_mc_state(BUS_CONTROLLER_DEV(obj), true)->enabled = value;
++}
++
++static char *uflow_mc_control_get(Object *obj, Error **errp)
++{
++    UFlowMcState *s = uflow_mc_state(BUS_CONTROLLER_DEV(obj), false);
++    if (!s || !s->enabled || !s->reply) {
++        error_setg(errp, "no enabled managed-cache metadata transaction");
++        return NULL;
++    }
++    return g_strdup(s->reply);
++}
++
++static void uflow_mc_control_set(Object *obj, const char *wire, Error **errp)
++{
++    BusControllerDev *ubc = BUS_CONTROLLER_DEV(obj);
++    UFlowMcState *s = uflow_mc_state(ubc, false);
++    UFlowMcCommand command;
++    GsvaRouteAccess native;
++    const char *codes[] = {"ok", "denied", "busy", "denied", "replay", "full"};
++    int result;
++    if (!s || !s->enabled || !uflow_mc_decode(wire, &command)) {
++        error_setg(errp, "disabled or malformed bounded UFlow metadata control");
++        return;
++    }
++    if (command.op == 3) {
++        bool was_active = s->cache.active;
++        bool accepted = command.generation == s->accepted.generation &&
++                        !memcmp(command.id, s->accepted.id, 32);
++        result = accepted ? uflow_mc_end(&s->cache, command.generation,
++                                          command.id) : UFLOW_MC_DENIED;
++        uflow_mc_reply(s, &command, codes[result], accepted ? &s->native : NULL);
++        if (was_active && result == UFLOW_MC_OK) {
++            qemu_log("UFLOW_MC_END generation=%" PRIu64 " active=0 fills=0 pages=0\n",
++                     command.generation);
++        }
++        return;
++    }
++    if (!uflow_mc_resolve(ubc, &command, &native)) {
++        uflow_mc_reply(s, &command, "denied", NULL);
++        return;
++    }
++    if (command.op == 2) {
++        if (uflow_mw_active(ubc)) {
++            uflow_mc_reply(s, &command, "busy", &native); return;
++        }
++        result = uflow_mc_begin(&s->cache, command.generation, command.id,
++            command.correlation, command.q[MC_OFFSET], command.q[MC_LENGTH]);
++        if (result == UFLOW_MC_OK) {
++            s->native = native; s->accepted = command;
++            qemu_log("UFLOW_MC_BEGIN generation=%" PRIu64 " offset=%" PRIu64
++                     " length=%" PRIu64 " active=1 pages=0\n", command.generation,
++                     command.q[MC_OFFSET], command.q[MC_LENGTH]);
++        }
++        uflow_mc_reply(s, &command, codes[result], &native);
++    } else {
++        uflow_mc_reply(s, &command, "ok", &native);
++    }
++}
++
++static bool uflow_mc_publish_alias(BusControllerDev *ubc, Error **errp)
++{
++    if (!uflow_mc_enabled_get(OBJECT(ubc), NULL)) { return true; }
++    if (object_property_find(OBJECT(qdev_get_machine()), UFLOW_MC_PROPERTY)) {
++        error_setg(errp, "managed-cache profile requires one UBC per Guest");
++        return false;
++    }
++    object_property_add_alias(OBJECT(qdev_get_machine()), UFLOW_MC_PROPERTY,
++                               OBJECT(ubc), UFLOW_MC_PROPERTY);
++    uflow_mc_state(ubc, false)->alias_published = true;
++    return true;
++}
++
++static void uflow_mc_finalize(BusControllerDev *ubc)
++{
++    uflow_mw_finalize(ubc);
++    UFlowMcState *s = uflow_mc_state(ubc, false);
++    if (s) {
++        assert(!s->cache.in_flight);
++        if (s->alias_published &&
++            object_property_find(OBJECT(qdev_get_machine()), UFLOW_MC_PROPERTY)) {
++            object_property_del(OBJECT(qdev_get_machine()), UFLOW_MC_PROPERTY);
++        }
++        uflow_mc_destroy(&s->cache);
++        g_free(s->reply);
++        g_hash_table_remove(uflow_mc_states, ubc);
++        g_free(s);
++    }
++}
+diff --git a/hw/ub/uflow_managed_write.inc b/hw/ub/uflow_managed_write.inc
+new file mode 100644
+index 0000000000000000000000000000000000000000..11e1c27b9e99cb10fb4fd6dac396f77f5639c196
+--- /dev/null
++++ b/hw/ub/uflow_managed_write.inc
+@@ -0,0 +1,304 @@
++/* Explicit normal metadata W control; caller holds BQL, including reentrant IO. */
++#include "hw/ub/uflow_managed_write_core.h"
++#define UFLOW_MW_PROPERTY "uflow-managed-write-control-v1"
++#define UFLOW_MW_FEATURE "uflow-managed-write-v1"
++typedef struct UFlowMwState {
++    bool enabled, alias_published;
++    UFlowManagedWrite write;
++    GsvaRouteAccess native;
++    UFlowMcCommand accepted;
++    BusControllerDev *ubc;
++    char *reply;
++} UFlowMwState;
++static GHashTable *uflow_mw_states;
++
++static UFlowMwState *uflow_mw_state(BusControllerDev *ubc, bool create)
++{
++    UFlowMwState *s;
++    if (!uflow_mw_states) {
++        if (!create) { return NULL; }
++        uflow_mw_states = g_hash_table_new(g_direct_hash, g_direct_equal);
++    }
++    s = g_hash_table_lookup(uflow_mw_states, ubc);
++    if (!s && create) {
++        s = g_new0(UFlowMwState, 1);
++        s->ubc = ubc;
++        g_hash_table_insert(uflow_mw_states, ubc, s);
++    }
++    return s;
++}
++
++static bool uflow_mw_active(BusControllerDev *ubc)
++{
++    UFlowMwState *s = uflow_mw_state(ubc, false);
++    return s && s->enabled && s->write.reads.active;
++}
++
++static bool uflow_mw_native_valid(void *opaque)
++{
++    UFlowMwState *s = opaque;
++    GsvaRouteAccess actual;
++    return s && (s->native.access_flags & 3) == 3 &&
++        gsva_route_resolve_pto(&g_gsva_routes, s->native.local_pa, 1,
++                              s->ubc->parent.cna, &actual) == GSVA_OK &&
++        gsva_route_access_equal(&actual, &s->native);
++}
++
++static int uflow_mw_transfer(UFlowMwState *s, uint64_t offset, uint8_t *bytes,
++                              uint32_t length, bool write)
++{
++    const GsvaRouteAccess *n = &s->native;
++    GsvaHomeIdentity identity = {.key = n->key, .home_cna = n->home_cna,
++        .token_id = n->token_id, .token_value = n->token_value,
++        .backing_token_id = n->backing_token_id};
++    return ubc_sim_dec_remote_io(s->ubc, n->key.home_va + offset,
++        n->backing_token_id, n->home_cna, bytes, length, true, write,
++        &identity) == MEMTX_OK ? 0 : -1;
++}
++
++static int uflow_mw_store(void *opaque, uint64_t offset, const uint8_t *bytes,
++                           uint32_t length)
++{
++    return uflow_mw_transfer(opaque, offset, (uint8_t *)bytes, length, true);
++}
++
++static int uflow_mw_fetch(void *opaque, uint64_t offset, uint8_t *bytes,
++                           uint32_t length)
++{
++    return uflow_mw_transfer(opaque, offset, bytes, length, false);
++}
++
++static bool uflow_mw_callback_matches(UFlowMwState *s, GsvaRouteEntry *route)
++{
++    GsvaRouteAccess actual;
++    return gsva_route_resolve_pto(&g_gsva_routes, route->local_pa, 1,
++                                  s->ubc->parent.cna, &actual) == GSVA_OK &&
++           gsva_route_access_equal(&actual, &s->native);
++}
++
++static bool uflow_mw_cpu_read(GsvaRouteEntry *route, uint64_t offset,
++    uint8_t *bytes, uint32_t length, MemTxResult *result)
++{
++    BusControllerDev *ubc = g_sim_decoder && g_sim_decoder->bcs ?
++        g_sim_decoder->bcs->ubc_dev : NULL;
++    UFlowMwState *s = ubc ? uflow_mw_state(ubc, false) : NULL;
++    int rc;
++    if (!s || !s->enabled || !s->write.reads.active ||
++        route->key.home_va != s->native.key.home_va) { return false; }
++    if (!uflow_mw_callback_matches(s, route)) {
++        uflow_mw_fail(&s->write); *result = MEMTX_ACCESS_ERROR; return true;
++    }
++    rc = uflow_mw_read(&s->write, offset, bytes, length, uflow_mw_store,
++                       uflow_mw_fetch, uflow_mw_native_valid, s);
++    if (rc == UFLOW_MC_MISS) { uflow_mw_fail(&s->write); }
++    *result = rc == UFLOW_MC_OK ? MEMTX_OK : MEMTX_ACCESS_ERROR;
++    return true;
++}
++
++static bool uflow_mw_cpu_write(GsvaRouteEntry *route, uint64_t offset,
++    const uint8_t *bytes, uint32_t length, MemTxResult *result)
++{
++    BusControllerDev *ubc = g_sim_decoder && g_sim_decoder->bcs ?
++        g_sim_decoder->bcs->ubc_dev : NULL;
++    UFlowMwState *s = ubc ? uflow_mw_state(ubc, false) : NULL;
++    int rc;
++    if (!s || !s->enabled || !s->write.reads.active ||
++        route->key.home_va != s->native.key.home_va) { return false; }
++    if (!uflow_mw_callback_matches(s, route)) {
++        uflow_mw_fail(&s->write); *result = MEMTX_ACCESS_ERROR; return true;
++    }
++    rc = uflow_mw_write(&s->write, offset, bytes, length, uflow_mw_store,
++                        uflow_mw_native_valid, s);
++    if (rc == UFLOW_MC_MISS) { uflow_mw_fail(&s->write); }
++    *result = rc == UFLOW_MC_OK ? MEMTX_OK : MEMTX_ACCESS_ERROR;
++    return true;
++}
++
++static bool uflow_mw_blocks_close(BusControllerDev *ubc, const GsvaKeyV1 *key)
++{
++    UFlowMwState *s = uflow_mw_state(ubc, false);
++    return s && s->enabled && s->write.reads.active &&
++           gsva_key_base_equal(&s->native.key, key);
++}
++
++static void uflow_mw_event(BusControllerDev *ubc, const GsvaKeyV1 *key,
++                            bool revoke)
++{
++    UFlowMwState *s = uflow_mw_state(ubc, false);
++    if (s && uflow_mw_blocks_close(ubc, key)) {
++        uflow_mw_invalidate(&s->write, revoke);
++    }
++}
++
++static int uflow_mw_fence(BusControllerDev *ubc, const GsvaKeyV1 *key)
++{
++    UFlowMwState *s = ubc ? uflow_mw_state(ubc, false) : NULL;
++    if (!s || !uflow_mw_blocks_close(ubc, key)) { return GSVA_OK; }
++    if (memcmp(key, &s->native.key, sizeof(*key))) { return GSVA_ERR_COH_PENDING; }
++    return uflow_mw_flush(&s->write, uflow_mw_store, uflow_mw_native_valid, s) ==
++           UFLOW_MC_OK ? GSVA_OK : GSVA_ERR_COH_PENDING;
++}
++
++static bool uflow_mw_decode(const char *wire, UFlowMcCommand *c)
++{
++    char proxy[446];
++    uint8_t neutral[UFLOW_MC_WIRE_BYTES];
++    if (!wire || strlen(wire) != 445 || strncmp(wire, "umw1:", 5)) {
++        return false;
++    }
++    /* Reuse the source-bound strict R wire parser, not its R authority. */
++    memcpy(proxy, wire, sizeof(proxy));
++    memcpy(proxy, "umc1:554d4331", 13);
++    if (proxy[14] == '5') { proxy[14] = '4'; }
++    if (!uflow_mc_decode(proxy, c) || wire[13] != '0' ||
++        wire[14] < '1' || wire[14] > '5' ||
++        memcmp(wire + 5, "554d5731", 8) || (c->n[MC_ACCESS] & 3) != 3) {
++        return false;
++    }
++    c->op = wire[14] - '0';
++    if (c->op == 5 && (!c->generation || !c->q[MC_MAP] || !c->q[MC_LEASE] ||
++        !memcmp(c->authority, (uint8_t[32]){0}, 32) ||
++        !memcmp(c->correlation, (uint8_t[32]){0}, 32) ||
++        !memcmp(c->descriptor, (uint8_t[32]){0}, 32))) { return false; }
++    memcpy(c->body, "UMW1", 4); c->body[4] = c->op;
++    uflow_mc_hash(c->body, sizeof(c->body), c->request);
++    memcpy(neutral, c->body, sizeof(neutral)); neutral[4] = 0;
++    uflow_mc_hash(neutral, sizeof(neutral), c->id);
++    return true;
++}
++
++static void uflow_mw_reply(UFlowMwState *s, const UFlowMcCommand *c,
++                            const char *code, const GsvaRouteAccess *native)
++{
++    static const char *ops[] = {"", "probe", "begin", "end", "status", "flush"};
++    static const char *qnames[] = {"map_id", "lease_epoch", "export_mem_id",
++        "remote_uba", "size", "segment_id", "epoch", "offset", "length"};
++    static const char *nnames[] = {"backing_token_id", "home_cna", "gsva_token_id",
++        "cache_policy", "p_tag", "access_flags", "owner_node", "node_count", "segment_flags"};
++    QDict *reply = qdict_new(), *stats = qdict_new(), *writes = qdict_new();
++    UFlowManagedCache *cache = &s->write.reads;
++    GString *text;
++    g_autofree char *request = uflow_mc_hex(c->request, 32);
++    g_autofree char *authority = uflow_mc_hex(c->authority, 32);
++    g_autofree char *correlation = uflow_mc_hex(c->correlation, 32);
++    g_autofree char *descriptor = uflow_mc_hex(c->descriptor, 32);
++    qdict_put_int(reply, "version", 1); qdict_put_str(reply, "feature", UFLOW_MW_FEATURE);
++    qdict_put_int(reply, "pid", getpid()); qdict_put_str(reply, "operation", ops[c->op]);
++    qdict_put_str(reply, "request_sha256", request); uflow_mc_put_u64(reply, "control_generation", c->generation);
++    qdict_put_str(reply, "authority_sha256", authority); qdict_put_str(reply, "correlation_sha256", correlation);
++    qdict_put_str(reply, "descriptor_sha256", descriptor); qdict_put_str(reply, "code", code);
++    qdict_put_str(reply, "scope", "UFlow-Catalog-exclusive-W-with-native-RW-verification");
++    qdict_put_bool(reply, "active", cache->active); qdict_put_bool(reply, "uncertain", s->write.failed);
++    qdict_put_int(reply, "in_flight", cache->in_flight); qdict_put_int(reply, "write_in_flight", s->write.pending);
++    qdict_put_int(reply, "cache_pages", cache->pages); qdict_put_int(reply, "dirty_bytes", s->write.dirty);
++    if (native) {
++        QDict *alias = qdict_new();
++        for (size_t i = 0; i < 9; i++) {
++            uint64_t v = i == MC_MAP ? native->map_id : i == MC_LEASE ? native->lease_epoch : c->q[i];
++            uflow_mc_put_u64(alias, qnames[i], v); qdict_put_int(alias, nnames[i], c->n[i]);
++        }
++        qdict_put_str(alias, "descriptor_sha256", descriptor); qdict_put_obj(reply, "native_alias", QOBJECT(alias));
++    } else { qdict_put_null(reply, "native_alias"); }
++    uflow_mc_put_u64(stats, "read_callbacks", cache->counters.reads);
++    uflow_mc_put_u64(stats, "cache_hits", cache->counters.hits);
++    uflow_mc_put_u64(stats, "remote_fill_calls", cache->counters.fills);
++    uflow_mc_put_u64(stats, "remote_fill_requested_bytes", cache->counters.remote_bytes);
++    uflow_mc_put_u64(stats, "remote_fill_successful_bytes", cache->counters.successful_bytes);
++    uflow_mc_put_u64(stats, "evictions", cache->counters.evictions);
++    uflow_mc_put_u64(stats, "invalidations", cache->counters.invalidations);
++    uflow_mc_put_u64(stats, "late_fill_discards", cache->counters.late_discards);
++    uflow_mc_put_u64(stats, "remote_failures", cache->counters.remote_failures);
++    qdict_put_bool(stats, "saturated", cache->counters.saturated);
++    uflow_mc_put_u64(writes, "cpu_callbacks", s->write.writes);
++    uflow_mc_put_u64(writes, "accepted_bytes", s->write.accepted_bytes);
++    uflow_mc_put_u64(writes, "strict_flush_calls", s->write.flushes);
++    uflow_mc_put_u64(writes, "completed_bytes", s->write.completed_bytes);
++    uflow_mc_put_u64(writes, "failures", s->write.failures);
++    qdict_put_obj(reply, "counters", QOBJECT(stats)); qdict_put_obj(reply, "write_counters", QOBJECT(writes));
++    text = qobject_to_json(QOBJECT(reply)); assert(text->len <= 4096);
++    g_free(s->reply); s->reply = g_string_free(text, false); qobject_unref(reply);
++}
++
++static bool uflow_mw_enabled_get(Object *obj, Error **errp)
++{
++    UFlowMwState *s = uflow_mw_state(BUS_CONTROLLER_DEV(obj), false);
++    return s && s->enabled;
++}
++
++static void uflow_mw_enabled_set(Object *obj, bool value, Error **errp)
++{
++    if (DEVICE(obj)->realized) { error_setg(errp, "managed W is construction-only"); return; }
++    uflow_mw_state(BUS_CONTROLLER_DEV(obj), true)->enabled = value;
++}
++
++static char *uflow_mw_control_get(Object *obj, Error **errp)
++{
++    UFlowMwState *s = uflow_mw_state(BUS_CONTROLLER_DEV(obj), false);
++    if (!s || !s->enabled || !s->reply) { error_setg(errp, "no enabled W metadata transaction"); return NULL; }
++    return g_strdup(s->reply);
++}
++
++static void uflow_mw_control_set(Object *obj, const char *wire, Error **errp)
++{
++    BusControllerDev *ubc = BUS_CONTROLLER_DEV(obj);
++    UFlowMwState *s = uflow_mw_state(ubc, false);
++    UFlowMcCommand c;
++    GsvaRouteAccess native;
++    static const char *codes[] = {"ok", "denied", "busy", "denied", "replay", "full", "unknown"};
++    int rc;
++    if (!s || !s->enabled || !uflow_mw_decode(wire, &c)) {
++        error_setg(errp, "disabled or malformed bounded W metadata control"); return;
++    }
++    if (c.op == 3 || c.op == 5) {
++        /* Operation byte alone may differ. Bind authority, correlation, opaque
++         * descriptor and every native/range field to the exact accepted grant. */
++        bool accepted = c.generation == s->accepted.generation &&
++            !memcmp(c.body + 8, s->accepted.body + 8, sizeof(c.body) - 8);
++        bool was_active = s->write.reads.active;
++        rc = !accepted ? UFLOW_MC_DENIED : c.op == 3 ?
++            uflow_mw_end(&s->write, c.generation, c.id, uflow_mw_store, uflow_mw_native_valid, s) :
++            uflow_mw_flush(&s->write, uflow_mw_store, uflow_mw_native_valid, s);
++        uflow_mw_reply(s, &c, codes[rc], accepted ? &s->native : NULL);
++        if (c.op == 3 && was_active && rc == UFLOW_MC_OK) {
++            /* At most512 accepted grant pairs; metadata only, no hot-loop log. */
++            (qemu_log)("UFLOW_MW_END generation=%" PRIu64 " active=0 dirty=0 fills=0 pages=0\n", c.generation);
++        }
++        return;
++    }
++    if (!uflow_mc_resolve(ubc, &c, &native) || (native.access_flags & 3) != 3) {
++        uflow_mw_reply(s, &c, "denied", NULL); return;
++    }
++    if (c.op == 2) {
++        UFlowMcState *r = uflow_mc_state(ubc, false);
++        rc = r && r->cache.active ? UFLOW_MC_BUSY :
++            uflow_mw_begin(&s->write, c.generation, c.id, c.correlation, c.q[MC_OFFSET], c.q[MC_LENGTH]);
++        if (rc == UFLOW_MC_OK) {
++            s->native = native; s->accepted = c;
++            (qemu_log)("UFLOW_MW_BEGIN generation=%" PRIu64 " offset=%" PRIu64 " length=%" PRIu64 " active=1 dirty=0\n",
++                       c.generation, c.q[MC_OFFSET], c.q[MC_LENGTH]);
++        }
++        uflow_mw_reply(s, &c, codes[rc], &native);
++    } else { uflow_mw_reply(s, &c, s->write.failed ? "unknown" : "ok", &native); }
++}
++
++static bool uflow_mw_publish_alias(BusControllerDev *ubc, Error **errp)
++{
++    if (!uflow_mw_enabled_get(OBJECT(ubc), NULL)) { return true; }
++    if (object_property_find(OBJECT(qdev_get_machine()), UFLOW_MW_PROPERTY)) {
++        error_setg(errp, "managed W requires one UBC per Guest"); return false;
++    }
++    object_property_add_alias(OBJECT(qdev_get_machine()), UFLOW_MW_PROPERTY, OBJECT(ubc), UFLOW_MW_PROPERTY);
++    uflow_mw_state(ubc, false)->alias_published = true; return true;
++}
++
++static void uflow_mw_finalize(BusControllerDev *ubc)
++{
++    UFlowMwState *s = uflow_mw_state(ubc, false);
++    if (!s) { return; }
++    assert(!s->write.pending && !s->write.reads.in_flight);
++    if (s->alias_published && object_property_find(OBJECT(qdev_get_machine()), UFLOW_MW_PROPERTY)) {
++        object_property_del(OBJECT(qdev_get_machine()), UFLOW_MW_PROPERTY);
++    }
++    uflow_mc_destroy(&s->write.reads); g_free(s->reply);
++    g_hash_table_remove(uflow_mw_states, ubc); g_free(s);
++}
+diff --git a/include/hw/ub/ub_ummu.h b/include/hw/ub/ub_ummu.h
+index 96c5effc7ce38ca13599bb0f9aa9d076d21c6f0b..26d9771309c7a49a8362286fb131e51c4b5139eb 100644
+--- a/include/hw/ub/ub_ummu.h
++++ b/include/hw/ub/ub_ummu.h
+@@ -168,6 +168,9 @@
+ };
+ 
+ void ummu_print_stats(UMMUState *s, const char *prefix);
++int ummu_dma_s1_translate_page(UMMUState *ummu, UBDevice *udev, uint32_t tid,
++                               uint64_t iova, uint64_t *physical_page);
++
+ 
+ struct UMMUBaseClass {
+     /* <private> */
+diff --git a/include/hw/ub/uflow_bounded_log.h b/include/hw/ub/uflow_bounded_log.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..50397b78d5be841ddb5e7c45321bdcb4c0e11102
+--- /dev/null
++++ b/include/hw/ub/uflow_bounded_log.h
+@@ -0,0 +1,50 @@
++/* Per-source-site bounded diagnostics; mandatory publication events preserved. */
++#ifndef UFLOW_BOUNDED_LOG_H
++#define UFLOW_BOUNDED_LOG_H
++#include <stdarg.h>
++#include <stdatomic.h>
++#include <stdbool.h>
++#include <inttypes.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++typedef struct UFlowLogBucket { _Atomic uint64_t count; } UFlowLogBucket;
++static inline __attribute__((format(gnu_printf, 4, 5)))
++void uflow_bounded_log(UFlowLogBucket *bucket, const char *file,
++                                      int line, const char *fmt, ...)
++{
++    uint64_t previous = atomic_load_explicit(&bucket->count, memory_order_relaxed);
++    uint64_t count;
++    bool mandatory = !strncmp(fmt, "SIM_DEC: OBMM bootstrap publish ",
++                              sizeof("SIM_DEC: OBMM bootstrap publish ") - 1) ||
++                     !strncmp(fmt, "SIM_DEC: OBMM export retired ",
++                              sizeof("SIM_DEC: OBMM export retired ") - 1) ||
++                     !strncmp(fmt, "UFLOW_MC_BEGIN ", sizeof("UFLOW_MC_BEGIN ") - 1) ||
++                     !strncmp(fmt, "UFLOW_MC_END ", sizeof("UFLOW_MC_END ") - 1);
++    while (previous != UINT64_MAX &&
++           !atomic_compare_exchange_weak_explicit(&bucket->count, &previous,
++             previous + 1, memory_order_relaxed, memory_order_relaxed)) { }
++    count = previous == UINT64_MAX ? previous : previous + 1;
++    if (mandatory || count <= 8) {
++        char text[768];
++        va_list ap;
++        int length;
++        va_start(ap, fmt);
++        length = vsnprintf(text, sizeof(text), fmt, ap);
++        va_end(ap);
++        if (length >= 0) {
++            qemu_log("%s%s", text, length >= sizeof(text) ?
++                     " [UFLOW_LOG_TRUNCATED]\n" : "");
++        }
++    } else if ((count & (count - 1)) == 0) {
++        const char *name = strrchr(file, '/');
++        qemu_log("UFLOW_LOG_SUPPRESSED site=%s:%d occurrences=%" PRIu64
++                 " exact_text_retained=8 suppressed=%" PRIu64 "\n",
++                 name ? name + 1 : file, line, count, count - 8);
++    }
++}
++#define UFLOW_BOUNDED_LOG(...) do { \
++    static UFlowLogBucket uflow_site_bucket; \
++    uflow_bounded_log(&uflow_site_bucket, __FILE__, __LINE__, __VA_ARGS__); \
++} while (0)
++#endif
+diff --git a/include/hw/ub/uflow_managed_cache_control.h b/include/hw/ub/uflow_managed_cache_control.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..a7000a11a4406ea45e6cd11b9c8d1ffb7792fe70
+--- /dev/null
++++ b/include/hw/ub/uflow_managed_cache_control.h
+@@ -0,0 +1,9 @@
++/* Normal opt-in simulator metadata API; all calls require the BQL. */
++#ifndef UFLOW_MANAGED_CACHE_CONTROL_H
++#define UFLOW_MANAGED_CACHE_CONTROL_H
++#include "hw/ub/ub_ubc.h"
++void ubc_uflow_managed_invalidate(BusControllerDev *ubc,
++                                  const GsvaKeyV1 *key, bool revoke);
++bool ubc_uflow_managed_blocks_close(BusControllerDev *ubc,
++                                    const GsvaKeyV1 *key);
++#endif
+diff --git a/include/hw/ub/uflow_managed_cache_core.h b/include/hw/ub/uflow_managed_cache_core.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..591f9f38ca442978cf648935c86458ea9cc08af8
+--- /dev/null
++++ b/include/hw/ub/uflow_managed_cache_core.h
+@@ -0,0 +1,226 @@
++/* UFlow Catalog-managed read grants. Caller serializes state under the BQL.
++ * Transport/native permission validation is supplied by the real GSVA wrapper.
++ * Cache data is never authority; fills always use strict Guest remote I/O.
++ */
++#ifndef UFLOW_MANAGED_CACHE_CORE_H
++#define UFLOW_MANAGED_CACHE_CORE_H
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++
++#define UFLOW_MC_PAGE 4096u
++#define UFLOW_MC_SLOTS 2048u
++#define UFLOW_MC_HISTORY 512u
++enum { UFLOW_MC_OK = 0, UFLOW_MC_MISS = 1, UFLOW_MC_BUSY = 2,
++       UFLOW_MC_DENIED = 3, UFLOW_MC_REPLAY = 4, UFLOW_MC_FULL = 5 };
++
++typedef struct UFlowMcPage {
++    uint64_t start;
++    uint32_t length;
++    bool valid;
++    uint8_t bytes[UFLOW_MC_PAGE];
++} UFlowMcPage;
++
++typedef struct UFlowMcCounters {
++    uint64_t reads, hits, fills, remote_bytes, successful_bytes, evictions, invalidations;
++    uint64_t late_discards, remote_failures;
++    bool saturated;
++} UFlowMcCounters;
++
++typedef struct UFlowManagedCache {
++    bool active, revoking;
++    uint64_t epoch, generation, offset, length;
++    uint32_t in_flight, pages, used;
++    uint8_t id[32], operation[32];
++    uint64_t generations[UFLOW_MC_HISTORY];
++    uint8_t closed_ids[UFLOW_MC_HISTORY][32];
++    uint8_t operations[UFLOW_MC_HISTORY][32];
++    UFlowMcCounters counters;
++    UFlowMcPage *slots;
++} UFlowManagedCache;
++
++typedef int (*UFlowMcFetch)(void *opaque, uint64_t offset,
++                            uint8_t *bytes, uint32_t length);
++typedef bool (*UFlowMcNativeValid)(void *opaque);
++
++static inline void uflow_mc_count(UFlowManagedCache *m, uint64_t *v,
++                                  uint64_t amount)
++{
++    if (amount > UINT64_MAX - *v) {
++        *v = UINT64_MAX;
++        m->counters.saturated = true;
++    } else {
++        *v += amount;
++    }
++}
++
++static inline void uflow_mc_invalidate(UFlowManagedCache *m)
++{
++    if (!m || !m->active) {
++        return;
++    }
++    if (m->epoch == UINT64_MAX) {
++        m->revoking = true;
++    } else {
++        m->epoch++;
++    }
++    for (uint32_t i = 0; m->slots && i < UFLOW_MC_SLOTS; i++) {
++        m->slots[i].valid = false;
++    }
++    m->pages = 0;
++    uflow_mc_count(m, &m->counters.invalidations, 1);
++}
++
++static inline int uflow_mc_begin(UFlowManagedCache *m, uint64_t generation,
++                                 const uint8_t id[32], const uint8_t operation[32],
++                                 uint64_t offset, uint64_t length)
++{
++    if (!m || !generation || !length || length > UINT64_MAX - offset) {
++        return UFLOW_MC_DENIED;
++    }
++    if (m->active || m->in_flight) {
++        return UFLOW_MC_BUSY;
++    }
++    for (uint32_t i = 0; i < m->used; i++) {
++        if (m->generations[i] == generation ||
++            !memcmp(m->closed_ids[i], id, 32) ||
++            !memcmp(m->operations[i], operation, 32)) {
++            return UFLOW_MC_REPLAY;
++        }
++    }
++    if (m->used == UFLOW_MC_HISTORY || m->epoch == UINT64_MAX) {
++        return UFLOW_MC_FULL;
++    }
++    if (!m->slots) {
++        m->slots = calloc(UFLOW_MC_SLOTS, sizeof(*m->slots));
++        if (!m->slots) {
++            return UFLOW_MC_FULL;
++        }
++    }
++    m->active = true;
++    m->revoking = false;
++    m->generation = generation;
++    m->offset = offset;
++    m->length = length;
++    memcpy(m->id, id, 32);
++    memcpy(m->operation, operation, 32);
++    memset(&m->counters, 0, sizeof(m->counters));
++    uflow_mc_invalidate(m);
++    return UFLOW_MC_OK;
++}
++
++static inline bool uflow_mc_overlap(const UFlowManagedCache *m,
++                                    uint64_t offset, uint64_t length)
++{
++    return m && m->active && length && length <= UINT64_MAX - offset &&
++        offset < m->offset + m->length && m->offset < offset + length;
++}
++
++static inline int uflow_mc_end(UFlowManagedCache *m, uint64_t generation,
++                               const uint8_t id[32])
++{
++    if (!m || !generation) {
++        return UFLOW_MC_DENIED;
++    }
++    if (!m->active) {
++        for (uint32_t i = 0; i < m->used; i++) {
++            if (m->generations[i] == generation &&
++                !memcmp(m->closed_ids[i], id, 32)) {
++                return UFLOW_MC_OK;
++            }
++        }
++        return UFLOW_MC_DENIED;
++    }
++    if (m->generation != generation || memcmp(m->id, id, 32)) {
++        return UFLOW_MC_DENIED;
++    }
++    m->revoking = true;
++    uflow_mc_invalidate(m);
++    if (m->in_flight) {
++        return UFLOW_MC_BUSY;
++    }
++    /* Begin reserved one replay-history slot; no new begin can race an end. */
++    m->generations[m->used] = generation;
++    memcpy(m->closed_ids[m->used], m->id, 32);
++    memcpy(m->operations[m->used], m->operation, 32);
++    m->used++;
++    m->active = false;
++    return UFLOW_MC_OK;
++}
++
++static inline int uflow_mc_read(UFlowManagedCache *m, uint64_t offset,
++                                uint8_t *out, uint32_t length,
++                                UFlowMcFetch fetch, UFlowMcNativeValid valid,
++                                void *opaque)
++{
++    uint32_t done = 0;
++    if (!m || !m->active || !length || offset < m->offset ||
++        offset - m->offset > m->length ||
++        length > m->length - (offset - m->offset)) {
++        return UFLOW_MC_MISS;
++    }
++    if (m->revoking || m->in_flight || !out || !fetch || !valid ||
++        !valid(opaque)) {
++        return UFLOW_MC_DENIED;
++    }
++    uflow_mc_count(m, &m->counters.reads, 1);
++    while (done < length) {
++        uint64_t at = offset + done;
++        uint64_t base = at - at % UFLOW_MC_PAGE;
++        uint64_t start = base > m->offset ? base : m->offset;
++        uint64_t end = m->offset + m->length;
++        uint32_t amount;
++        UFlowMcPage *page;
++        if (UINT64_MAX - base >= UFLOW_MC_PAGE &&
++            end > base + UFLOW_MC_PAGE) {
++            end = base + UFLOW_MC_PAGE;
++        }
++        amount = end - at < length - done ? end - at : length - done;
++        page = &m->slots[(base / UFLOW_MC_PAGE) % UFLOW_MC_SLOTS];
++        if (!page->valid || page->start != start ||
++            page->length != end - start) {
++            uint8_t bytes[UFLOW_MC_PAGE];
++            uint64_t epoch = m->epoch;
++            int result;
++            m->in_flight++;
++            uflow_mc_count(m, &m->counters.fills, 1);
++            uflow_mc_count(m, &m->counters.remote_bytes, end - start);
++            result = fetch(opaque, start, bytes, end - start);
++            m->in_flight--;
++            if (result != 0) {
++                uflow_mc_count(m, &m->counters.remote_failures, 1);
++                return UFLOW_MC_DENIED;
++            }
++            uflow_mc_count(m, &m->counters.successful_bytes, end - start);
++            if (!m->active || m->revoking || m->epoch != epoch ||
++                !valid(opaque)) {
++                uflow_mc_count(m, &m->counters.late_discards, 1);
++                return UFLOW_MC_DENIED;
++            }
++            if (page->valid) {
++                uflow_mc_count(m, &m->counters.evictions, 1);
++            } else {
++                m->pages++;
++            }
++            page->start = start;
++            page->length = end - start;
++            memcpy(page->bytes, bytes, page->length);
++            page->valid = true;
++        } else {
++            uflow_mc_count(m, &m->counters.hits, 1);
++        }
++        memcpy(out + done, page->bytes + at - start, amount);
++        done += amount;
++    }
++    return UFLOW_MC_OK;
++}
++
++static inline void uflow_mc_destroy(UFlowManagedCache *m)
++{
++    if (m) {
++        free(m->slots);
++        memset(m, 0, sizeof(*m));
++    }
++}
++#endif
+diff --git a/include/hw/ub/uflow_managed_write_core.h b/include/hw/ub/uflow_managed_write_core.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..54a4633f6c96066f059d228f61a9633346acea35
+--- /dev/null
++++ b/include/hw/ub/uflow_managed_write_core.h
+@@ -0,0 +1,181 @@
++/* BQL-serialized Catalog W-grant buffer. No data is supplied by host control.
++ * CPU stores supply every dirty byte. Only real strict native completion clears
++ * it. Invalidation during an unlocked/reentrant flush is sticky uncertainty.
++ */
++#ifndef UFLOW_MANAGED_WRITE_CORE_H
++#define UFLOW_MANAGED_WRITE_CORE_H
++#include "hw/ub/uflow_managed_cache_core.h"
++
++#define UFLOW_MW_UNKNOWN 6
++typedef int (*UFlowMwStore)(void *, uint64_t, const uint8_t *, uint32_t);
++typedef struct UFlowManagedWrite {
++    UFlowManagedCache reads;
++    bool failed, staged;
++    uint32_t pending, dirty, span;
++    uint64_t start, writes, accepted_bytes, flushes, completed_bytes, failures;
++    uint8_t data[UFLOW_MC_PAGE], mask[UFLOW_MC_PAGE / 8];
++} UFlowManagedWrite;
++
++static inline bool uflow_mw_bit(const UFlowManagedWrite *m, uint32_t at)
++{
++    return (m->mask[at / 8] >> (at % 8)) & 1;
++}
++
++static inline int uflow_mw_fail(UFlowManagedWrite *m)
++{
++    m->failed = true;
++    m->reads.revoking = true;
++    uflow_mc_count(&m->reads, &m->failures, 1);
++    uflow_mc_invalidate(&m->reads);
++    return UFLOW_MW_UNKNOWN;
++}
++
++static inline int uflow_mw_begin(UFlowManagedWrite *m, uint64_t generation,
++    const uint8_t id[32], const uint8_t operation[32], uint64_t offset,
++    uint64_t length)
++{
++    int rc;
++    if (!m) { return UFLOW_MC_DENIED; }
++    if (m->failed) { return UFLOW_MW_UNKNOWN; }
++    if (m->pending || m->dirty) { return UFLOW_MC_BUSY; }
++    rc = uflow_mc_begin(&m->reads, generation, id, operation, offset, length);
++    if (rc != UFLOW_MC_OK) { return rc; }
++    m->staged = false;
++    m->writes = m->accepted_bytes = m->flushes = m->completed_bytes = 0;
++    m->failures = 0;
++    memset(m->mask, 0, sizeof(m->mask));
++    return UFLOW_MC_OK;
++}
++
++static inline void uflow_mw_invalidate(UFlowManagedWrite *m, bool revoke)
++{
++    if (!m || !m->reads.active) { return; }
++    if (revoke || m->dirty || m->pending || m->reads.in_flight) {
++        uflow_mw_fail(m);
++    } else {
++        uflow_mc_invalidate(&m->reads);
++    }
++}
++
++static inline int uflow_mw_flush(UFlowManagedWrite *m, UFlowMwStore store,
++    UFlowMcNativeValid valid, void *opaque)
++{
++    if (!m || !m->reads.active || !store || !valid) { return UFLOW_MC_DENIED; }
++    if (m->failed) { return UFLOW_MW_UNKNOWN; }
++    if (m->pending || m->reads.in_flight) { return UFLOW_MC_BUSY; }
++    if (!valid(opaque)) { return uflow_mw_fail(m); }
++    for (uint32_t at = 0; at < m->span && m->dirty;) {
++        uint32_t first, length;
++        uint64_t epoch;
++        int rc;
++        if (!uflow_mw_bit(m, at)) { at++; continue; }
++        first = at;
++        while (at < m->span && uflow_mw_bit(m, at)) { at++; }
++        length = at - first;
++        epoch = m->reads.epoch;
++        m->pending++;
++        m->reads.in_flight++;
++        uflow_mc_count(&m->reads, &m->flushes, 1);
++        rc = store(opaque, m->start + first, m->data + first, length);
++        m->pending--;
++        m->reads.in_flight--;
++        if (rc == 0) {
++            uflow_mc_count(&m->reads, &m->completed_bytes, length);
++        }
++        if (rc != 0 || m->failed || !m->reads.active ||
++            m->reads.epoch != epoch || !valid(opaque)) {
++            return uflow_mw_fail(m);
++        }
++        for (uint32_t i = first; i < at; i++) {
++            m->mask[i / 8] &= (uint8_t)~(1u << (i % 8));
++        }
++        m->dirty -= length;
++        uflow_mc_invalidate(&m->reads);
++    }
++    return UFLOW_MC_OK;
++}
++
++static inline int uflow_mw_write(UFlowManagedWrite *m, uint64_t offset,
++    const uint8_t *bytes, uint32_t length, UFlowMwStore store,
++    UFlowMcNativeValid valid, void *opaque)
++{
++    uint32_t done = 0;
++    if (!m || !m->reads.active || !length || offset < m->reads.offset ||
++        offset - m->reads.offset > m->reads.length ||
++        length > m->reads.length - (offset - m->reads.offset)) {
++        return UFLOW_MC_MISS;
++    }
++    if (m->failed) { return UFLOW_MW_UNKNOWN; }
++    if (m->pending || m->reads.in_flight || !bytes || !valid ||
++        !valid(opaque)) { return uflow_mw_fail(m); }
++    uflow_mc_count(&m->reads, &m->writes, 1);
++    while (done < length) {
++        uint64_t at = offset + done;
++        uint64_t base = at - at % UFLOW_MC_PAGE;
++        uint64_t start = base > m->reads.offset ? base : m->reads.offset;
++        uint64_t end = m->reads.offset + m->reads.length;
++        uint32_t count, inside;
++        int rc;
++        if (UINT64_MAX - base >= UFLOW_MC_PAGE && end > base + UFLOW_MC_PAGE) {
++            end = base + UFLOW_MC_PAGE;
++        }
++        if (!m->staged || m->start != start) {
++            rc = uflow_mw_flush(m, store, valid, opaque);
++            if (rc != UFLOW_MC_OK) { return rc; }
++            m->start = start;
++            m->span = end - start;
++            m->staged = true;
++            memset(m->mask, 0, sizeof(m->mask));
++        }
++        if (!m->dirty) { uflow_mc_invalidate(&m->reads); }
++        inside = at - start;
++        count = end - at < length - done ? end - at : length - done;
++        for (uint32_t i = 0; i < count; i++) {
++            uint32_t index = inside + i;
++            if (!uflow_mw_bit(m, index)) {
++                m->mask[index / 8] |= 1u << (index % 8);
++                m->dirty++;
++            }
++            m->data[index] = bytes[done + i];
++        }
++        uflow_mc_count(&m->reads, &m->accepted_bytes, count);
++        done += count;
++        if (m->dirty == m->span) {
++            rc = uflow_mw_flush(m, store, valid, opaque);
++            if (rc != UFLOW_MC_OK) { return rc; }
++        }
++    }
++    return UFLOW_MC_OK;
++}
++
++static inline int uflow_mw_read(UFlowManagedWrite *m, uint64_t offset,
++    uint8_t *bytes, uint32_t length, UFlowMwStore store, UFlowMcFetch fetch,
++    UFlowMcNativeValid valid, void *opaque)
++{
++    int rc;
++    if (!m || !m->reads.active || !length || offset < m->reads.offset ||
++        offset - m->reads.offset > m->reads.length ||
++        length > m->reads.length - (offset - m->reads.offset)) {
++        return UFLOW_MC_MISS;
++    }
++    rc = uflow_mw_flush(m, store, valid, opaque);
++    if (rc != UFLOW_MC_OK) { return rc; }
++    rc = uflow_mc_read(&m->reads, offset, bytes, length, fetch, valid, opaque);
++    return rc == UFLOW_MC_OK ? rc : uflow_mw_fail(m);
++}
++
++static inline int uflow_mw_end(UFlowManagedWrite *m, uint64_t generation,
++    const uint8_t id[32], UFlowMwStore store, UFlowMcNativeValid valid,
++    void *opaque)
++{
++    int rc;
++    if (!m || m->failed) { return m ? UFLOW_MW_UNKNOWN : UFLOW_MC_DENIED; }
++    if (!m->reads.active) { return uflow_mc_end(&m->reads, generation, id); }
++    if (m->reads.generation != generation || memcmp(m->reads.id, id, 32)) {
++        return UFLOW_MC_DENIED;
++    }
++    rc = uflow_mw_flush(m, store, valid, opaque);
++    if (rc != UFLOW_MC_OK) { return rc; }
++    return uflow_mc_end(&m->reads, generation, id);
++}
++#endif

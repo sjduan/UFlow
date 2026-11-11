@@ -724,24 +724,11 @@ fn run_inner(endpoint:&str,root:&Path,python:&str,budget:u64,mem_service_config:
     if remote.is_some() && budget > 128 * 1024 * 1024 {
         return Err("mem_service B pool budget is at most 128MiB".into());
     }
-    if remote.as_ref().is_some_and(|p|p.reconciliation.is_none()) &&
-        Path::new("/workspace/uflow/runs/mem-service-shared-pool-20261108/runs/c013/state/state.json").exists() {
-        return Err("original c013 responsibility must enter this authority before new remote bootstrap/business".into());
-    }
+    crate::pool_experiments::guard_original_scope(remote.as_ref())?;
     let provider = if remote.is_none() { Some(Provider::start(root, python)?) } else { None };
     let mut catalog = Catalog::new(-1, Vec::new());
     catalog.ddr_resources.limit = budget;
-    let restore_original=|st:&mut Catalog|if let Some(config)=remote.as_ref().and_then(|p|p.reconciliation.as_ref()) {
-        if config.get("terminal_c101_execution_manifest").is_some(){
-            crate::pool_terminal_domain::case_chain::current_c101::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
-        } else if config.get("terminal_case_execution_manifest").is_some(){
-            crate::pool_terminal_domain::case_chain::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
-        } else if config.get("terminal_c064_execution_manifest").is_some(){
-            crate::pool_terminal_domain::current::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
-        } else if config.get("terminal_c044_execution_manifest").is_some(){
-            crate::pool_terminal_domain::restore_staged(st,config,&remote.as_ref().unwrap().loaded()).map(Some)
-        } else {crate::pool_reconciliation::restore(st,config,root).map(Some)}
-    } else {Ok(None)};
+    let restore_original=|st:&mut Catalog|crate::pool_experiments::restore(st,remote.as_ref(),root);
     #[cfg(not(test))]
     let responsibility=restore_original(&mut catalog)?;
     #[cfg(test)]

@@ -22,9 +22,10 @@ E10 retains its owner policy, memfd/seal/read-only adapter and durable witnesses
 `sdk/python/uflow/managed_pool.py` is the public control and mapped-view API. It
 imports only the standard library. `_managed_pool_wire.py` implements bounded
 strict JSON and FD transport. `pool_provider.py` is the only Simpler owner adapter;
-it imports the backend after startup. A future mem_service adapter belongs at
-this provider boundary, with its simulation capability preferred when that
-provider is implemented. This change implements the Simpler provider only.
+it imports the backend after startup. The mem_service adapter is implemented
+separately at this provider boundary in `mem_service_pool.rs` and
+`uf-ub-sim-agent/c`; its simulated capabilities do not imply POSIX tensor
+addressability. See the [framework baseline](../../docs/shared-pool-framework.md).
 
 The explicit daemon mode starts before ACL/HBM or E10 authority initialization:
 
