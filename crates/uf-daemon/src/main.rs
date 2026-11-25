@@ -39,7 +39,7 @@ mod pool_c039_prestart;
 #[cfg(any(test, feature = "experimental-reconciliation"))]
 mod pool_terminal_domain;
 mod object_service;
-mod pool_provider;
+mod pool_process;
 mod pool_ranges;
 mod pool_service;
 mod pool_wire;
@@ -76,7 +76,6 @@ use std::time::Duration;
 struct Args {
     host_pool: bool,
     pool_state_root: String,
-    pool_provider_python: String,
     pool_mem_service_config: String,
     pool_budget_bytes: u64,
     device: i32,
@@ -98,14 +97,13 @@ fn parse_args() -> Args {
     let mut args = Args {
         host_pool: false,
         pool_state_root: String::new(),
-        pool_provider_python: String::new(),
         pool_mem_service_config: String::new(),
         pool_budget_bytes: 256 * 1024 * 1024,
         device: env::var("UF_TARGET_DEVICE")
             .ok()
-            .and_then(|value| value.parse().ok())
-            .unwrap_or(0),
-        socket: "/tmp/uf_phasea03.sock".to_string(),
+            .map(|value| value.parse().expect("invalid UF_TARGET_DEVICE"))
+            .unwrap_or(-1),
+        socket: "/tmp/uflow.sock".to_string(),
         execution_mode: env::var("UF_EXECUTION_MODE").unwrap_or_else(|_| "physical".to_string()),
         block_bytes: 1 << 20,
         block_count: 0,
@@ -134,7 +132,6 @@ fn parse_args() -> Args {
         match key.as_str() {
             "--host-pool" => args.host_pool = true,
             "--pool-state-root" => args.pool_state_root = value(),
-            "--pool-provider-python" => args.pool_provider_python = value(),
             "--pool-mem-service-config" => args.pool_mem_service_config = value(),
             "--pool-budget-bytes" => {
                 args.pool_budget_bytes = value().parse().expect("invalid pool budget")
@@ -314,10 +311,13 @@ fn startup_hbm_probe(args: &Args) -> HbmRuntimeStatus {
 
 fn startup_catalog(args: &Args) -> Catalog {
     let mut catalog = Catalog::new(args.device, Vec::new());
+    if args.execution_mode != "physical" {
+        catalog.enable_simulated_providers();
+    }
     catalog.hbm = startup_hbm_probe(args);
     if args.block_count > 0 {
         eprintln!(
-            "{{\"event\":\"daemon_prealloc_ignored\",\"device_id\":{},\"requested_block_count\":{},\"block_bytes\":{},\"reason\":\"phasee04_lazy_allocation\"}}",
+            "{{\"event\":\"daemon_prealloc_ignored\",\"device_id\":{},\"requested_block_count\":{},\"block_bytes\":{},\"reason\":\"lazy_allocation\"}}",
             args.device,
             args.block_count,
             args.block_bytes
@@ -500,6 +500,18 @@ fn seal_bound_generation(endpoint: &str) -> std::io::Result<()> {
 }
 
 fn main() {
+    let first_arg = env::args().nth(1);
+    if matches!(first_arg.as_deref(), Some("--help" | "-h")) {
+        println!(concat!(
+            "UFlow A5 supernode development baseline\n",
+            "  uf-daemon --device DEVICE --socket PATH         Linux local backends\n",
+            "  uf-daemon --startup-probe-bytes 0 --socket PATH Skip the startup HBM probe\n",
+            "  uf-daemon --host-pool --pool-mem-service-config FILE --pool-state-root PATH\n",
+            "    --pool-budget-bytes BYTES --socket PATH       Explicit simulator adapter\n",
+            "For native HBM operation, pass the device assigned to the task."
+        ));
+        return;
+    }
     // Private explicit administrative modes run before every backend/trace/
     // Catalog startup. Neither missing endpoints nor a human flag mint ACKs.
     let private_args=std::env::args().skip(1).collect::<Vec<_>>();
@@ -511,7 +523,7 @@ fn main() {
     let args = parse_args();
     if args.host_pool {
         if args.pool_state_root.is_empty()
-            || (args.pool_provider_python.is_empty() == args.pool_mem_service_config.is_empty())
+            || args.pool_mem_service_config.is_empty()
             || args.block_count != 0
             || args.initialize_external_ddr_authority
             || args.inspect_external_ddr_evidence
@@ -519,16 +531,14 @@ fn main() {
             || args.begin_external_ddr_generation
             || args.seal_external_ddr_generation
         {
-            eprintln!("host-pool is a separate explicit mode; fresh task state/provider required");
+            eprintln!("host-pool requires explicit simulator config and fresh task state");
             std::process::exit(1);
         }
         if let Err(error) = pool_service::run(
             &args.socket,
             std::path::Path::new(&args.pool_state_root),
-            &args.pool_provider_python,
             args.pool_budget_bytes,
-            if args.pool_mem_service_config.is_empty() { None }
-            else { Some(std::path::Path::new(&args.pool_mem_service_config)) },
+            std::path::Path::new(&args.pool_mem_service_config),
         ) {
             eprintln!("managed host pool stopped with unresolved state: {error}");
             std::process::exit(1);
@@ -594,6 +604,10 @@ fn main() {
     } else {
         None
     };
+    if args.execution_mode != "simulated" && args.startup_probe_bytes > 0 && args.device < 0 {
+        eprintln!("native startup requires --device or UF_TARGET_DEVICE from the task");
+        std::process::exit(1);
+    }
     let mut catalog = startup_catalog(&args);
     if let Some(control) = bound_control.as_mut() {
         if let Err(e) = catalog

@@ -271,27 +271,8 @@ impl Catalog {
                 Addressability::BlockDescriptor,
             )))
             .expect("register local_ssd provider");
-        providers
-            .register(Arc::new(MockProvider::new(
-                "mock",
-                "simulated:mock",
-                "mock-node",
-            )))
-            .expect("register mock provider");
-        providers
-            .register(Arc::new(MockBridgeUbSimProvider::new()))
-            .expect("register ub_sim_mock provider");
-        match UbSimProvider::from_env() {
-            Ok(Some(provider)) => providers
-                .register(Arc::new(provider))
-                .expect("register ub_sim provider"),
-            Ok(None) => {}
-            Err(error) => eprintln!(
-                "{{\"event\":\"provider_unavailable\",\"provider_id\":\"ub_sim\",\"error_code\":\"{}\",\"detail\":\"{}\"}}",
-                error.code.as_str(),
-                error.detail.replace('"', "'")
-            ),
-        }
+        #[cfg(test)]
+        Self::register_mock_providers(&mut providers);
         Self {
             device,
             hbm: HbmRuntimeStatus::default(),
@@ -328,6 +309,35 @@ impl Catalog {
             next_lease_id: 1000,
             next_transfer_plan_id: 20_000,
             next_transfer_event_id: 30_000,
+        }
+    }
+
+    fn register_mock_providers(providers: &mut ProviderRegistry) {
+        providers
+            .register(Arc::new(MockProvider::new(
+                "mock",
+                "simulated:mock",
+                "mock-node",
+            )))
+            .expect("register mock provider");
+        providers
+            .register(Arc::new(MockBridgeUbSimProvider::new()))
+            .expect("register ub_sim_mock provider");
+    }
+
+    pub fn enable_simulated_providers(&mut self) {
+        #[cfg(not(test))]
+        Self::register_mock_providers(&mut self.providers);
+        match UbSimProvider::from_env() {
+            Ok(Some(provider)) => self.providers
+                .register(Arc::new(provider))
+                .expect("register ub_sim provider"),
+            Ok(None) => {}
+            Err(error) => eprintln!(
+                "{{\"event\":\"provider_unavailable\",\"provider_id\":\"ub_sim\",\"error_code\":\"{}\",\"detail\":\"{}\"}}",
+                error.code.as_str(),
+                error.detail.replace('"', "'")
+            ),
         }
     }
 

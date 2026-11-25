@@ -92,7 +92,7 @@ class UFlowClient:
         enabled = env_flag("UF_ENABLE", False)
         socket_path = os.environ.get("UF_SOCKET", "/tmp/uflow.sock")
         target_device = int(os.environ.get("UF_TARGET_DEVICE", str(device_id)))
-        acl_lib_path = os.environ.get("UF_ACL_LIB", "/home/sj/git/data-service/build/lib/libuf_acl_shim.so")
+        acl_lib_path = os.environ.get("UF_ACL_LIB", "build/lib/libuf_acl_shim.so")
         return cls(
             enabled=enabled,
             socket_path=socket_path,
@@ -114,7 +114,7 @@ class UFlowClient:
         if not Path(self.socket_path).exists():
             raise FileNotFoundError(f"UF_SOCKET does not exist: {self.socket_path}")
         require_acl = env_flag("UF_REQUIRE_ACL", False)
-        if Path(self.acl_lib_path).exists():
+        if self.acl_lib_path and Path(self.acl_lib_path).exists():
             try:
                 self._acl = _AclClient(self.acl_lib_path, self.device_id)
             except Exception:

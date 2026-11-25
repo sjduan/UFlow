@@ -150,7 +150,7 @@ def build(root, source, name):
          '--legacy-source',legacy_source,'--worker',fixture_worker,'--controller',sdk/'bin/linqu_mem_service',
          '--cost',rx_cost,'--scratch',root/('rx'+generation),'--output',out/'serial-rx-cpu'],timeout=45)
     shim = out/'fence';shim.mkdir()
-    run(['/usr/bin/gcc','-shared','-fPIC',source/'examples/managed_pool/api_fence.c','-o',shim/'libuf_acl_shim.so'])
+    run(['/usr/bin/gcc','-shared','-fPIC',source/'tools/fixtures/acl_api_fence.c','-o',shim/'libuf_acl_shim.so'])
     cargo=shutil.which('cargo') or '/root/.cargo/bin/cargo'
     if not Path(cargo).is_file():raise RuntimeError('existing Cargo toolchain not found; no implicit install')
     # Core's real Unix-socket fixtures use CARGO_TARGET_DIR.parent(). Keep that
@@ -223,8 +223,6 @@ def build(root, source, name):
              '--nocapture','--test-threads=1'],cwd=source,env=e10_env,timeout=120)
     run([sys.executable,'-B',fixture/'original_reconciliation_cpu.py'],env=env,timeout=120)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/mem_service_pool','-p','test_*.py'],env=env)
-    run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/managed_pool','-p','test_sdk.py'],env=env)
-    run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/common_session','-p','test_*.py'],env=env)
     run([sys.executable,'-B','-m','unittest','discover','-s',source/'examples/ddr_v0','-p','test_t34_isolation.py'],env=env)
     base=root/'src/ub_sim/guest-linux/aarch64/out/initramfs.cpio.gz'
     stage=out/'stage';stage.mkdir()

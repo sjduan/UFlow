@@ -1,3 +1,0 @@
-external_source_unchanged=1
-daemon_pid_alive=0
-platform_pid_alive=0

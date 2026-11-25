@@ -1,61 +1,7 @@
 {
   "schema": 1,
-  "purpose": "Exact source overlays for the accepted framework candidate; no new device/Guest result",
+  "purpose": "Historical simulator source overlays for opt-in host and Guest adapter development",
   "sources": {
-    "pypto": {
-      "base": "be23606f791fa2251d7fccabdb91c75582268fad",
-      "accepted_source_commit": "8007f1146a800d679301c5ea14bb644b863da6bf",
-      "accepted_tree": "af630816c0d799933f20aceb2df26302371beaad",
-      "files": {
-        "python/pypto/ir/distributed_compiled_program.py": {
-          "mode": "100644",
-          "object": "8e2ab3f13d9a96363ed1bb8159642a7e270bd556",
-          "bytes": 32571,
-          "sha256": "ce3327f3eaeb8a0e0bc0fade382b87466586f49cdaa91e3565b0d7e99a3fe81d"
-        },
-        "python/pypto/runtime/distributed_runner.py": {
-          "mode": "100644",
-          "object": "b575c67c072b70036ba3eb9284a9b48055822144",
-          "bytes": 163966,
-          "sha256": "112339b34c1d6ab61233b8ec6a781b19ea68ff94f593b2db8cc5403192cc60e5"
-        },
-        "runtime": {
-          "mode": "160000",
-          "object": "508becb93e182a3035a14e3f9226929dbe994346"
-        },
-        "tests/ut/runtime/test_distributed_worker.py": {
-          "mode": "100644",
-          "object": "fad6a4645bc9d152cc8678a1d7ef05e6ea693893",
-          "bytes": 198795,
-          "sha256": "e9aa0de63538341f1f2736c1a34688620a24cc4442c1d9b9c164c7fd8875b72c"
-        }
-      },
-      "patch_sha256": "3874c652f543dfcc4786c5bd5791e0e6b9abf24d4363fa4ce519340831bd6cc3",
-      "url": "https://github.com/hw-native-sys/pypto.git",
-      "patch": "patches/pypto.patch"
-    },
-    "simpler": {
-      "base": "6b6b88f2353cca12cfafe809750b50b59931b0d1",
-      "accepted_source_commit": "508becb93e182a3035a14e3f9226929dbe994346",
-      "accepted_tree": "7c7d9bb620c9aa4ae504d1f1d38581b5bc52a748",
-      "files": {
-        "python/simpler/worker.py": {
-          "mode": "100644",
-          "object": "7fcff06e3d7c5a18aac40a85e965a37659b847f5",
-          "bytes": 750780,
-          "sha256": "f28dbd43ff747080eec171d774e0934a3b19bbf7b153c7a0f5880117d4144a1f"
-        },
-        "tests/ut/py/test_worker/test_chip_services.py": {
-          "mode": "100644",
-          "object": "0db1df881111b0299f99ddddad042a31e047440a",
-          "bytes": 7941,
-          "sha256": "db5219618bac634148d08333243758da58049efe0dcdb962623a5f847bba7fb0"
-        }
-      },
-      "patch_sha256": "2d60e58b6f95656c662b82e8699b250e4915ec54e7c9d38faee0cde47c7d3d4f",
-      "url": "https://github.com/hw-native-sys/simpler.git",
-      "patch": "patches/simpler.patch"
-    },
     "ub_sim": {
       "url": "https://github.com/LL-mixed/ub_sim.git",
       "base": "abeec108a1607feb37218d0d89987e37c579d567",
@@ -597,18 +543,6 @@
     "mem_service": {
       "url": "https://github.com/LL-mixed/mem_service.git",
       "commit": "546985e26bce60798fa3f88329c3fbed8350c798"
-    },
-    "pto_isa": {
-      "url": "https://github.com/hw-native-sys/pto-isa.git",
-      "commit": "217bb98952a8f9004b95fe938da97d8d5f68f702"
-    },
-    "ptoas": {
-      "url": "https://github.com/hw-native-sys/ptoas.git",
-      "tag": "v0.70"
     }
-  },
-  "overrides": {
-    "ub_sim/vendor/simpler": "Use the simpler overlay above, not gitlink 3794c4309fbdb8d20a262ced4e7cb1b3fa823261",
-    "pypto/runtime": "Use the simpler overlay above"
   }
 }

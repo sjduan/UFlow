@@ -3,7 +3,7 @@
 use crate::ddr_resources::BackingId;
 use crate::catalog::Catalog;
 use crate::managed_pool::{Operation, Peer};
-use crate::pool_provider::opaque_id;
+use crate::pool_process::opaque_id;
 use crate::pool_service::Service;
 use crate::pool_wire::{fields, number, parse, text};
 use serde_json::{json, Value};
@@ -724,7 +724,7 @@ mod tests {
             });
             let service_exec=Arc::clone(&service);let lease_token=lease.token.clone();let client=lease.client.clone();
             let execute=thread::spawn(move||{
-                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_provider::pidfd(pid).unwrap()};
+                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_process::pidfd(pid).unwrap()};
                 provider.execute(&service_exec,&peer,&json!({"op":"ExecutePoolRange","operation_id":"host-real-execute","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":client,"access_generation":access,"access_binding_v2":{},"lease":lease_json,"pattern_id":17}))
             });
             entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
@@ -768,7 +768,7 @@ mod tests {
             });
             let service_exec=Arc::clone(&service);let lease_token=lease.token.clone();let client=lease.client.clone();
             let execute=thread::spawn(move||{
-                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_provider::pidfd(pid).unwrap()};
+                let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_process::pidfd(pid).unwrap()};
                 provider.execute(&service_exec,&peer,&json!({"op":"ExecutePoolRange","operation_id":"host-real-w-execute","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":client,"access_generation":access,"access_binding_v2":{},"lease":lease_json,"pattern_id":17}))
             });
             entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();

@@ -1,4 +1,4 @@
-"""Bounded CPU-only framework checks with an ACL API fence.
+"""Build and check the A5 branch's Linux host entry points and data contracts.
 
 Requires Linux, GCC, Cargo and already cached locked Rust dependencies. No NPU,
 Guest, Simpler worker, daemon service or historical recovery is started.
@@ -26,6 +26,8 @@ def main():
            "CARGO_TARGET_DIR": str(output / "target"), "CARGO_BUILD_JOBS": "4", "CARGO_INCREMENTAL": "0",
            "UF_ACL_SHIM_LIB_DIR": str(shim), "LD_LIBRARY_PATH": str(shim),
            "PYTHONPATH": str(source / "sdk/python"), "PYTHONDONTWRITEBYTECODE": "1"}
+    for name in ("UF_TARGET_DEVICE", "UF_EXECUTION_MODE", "UF_HBM_STARTUP_PROBE_BYTES"):
+        env.pop(name, None)
     steps = []
 
     def run(name, command, seconds=300, expected=0):
@@ -52,10 +54,20 @@ def main():
         if code != expected:
             raise RuntimeError(f"{name} exited {code}; see its log")
 
-    run("compile-acl-fence", ["gcc", "-shared", "-fPIC", str(source / "examples/managed_pool/api_fence.c"),
+    run("compile-acl-fence", ["gcc", "-shared", "-fPIC", str(source / "tools/fixtures/acl_api_fence.c"),
                               "-o", str(shim / "libuf_acl_shim.so")])
     run("default-daemon-build", ["cargo", "build", "--offline", "--locked", "-p", "uf-daemon", "-j4"], 900)
     binary = output / "target/debug/uf-daemon"
+    run("native-help", [str(binary), "--help"], 5)
+    if "UFlow A5 supernode development baseline" not in (output / "native-help.log").read_text():
+        raise RuntimeError("native entry did not expose the A5 baseline")
+    endpoint = output / "unused.sock"
+    run("native-needs-assignment", [str(binary), "--socket", str(endpoint)], 5, 1)
+    run("legacy-a3-owner-rejected", [str(binary), "--socket", str(endpoint),
+                                    "--host-pool", "--pool-provider-python", sys.executable], 5, 101)
+    run("simulator-needs-config", [str(binary), "--socket", str(endpoint), "--host-pool"], 5, 1)
+    if endpoint.exists():
+        raise RuntimeError("a rejected entry point created a control socket")
     for index, flag in enumerate(("--pool-terminal-domain-loss", "--pool-shutdown-report",
                                   "--pool-terminal-c101-manifest")):
         command = [str(binary), flag]
@@ -66,12 +78,18 @@ def main():
         if "no recovery IO performed" not in (output / (name + ".log")).read_text():
             raise RuntimeError("default recovery command did not fail at the feature boundary")
     run("core-agent-tests", ["cargo", "test", "--offline", "--locked", "-p", "uf-core", "-p", "uf-ub-sim-agent", "-j4"], 300)
-    for group in ("ddr_resources::tests", "pool_ranges::tests", "managed_pool::tests", "mem_service_pool::tests",
-                  "managed_read_cache::tests", "managed_write::tests", "pool_experiments::tests"):
+    for group in ("control_shutdown_tests", "transfer_executor::monitor_tests", "ssd_direct::tests",
+                  "providers::registry::tests", "ddr_resources::tests", "pool_ranges::tests",
+                  "managed_pool::tests", "mem_service_pool::tests", "managed_read_cache::tests",
+                  "managed_write::tests", "pool_experiments::tests"):
         run(group.split("::")[0], ["cargo", "test", "--offline", "--locked", "-p", "uf-daemon", "-j4", group], 300)
     run("experimental-compatibility-build", ["cargo", "check", "--offline", "--locked", "-p", "uf-daemon",
                                             "--features", "experimental-reconciliation", "-j4"], 300)
-    run("managed-sdk-tests", [sys.executable, "-B", "-m", "unittest", "discover", "-s", "examples/managed_pool", "-p", "test_sdk.py"], 120)
+    sdk_env = output / "sdk-venv"
+    run("sdk-venv", [sys.executable, "-B", "-m", "venv", "--without-pip", str(sdk_env)], 120)
+    run("external-ddr-sdk", [str(sdk_env / "bin/python"), "-B", "examples/ddr_v0/test_t34_sdk.py"], 120)
+    run("monitor-host-tests", [sys.executable, "-B", "-m", "unittest", "discover",
+                               "-s", "tools/tests", "-p", "test_uflow_monitor_api.py"], 120)
     (output / "result.json").write_text(json.dumps({"pass": True, "CPU_only": True,
         "physical_device_or_Guest_started": False, "historical_recovery_executed": False,
         "steps": steps}, indent=2) + "\n")

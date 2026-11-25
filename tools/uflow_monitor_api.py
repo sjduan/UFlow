@@ -12,10 +12,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 
-DEFAULT_SOCKET = "/tmp/uflow_phasee04.sock"
+DEFAULT_SOCKET = "/tmp/uflow.sock"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8082
-DEFAULT_MODEL_ID = "phasee04-monitor"
+DEFAULT_MODEL_ID = "uflow"
 MAX_COMMAND_BODY_BYTES = 64 * 1024
 DEFAULT_TRANSFER_LIMIT = 50
 MAX_TRANSFER_LIMIT = 200
@@ -907,7 +907,7 @@ def build_config(args: argparse.Namespace) -> dict[str, Any]:
         "api_base": api_base,
         "ui_url": ui_url,
         "tunnel_path": os.environ.get(
-            "UFLOW_TUNNEL_PATH", "local -> ssh serving-b -> openeuler-2403-DS"
+            "UFLOW_TUNNEL_PATH", "local"
         ),
         "default_model_id": os.environ.get("UFLOW_MONITOR_MODEL_ID", DEFAULT_MODEL_ID),
         "trace_root": os.environ.get("UF_TRACE_OUTPUT_DIR", os.environ.get("UF_TRACE_ROOT", "/tmp/uflow_traces")),

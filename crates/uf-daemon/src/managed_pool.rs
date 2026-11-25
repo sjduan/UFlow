@@ -1,7 +1,7 @@
 //! Managed host resources extend the one Catalog, not the Python executor.
 use crate::catalog::{Catalog, Client, Lease, Object};
 use crate::ddr_process_identity::ProcessBirth;
-use crate::pool_provider::{exited, opaque_id, pidfd};
+use crate::pool_process::{exited, opaque_id, pidfd};
 use crate::pool_ranges::{RangeLease, Ranges};
 use crate::pool_wire::{fields, number, text};
 use serde_json::{json, Value};
@@ -344,7 +344,7 @@ impl State {
             state: "Creating".into(),
             name: id.clone(),
             role: "managed_pool".into(),
-            ddr_fast_profile: "posix_shm_simpler".into(),
+            ddr_fast_profile: "managed_pool".into(),
             ..Object::default()
         };
         st.record_legacy_object(&record);
@@ -358,7 +358,7 @@ impl State {
         self.pools.insert(
             id.clone(),
             Pool {
-                backend: "posix_shm_simpler",
+                backend: "unbound",
                 id,
                 epoch,
                 provider_session,
@@ -460,7 +460,7 @@ impl State {
                     source_binding_id: pool.binding,
                     accessor_node_id: "local".into(),
                     accessor_device_id: None,
-                    accessor_provider_id: "posix_shm_simpler".into(),
+                    accessor_provider_id: pool.backend.into(),
                     accessor_provider_session_id: session.clone(),
                     accessor_resource_id: format!("mapped:{access_id}"),
                     access_binding_generation: access_id,

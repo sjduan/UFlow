@@ -1,10 +1,10 @@
-name: Framework host checks
+name: UFlow A5 host checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [uflow/a5-supernode-native]
   push:
-    branches: [main]
+    branches: [uflow/a5-supernode-native]
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Fetch locked Rust dependencies
         run: cargo fetch --locked
-      - name: CPU-only build and pool contracts
+      - name: CPU-only build, entry points and shared contracts
         run: python -B tools/check_framework_host.py "$RUNNER_TEMP/uflow-host"
       - name: Source-overlay safety checks
         run: python -B tools/test_locked_source.py
@@ -30,5 +30,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: framework-host
-          path: ${{ runner.temp }}/uflow-host/*.json
+          name: uflow-a5-host
+          path: |
+            ${{ runner.temp }}/uflow-host/*.json
+            ${{ runner.temp }}/uflow-host/*.log

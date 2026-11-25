@@ -1,5 +1,5 @@
 const DEFAULT_API_BASE = "http://127.0.0.1:18082";
-const DEFAULT_MODEL_ID = "phasee04-monitor";
+const DEFAULT_MODEL_ID = "uflow";
 const TRACE_ARTIFACTS = [
   "trace_events.json",
   "trace_summary.json",
@@ -173,7 +173,7 @@ function renderConfig(payload) {
   if (pollMs !== null && pollMs >= 500) {
     state.pollMs = pollMs;
   }
-  setText("tunnel-path", config.tunnel_path || "local → ssh serving-b → openeuler-2403-DS");
+  setText("tunnel-path", config.tunnel_path || "local");
   setText("daemon-socket", rawValue(config.daemon_socket));
 }
 

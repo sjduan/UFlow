@@ -4,7 +4,7 @@ use crate::managed_pool::{Peer,State};
 pub(crate) fn fixture()->(Catalog,State,RangeLease,Value){
  let(mut st,mut state,read,node)=crate::managed_read_cache::tests::fixture();
  let p=&state.pools["pool"];let access=p.clients[&read.client].access_id;
- let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_provider::pidfd(pid).unwrap()};
+ let pid=std::process::id() as i32;let peer=Peer{birth:crate::ddr_process_identity::observe(pid,unsafe{libc::geteuid()},unsafe{libc::getegid()}).unwrap(),pidfd:crate::pool_process::pidfd(pid).unwrap()};
  let q=json!({"op":"AcquirePoolRange","pool_id":"pool","pool_epoch":"epoch","provider_session":"provider","client_session":read.client,"access_generation":access,
   "block":p.block_json(p.ranges.blocks[&read.block].json()),"mode":"w","expected_generation":1,"byte_offset":65536,"nbytes":65536});
  let id=state.metadata(&mut st,&peer,&q).unwrap();let w=state.pools.get_mut("pool").unwrap().ranges.leases.get_mut(id["lease_id"].as_str().unwrap()).unwrap();w.state="Executing";let w=w.clone();
