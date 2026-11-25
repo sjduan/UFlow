@@ -1,7 +1,7 @@
 //! Explicit simulator host-pool adapter. Provider waits and all socket I/O are outside Catalog.
 use crate::catalog::{Catalog, SharedCatalog};
 use crate::managed_pool::{Peer, State};
-use crate::pool_process::{opaque_id, pidfd};
+use crate::pool_process::{exited, opaque_id, pidfd};
 use crate::pool_wire;
 use serde_json::{json, Value};
 use std::fs::{self, File, OpenOptions};

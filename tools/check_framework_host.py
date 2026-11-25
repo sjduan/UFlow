@@ -52,6 +52,8 @@ def main():
         (output / "steps.json").write_text(json.dumps(steps, indent=2) + "\n")
         print(name, code, flush=True)
         if code != expected:
+            tail = (output / (name + ".log")).read_text(errors="replace").splitlines()[-60:]
+            print("\n".join(tail), flush=True)
             raise RuntimeError(f"{name} exited {code}; see its log")
 
     run("compile-acl-fence", ["gcc", "-shared", "-fPIC", str(source / "tools/fixtures/acl_api_fence.c"),
