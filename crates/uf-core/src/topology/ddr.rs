@@ -778,17 +778,22 @@ mod tests {
     #[test]
     fn broker_read_timeout_keeps_original_five_second_boundary_and_errno_context() {
         use std::io::{BufRead, BufReader};
-        let (control, worker, root) = socket_fixture(|stream| {
+        let (complete, waiting) = std::sync::mpsc::channel();
+        let (control, worker, root) = socket_fixture(move |stream| {
             let mut line = String::new();
             BufReader::new(&stream).read_line(&mut line).unwrap();
             assert_eq!(line, "op=GetExternalDdrSnapshot\n");
-            // Controlled same-mechanism socket timeout, not physical I/O or
-            // proof of which syscall produced the historical run130 failure.
-            std::thread::sleep(Duration::from_millis(5500));
+            // Hold the connection open until the client observes its timeout.
+            // A fixed sleep can race the client and produce EOF on a busy host.
+            waiting.recv_timeout(Duration::from_secs(12)).unwrap();
+            drop(stream);
         });
         let start = Instant::now();
         let error = query_broker(&control).unwrap_err();
         let elapsed = start.elapsed();
+        complete.send(()).unwrap();
+        worker.join().unwrap();
+        fs::remove_dir_all(root).unwrap();
         assert!(
             elapsed >= Duration::from_secs(5) && elapsed < Duration::from_secs(7),
             "{elapsed:?}"
@@ -799,8 +804,6 @@ mod tests {
                 && error.contains("raw_os_error=Some(11)"),
             "{error}"
         );
-        worker.join().unwrap();
-        fs::remove_dir_all(root).unwrap();
     }
 
     #[cfg(unix)]
